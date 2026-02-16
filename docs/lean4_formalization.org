@@ -83,7 +83,7 @@ must be made rigorous (the hardest part).
 
 | Component | Needed for | Estimated effort | Dependency |
 |------------------------------+-----------------------+------------------+-----------------|
-| *Symbolic dynamics / SFT* | Pillar 2 (SFT) | 1--2 months | None |
+| *Symbolic dynamics / SFT* | Pillar 2 (SFT) | 1--2 months | *Phase 1 done* |
 | *Baker's theorem* | Pillar 4 (persistence) | 3--6 months | Extensive |
 | *Riemann-Hurwitz formula* | Pillar 1 (genus) | 2--3 months | Alg. geometry |
 | *Transfer operators* | Pillar 3 (spectral gap) | 2--3 months | Spectral theory |
@@ -209,85 +209,56 @@ to support the torus dynamics.
 
 ** Phase 1: The Golden Mean Shift (new library needed)              :gap:bridge:
 
-*** TODO [#A] Build =Mathlib.Dynamics.SymbolicDynamics.SFT=
+*** DONE [#A] Build SFT library and golden mean shift
 :PROPERTIES:
 :Effort:   1m
 :END:
 
-This is the biggest "missing piece" in Mathlib for our purposes.
-Needed definitions:
-- =Alphabet=: finite type
-- =FullShift (A : Type) := ℕ → A= (one-sided)
-- =SubShift=: closed, shift-invariant subset of =FullShift=
-- =SFT=: subshift defined by a finite set of forbidden words
-- =TransitionMatrix=: for 1-step SFT, $A_{ij} = 1$ iff $ij$ allowed
-- =TopologicalEntropy=: $h_{\rm top} = \lim \frac{1}{n} \log |W_n|$
+Implemented in =CollatzLean/SFT.lean= and =CollatzLean/FibCounting.lean=.
 
-*Key theorem to formalize:*
+Definitions built from scratch (Mathlib has zero symbolic dynamics):
+- =FullShift (A : Type*) := ℕ → A= (one-sided infinite sequences)
+- =shiftMap=: drop first symbol, $\sigma(x)(n) = x(n+1)$
+- =Word (A : Type*) (k : ℕ) := Fin k → A= (finite words)
+- =extractWord=, =Avoids=, =SFTMem=: subword extraction and avoidance
+- =InGoldenMeanShift=: no two consecutive 1s (the key predicate)
+- =avoidCount=: Fibonacci word counting, $f(0)=1, f(1)=2, f(n+2)=f(n+1)+f(n)$
 
-#+begin_src lean4
--- The golden mean shift
-def goldenMeanShift : SFT (Fin 2) :=
-  SFT.ofForbidden {![1, 1]}   -- forbidden bigram "11"
+Fully proved theorems:
+- =shiftMap_preserves_SFT=: shift map preserves SFT membership
+- =inGoldenMeanShift_iff=: equivalence with SFT avoiding bigram "11"
+- =shiftMap_goldenMean=: shift preserves golden mean shift
+- =avoidCount_eq_fib=: $\text{avoidCount}(n) = \text{fib}(n+2)$
 
--- Its transition matrix
--- A = [[1, 1], [1, 0]]
--- Spectral radius = φ (golden ratio)
+Two =sorry= (deep results requiring substantial Mathlib extensions):
+- =goldenMean_entropy=: topological entropy $= \log \varphi$
+- =goldenMean_max_p_odd=: max $p_{\rm odd}$ under MME $= 1/\varphi^2$
 
--- Topological entropy
-theorem goldenMean_entropy :
-    topologicalEntropy goldenMeanShift = Real.log (goldenRatio) := by
-  sorry -- requires spectral theory of non-negative matrices
-
--- Maximum odd-step frequency under the measure of maximal entropy
-theorem goldenMean_max_p_odd :
-    maximalMeasureOddFreq goldenMeanShift = 1 / goldenRatio ^ 2 := by
-  sorry -- = 1/φ² ≈ 0.382
-#+end_src
-
-*** TODO [#A] Prove Collatz parity sequence lives in golden mean shift
+*** DONE [#A] Prove Collatz parity sequence lives in golden mean shift
 :PROPERTIES:
 :Effort:   1w
 :END:
 
-#+begin_src lean4
--- The parity sequence of any Collatz trajectory is in the golden mean shift
-theorem collatz_parity_in_goldenMean (n : ℕ) (hn : n ≥ 1) :
-    paritySeq n ∈ goldenMeanShift := by
-  intro k
-  -- Need: paritySeq n k = 1 → paritySeq n (k+1) = 0
-  -- This is exactly `collatz_odd_gives_even`
-  exact no_consecutive_odd ...
-#+end_src
+Implemented in =CollatzLean/CollatzSFT.lean=.  Fully proved, zero =sorry=.
 
-*** TODO [#B] Prove $1/\varphi^2 < \log_2(3) - 1$ (the near-miss)
+- =collatzParitySeq=: parity sequence as =FullShift (Fin 2)= element
+- =collatzSeq_pos=: Collatz iterates stay $\ge 1$ for $n \ge 1$
+- =collatzParitySeq_in_goldenMean=: the key theorem, bridging
+  =parityBit = 1 \leftrightarrow \text{isOddStep} = \text{true}=
+  with =no_consecutive_odd_steps= from Phase 0
+
+*** DONE [#B] Prove $\log_2(3) < \varphi$ (the near-miss inequality)
 :PROPERTIES:
 :Effort:   2d
 :END:
 
-This is a numerical inequality between algebraic and transcendental numbers.
-$1/\varphi^2 = (3 - \sqrt{5})/2 \approx 0.38197$ vs
-$\log_2 3 - 1 \approx 0.58496$.
+Implemented in =CollatzLean/FibCounting.lean=.  Fully proved via rational sandwich:
 
-Wait---the equilibrium threshold is actually
-$p_{\rm eq} = 1 - 1/\log_2 3 \approx 0.387$.
-And $1/\varphi^2 \approx 0.382 < 0.387 = p_{\rm eq}$.
-
-So we need: $1/\varphi^2 < 1 - 1/\log_2 3$.
-
-Equivalently: $\log_2 3 < 1/(1 - 1/\varphi^2) = \varphi^2/(\varphi^2 - 1) = \varphi^2/\varphi = \varphi$.
-
-That is: $\log_2 3 < \varphi$?
-
-$\log_2 3 \approx 1.585$ and $\varphi \approx 1.618$.  Yes, $\log_2 3 < \varphi$.
-
-#+begin_src lean4
--- The critical inequality
--- log₂(3) < φ, equivalently 2^φ > 3, equivalently 2^((1+√5)/2) > 3
-theorem log2_three_lt_golden_ratio :
-    Real.logb 2 3 < goldenRatio := by
-  sorry -- numerical verification; can be done via interval arithmetic
-#+end_src
+- =logb_two_three_lt=: $\log_2(3) < 8/5$, via $3^5 = 243 < 256 = 2^8$
+  (cross-multiply, use =log_pow= + =log_lt_log=)
+- =eight_fifths_lt_goldenRatio=: $8/5 < \varphi$, via $(11/5)^2 = 121/25 < 5$
+  (use =lt_of_pow_lt_pow_left₀= with =sq_sqrt=)
+- =log2_three_lt_goldenRatio=: $\log_2(3) < \varphi$ (=calc= chain)
 
 /This single inequality is why the golden mean shift almost proves Collatz./
 
@@ -610,14 +581,20 @@ argument using the geometric series structure of $R(t)$.
    numbers, multiplicative identity, torus residues).  Implemented in
    =CollatzLean/Basic.lean=, =Parity.lean=, =Winding.lean=, =Torus.lean=,
    =Identity.lean=.  Zero =sorry=, builds clean.
-3. [ ] *Write the SFT library stub* (types and signatures only).  This scopes
-   the Phase 1 effort and can be submitted as a Mathlib PR.
+3. [X] *Formalize Phase 1* (SFT library, golden mean shift, Collatz
+   connection).  Implemented in =CollatzLean/SFT.lean=,
+   =FibCounting.lean=, =CollatzSFT.lean=.  Two =sorry= remain
+   (=goldenMean_entropy=, =goldenMean_max_p_odd=).  All other theorems
+   fully proved including $\log_2(3) < \varphi$ and the main result
+   =collatzParitySeq_in_goldenMean=.
 4. [ ] *Wait for the 10B run* to determine the branch count convergence.
 5. [ ] *Decide: Baker vs. finite-state bypass.*  If the transfer operator
    spectral gap can be computed (Item 3 in "Gaps to Close"), take the bypass
    route.  Otherwise, commit to the Baker formalization.
 6. [ ] *Resolve the mathematical gaps* (previous section) with pen-and-paper
    proofs before attempting Lean formalization.
+7. [ ] *Begin Phase 2* (torus dynamics): define branch locus, tunnel,
+   reflecting boundary on $(\mathbb{Z}/k\mathbb{Z})^2$.
 
 * Appendix: What Has Been Verified Computationally
 
