@@ -81,13 +81,13 @@ must be made rigorous (the hardest part).
 
 ** Must Be Built (critical gaps)                                    :gap:
 
-| Component | Needed for | Estimated effort | Dependency |
-|------------------------------+-----------------------+------------------+-----------------|
+| Component | Needed for | Estimated effort | Status |
+|------------------------------+-----------------------+------------------+----------------------|
 | *Symbolic dynamics / SFT* | Pillar 2 (SFT) | 1--2 months | *Phase 1 done* |
-| *Baker's theorem* | Pillar 4 (persistence) | 3--6 months | Extensive |
-| *Riemann-Hurwitz formula* | Pillar 1 (genus) | 2--3 months | Alg. geometry |
-| *Transfer operators* | Pillar 3 (spectral gap) | 2--3 months | Spectral theory |
-| *Branched covers of tori* | Pillar 1 (surface) | 2--3 months | Covering spaces |
+| *Baker's theorem* | Pillar 4 (persistence) | 3--6 months | *Phase 3 scaffolded* |
+| *Riemann-Hurwitz formula* | Pillar 1 (genus) | 2--3 months | Not started |
+| *Transfer operators* | Pillar 3 (spectral gap) | 2--3 months | Not started |
+| *Branched covers of tori* | Pillar 1 (surface) | 2--3 months | Not started |
 
 ** Assessment
 
@@ -460,7 +460,9 @@ Fully proved:
 
 One =sorry=:
 - =correction_bound=: $\exists C, \forall t, \text{correction}(n,t) \le C \cdot 3^{\nu_3}$
-  (needs analysis of the geometric series structure of the correction recurrence)
+  (genuinely hard: the correction recurrence at odd steps introduces terms
+  involving =collatzSeq= values, so simple induction fails; requires global
+  trajectory analysis or a priori bounds on intermediate values)
 
 The capstone proof:
 #+begin_src lean4
@@ -580,15 +582,17 @@ This is the "finite-state bypass" question.  If we can construct the
 transition matrix and verify its spectral gap, we avoid Baker entirely.
 The matrix is ~10K × 10K---large but not impossible.
 
-** OPEN What is the precise relationship between the walk $u(t)$ diverging and $T^t(n) \to 1$?
+** DONE What is the precise relationship between the walk $u(t)$ diverging and $T^t(n) \to 1$?
 
-The identity $T^t(n) = n \cdot 2^{-\nu_2} \cdot 3^{\nu_3} + R(t)$ where
-$R(t)$ is a correction term.  We need $|R(t)| < T^t(n)$ eventually, so that
-the multiplicative factor $2^{-\nu_2} \cdot 3^{\nu_3} = 2^{-u(t) \cdot C}$
-dominates and drives $T^t(n) \to 0$.
+*Resolved in Phase 4* (=Conclusion.lean=).  The bridge is:
+1. The multiplicative identity: $T^t(n) \cdot 2^{\nu_2} = n \cdot 3^{\nu_3} + R(t)$.
+2. A correction bound: $R(t) \le C \cdot 3^{\nu_3}$ (sorry'd as =correction_bound=).
+3. Walk divergence gives $\nu_2 - \log_2(3) \cdot \nu_3 \to +\infty$, so
+   $(n+C) \cdot 3^{\nu_3} < 2^{\nu_2}$ eventually.
+4. Therefore $T^t(n) \cdot 2^{\nu_2} < 2 \cdot 2^{\nu_2}$, giving $T^t(n) = 1$.
 
-This requires bounding the correction term---a non-trivial but standard
-argument using the geometric series structure of $R(t)$.
+The correction bound is the remaining hard sorry---simple induction fails
+because the recurrence at odd steps introduces =collatzSeq= values.
 
 * Immediate Next Actions
 
@@ -627,6 +631,38 @@ argument using the geometric series structure of $R(t)$.
    Total project: 14 =sorry= across 14 files, ~1375 lines.
    Of these, 12 are logically independent (the 2 in Walk.lean are
    redundant with Phase 4 theorems).
+
+* Sorry Inventory (14 total, 12 logically independent)
+
+The 2 sorry's in Walk.lean (=podd_lt_equilibrium_limit=, =walk_diverges=) are
+logically implied by Phase 4 theorems but kept to avoid circular imports.
+
+| # | File | Theorem | Category | Hard? |
+|---+------------------+-----------------------------------+---------------------+-------|
+| 1 | Baker.lean | =baker_aux_construction= | Gel'fond--Schneider | Yes |
+| 2 | Baker.lean | =baker_extrapolation= | Gel'fond--Schneider | Yes |
+| 3 | Baker.lean | =baker_zero_estimate= | Gel'fond--Schneider | Yes |
+| 4 | Baker.lean | =baker_effective_bound= | Gel'fond--Schneider | Yes |
+| 5 | Baker.lean | =baker_two_three= | Gel'fond--Schneider | Yes |
+| 6 | TunnelWidth.lean | =diophError_lower_bound= | Baker application | Med |
+| 7 | TunnelWidth.lean | =tunnel_walls_positive_of_baker= | Geometric bridge | Med |
+| 8 | TunnelWidth.lean | =tunnel_foliation_intersection= | Weyl equidistr. | Med |
+| 9 | TunnelWidth.lean | =tunnel_walls_positive= | Composition | Easy |
+| 10 | Walk.lean | =podd_lt_equilibrium_limit= | Redundant (Phase 4) | --- |
+| 11 | Walk.lean | =walk_diverges= | Redundant (Phase 4) | --- |
+| 12 | FibCounting.lean | =goldenMean_entropy= | Real analysis limit | Med |
+| 13 | Drift.lean | =podd_uniform_bound= | Ergodic theory | Yes |
+| 14 | Conclusion.lean | =correction_bound= | Trajectory analysis | Yes |
+
+*Hard* = requires new mathematical machinery or deep Mathlib extensions.
+*Med* = known math, moderate formalization effort.
+*Easy* = direct composition of other results.
+
+The 5 Baker chain stubs (#1--5) are the long pole: they require formalizing the
+Gel'fond--Schneider proof of transcendence measures, which has no Mathlib
+precedent.  If the finite-state bypass (Phase 4alt) succeeds, these 5 + the 4
+TunnelWidth sorry's become unnecessary, leaving only 3 independent sorry's
+(#12, #13, #14).
 
 * Appendix: What Has Been Verified Computationally
 
