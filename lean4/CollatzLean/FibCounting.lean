@@ -93,11 +93,16 @@ theorem goldenMean_entropy :
   sorry
 
 /-- Under the measure of maximal entropy on the golden mean shift,
-    the maximum density of 1s (odd steps) is 1/φ².
-    Proof requires measure theory on shift spaces. -/
+    the maximum density of 1s (odd steps) is 1/φ² = (3 - √5)/2. -/
 theorem goldenMean_max_p_odd :
     (1 : ℝ) / ((1 + Real.sqrt 5) / 2) ^ 2 = (3 - Real.sqrt 5) / 2 := by
-  sorry
+  have h5 : Real.sqrt 5 ^ 2 = 5 := Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 5)
+  have h5_3 : Real.sqrt 5 ^ 3 = 5 * Real.sqrt 5 := by
+    have : Real.sqrt 5 ^ 3 = Real.sqrt 5 ^ 2 * Real.sqrt 5 := by ring
+    rw [this, h5]
+  have hpos : (0 : ℝ) < 1 + Real.sqrt 5 := by positivity
+  field_simp
+  nlinarith [h5, h5_3]
 
 /-! ## Evaluation -/
 

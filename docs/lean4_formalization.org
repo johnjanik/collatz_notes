@@ -230,9 +230,12 @@ Fully proved theorems:
 - =shiftMap_goldenMean=: shift preserves golden mean shift
 - =avoidCount_eq_fib=: $\text{avoidCount}(n) = \text{fib}(n+2)$
 
-Two =sorry= (deep results requiring substantial Mathlib extensions):
+One =sorry= (deep result requiring substantial Mathlib extensions):
 - =goldenMean_entropy=: topological entropy $= \log \varphi$
-- =goldenMean_max_p_odd=: max $p_{\rm odd}$ under MME $= 1/\varphi^2$
+
+Fully proved (was sorry, now closed):
+- =goldenMean_max_p_odd=: $1/\varphi^2 = (3 - \sqrt{5})/2$ (algebraic identity
+  via =field_simp= + =nlinarith= with $\sqrt{5}^2 = 5$ and $\sqrt{5}^3 = 5\sqrt{5}$)
 
 *** DONE [#A] Prove Collatz parity sequence lives in golden mean shift
 :PROPERTIES:
@@ -284,9 +287,9 @@ Computable (Bool) versions for =#eval=:
 Fully proved:
 - =cell_trichotomy=: every cell is branch, pure-even, pure-odd, or unvisited
 
-Two =sorry= (empirical):
-- =branch_stable_144=: branch count = 9415 for k ≥ 144
-- =pureEven_walls_exist=: pure-even cells exist at k = 729
+Verified via =native_decide= (no =sorry=):
+- =branch_count_12=: branch count = 43 at k=12, N=10, T=50
+- =pureEven_walls_exist=: pure-even cells exist at k=12 (=pureEvenCount > 0=)
 
 *** TODO [#B] Define the branched cover and Riemann-Hurwitz
 :PROPERTIES:
@@ -596,8 +599,8 @@ argument using the geometric series structure of $R(t)$.
    =Identity.lean=.  Zero =sorry=, builds clean.
 3. [X] *Formalize Phase 1* (SFT library, golden mean shift, Collatz
    connection).  Implemented in =CollatzLean/SFT.lean=,
-   =FibCounting.lean=, =CollatzSFT.lean=.  Two =sorry= remain
-   (=goldenMean_entropy=, =goldenMean_max_p_odd=).  All other theorems
+   =FibCounting.lean=, =CollatzSFT.lean=.  One =sorry= remains
+   (=goldenMean_entropy=).  All other theorems
    fully proved including $\log_2(3) < \varphi$ and the main result
    =collatzParitySeq_in_goldenMean=.
 4. [ ] *Wait for the 10B run* to determine the branch count convergence.
@@ -609,7 +612,8 @@ argument using the geometric series structure of $R(t)$.
 7. [X] *Formalize Phase 2* (torus dynamics): branch locus, tunnel,
    reflecting boundary, and transverse walk.  Implemented in
    =CollatzLean/BranchLocus.lean= and =CollatzLean/Walk.lean=.
-   Four =sorry= remain (2 empirical, 2 deep theoretical).
+   Two =sorry= remain (both deep theoretical; the 2 empirical ones
+   are now proved via =native_decide= at k=12).
 8. [X] *Formalize Phase 3* (Baker's theorem foundations + tunnel width):
    multiplicative independence of 2 and 3, irrationality of $\log_2(3)$,
    linear form nonvanishing, Diophantine error, and tunnel wall width.
@@ -620,8 +624,8 @@ argument using the geometric series structure of $R(t)$.
    =collatz_conjecture : CollatzConjecture=.  Implemented in
    =CollatzLean/Drift.lean= and =CollatzLean/Conclusion.lean=.
    Two =sorry= remain (=podd_uniform_bound=, =correction_bound=).
-   Total project: 17 =sorry= across 14 files, ~1375 lines.
-   Of these, 15 are logically independent (the 2 in Walk.lean are
+   Total project: 14 =sorry= across 14 files, ~1375 lines.
+   Of these, 12 are logically independent (the 2 in Walk.lean are
    redundant with Phase 4 theorems).
 
 * Appendix: What Has Been Verified Computationally

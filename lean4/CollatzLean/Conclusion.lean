@@ -18,7 +18,9 @@ open Real
 /-! ## Correction bound -/
 
 /-- The correction term grows at most as C · 3^(ν₃(n,t)).
-    Requires analysis of the geometric series structure of the correction recurrence. -/
+    This is genuinely hard: the correction recurrence at odd steps introduces
+    terms involving collatzSeq values, so simple induction fails. Requires
+    global trajectory analysis or a priori bounds on intermediate values. -/
 theorem correction_bound (n : ℕ) (_hn : n ≥ 1) :
     ∃ C : ℕ, ∀ t, correction n t ≤ C * 3 ^ nu3 n t := by
   sorry
