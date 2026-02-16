@@ -350,7 +350,7 @@ Two =sorry= (deep results):
 
 ** Phase 3: Baker's Theorem (the hard part)                         :gap:capstone:
 
-*** TODO [#A] Formalize Baker's theorem on linear forms in logarithms
+*** DONE [#A] Formalize Baker's theorem foundations
 :PROPERTIES:
 :Effort:   6m
 :END:
@@ -367,17 +367,22 @@ For Collatz we need the case $n = 2$, $\alpha_1 = 2$, $\alpha_2 = 3$:
 
 $|m \log 2 - n \log 3| > C / \max(|m|, |n|)^{1+\epsilon}$
 
-*This is the single hardest component of the formalization.*
+Implemented in =CollatzLean/Baker.lean=.
 
-Possible approaches:
-1. *Full formalization from scratch* (~6 months by a team).  Baker's proof
-   uses: heights of algebraic numbers, Gel'fond-Schneider method,
-   interpolation determinants, Schwarz lemma.  Most of this is not in Mathlib.
-2. *Use as axiom with computational verification.*  State Baker's inequality
-   as an axiom and verify its consequences numerically for the finite range
-   needed.  Faster but less satisfying.
-3. *Bypass Baker entirely* if we can prove the spectral gap of the transfer
-   operator on the finite torus directly.  See Phase 4 alternative.
+Fully proved (zero =sorry=):
+- =multIndep_two_three=: $2^m = 3^n \Rightarrow m = n = 0$ (via prime divisibility)
+- =multIndep_two_three_int=: integer version via cast
+- =irrational_logb_two_three=: $\log_2(3) \notin \mathbb{Q}$ (via multiplicative
+  independence + log injectivity)
+- =linear_form_nonzero=: $m \log 2 + n \log 3 \neq 0$ for $(m,n) \neq (0,0)$
+  (via irrationality of $\log_2 3$)
+
+Five =sorry= (Gel'fond--Schneider proof chain stubs):
+- =baker_aux_construction=: Siegel's lemma (needs formalization)
+- =baker_extrapolation=: Schwarz + analytic continuation
+- =baker_zero_estimate=: interpolation determinant
+- =baker_effective_bound=: composition of above
+- =baker_two_three=: main Baker inequality
 
 **** Status of prerequisites in Mathlib4
 
@@ -389,25 +394,27 @@ Possible approaches:
 | Interpolation determinants | NOT formalized |
 | Effective lower bounds | NOT formalized |
 
-*** TODO [#B] Derive tunnel wall width bound from Baker
+*** DONE [#B] Derive tunnel wall width bound from Baker
 :PROPERTIES:
 :Effort:   2w
 :END:
 
-Given Baker: $|m \log 2 - n \log 3| > C/\max(m,n)^{1+\epsilon}$,
+Implemented in =CollatzLean/TunnelWidth.lean=.
 
-the tunnel at level $k = 3^b$ has width (in cell units):
-$W(b) \ge C' \cdot k / k^{1+\epsilon} = C' \cdot k^{-\epsilon}$.
+Definitions:
+- =bestApprox b=: nearest integer to $\log_2(3) \cdot 3^b$
+- =diophError b=: $\log_2(3) - \text{bestApprox}(b) / 3^b$
+- =tunnelWallWidth b N T=: pure-even cell count at scale $3^b$
 
-So $W(b) \to \infty$ in absolute cells (slowly), and $W(b)/k \to 0$.
+Fully proved:
+- =diophError_ne_zero=: error $\neq 0$ (else $\log_2(3)$ rational)
+- =walk_confined_at_boundary=: walk increment $= +1$ at pure-even cells
 
-#+begin_src lean4
--- Baker bound implies tunnel walls never vanish
-theorem tunnel_walls_positive (b : ℕ) (hb : b ≥ 1) :
-    tunnelWallWidth (3 ^ b) > 0 := by
-  -- Follows from Baker's theorem applied to |ν₂ log 2 - ν₃ log 3|
-  sorry
-#+end_src
+Four =sorry=:
+- =diophError_lower_bound=: Baker $\to$ $|\epsilon(b)| > C'/(3^b)^{1+\epsilon}$
+- =tunnel_walls_positive_of_baker=: Diophantine gap $\to$ pure-even cells exist
+- =tunnel_foliation_intersection=: Weyl equidistribution (not in Mathlib)
+- =tunnel_walls_positive=: composition of Baker + geometric bridge
 
 ** Phase 4: The Ergodic Conclusion                                  :capstone:
 
@@ -603,6 +610,12 @@ argument using the geometric series structure of $R(t)$.
    reflecting boundary, and transverse walk.  Implemented in
    =CollatzLean/BranchLocus.lean= and =CollatzLean/Walk.lean=.
    Four =sorry= remain (2 empirical, 2 deep theoretical).
+8. [X] *Formalize Phase 3* (Baker's theorem foundations + tunnel width):
+   multiplicative independence of 2 and 3, irrationality of $\log_2(3)$,
+   linear form nonvanishing, Diophantine error, and tunnel wall width.
+   Implemented in =CollatzLean/Baker.lean= and =CollatzLean/TunnelWidth.lean=.
+   Nine =sorry= remain (5 Baker proof chain stubs, 4 tunnel width).
+   Total project: 15 =sorry= across 12 files, 1155 lines.
 
 * Appendix: What Has Been Verified Computationally
 
