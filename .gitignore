@@ -13,6 +13,11 @@ c_scripts/branch_locus
 # Video output
 c_scripts/frames/output.mp4
 
+# Large CSV data files
+c_scripts/branch_cells.csv
+c_scripts/branch_foliation.csv
+c_scripts/profinite_forbidden.csv
+
 # Emacs backup/lock files
 *~
 \#*\#
