@@ -264,21 +264,29 @@ Implemented in =CollatzLean/FibCounting.lean=.  Fully proved via rational sandwi
 
 ** Phase 2: The Torus Dynamics (moderate Mathlib extensions)        :bridge:
 
-*** TODO [#A] Define the branch locus on $(\mathbb{Z}/k\mathbb{Z})^2$
+*** DONE [#A] Define the branch locus on $(\mathbb{Z}/k\mathbb{Z})^2$
 :PROPERTIES:
 :Effort:   1w
 :END:
 
-#+begin_src lean4
--- A cell is "branch" if visited by both even and odd steps
-def isBranchCell (k : ℕ) (cell : ZMod k × ZMod k) (N : ℕ) : Prop :=
-  (∃ n t, n ≤ N ∧ torusResidue k n t = cell ∧ isEvenStep n t) ∧
-  (∃ n t, n ≤ N ∧ torusResidue k n t = cell ∧ isOddStep n t)
+Implemented in =CollatzLean/BranchLocus.lean=.
 
--- The branch locus
-def branchLocus (k N : ℕ) : Set (ZMod k × ZMod k) :=
-  {cell | isBranchCell k cell N}
-#+end_src
+Prop definitions:
+- =hasEvenVisit=, =hasOddVisit=: existence of even/odd visits at a cell
+- =isBranchCell=: both even and odd visits (=hasEvenVisit ∧ hasOddVisit=)
+- =isPureEven=: even visits only (=hasEvenVisit ∧ ¬hasOddVisit=)
+- =isPureOdd=: odd visits only (=hasOddVisit ∧ ¬hasEvenVisit=)
+
+Computable (Bool) versions for =#eval=:
+- =hasEvenVisitBool=, =hasOddVisitBool=, =isBranchCellBool=, =isPureEvenBool=
+- =branchCount=, =pureEvenCount=: cell counts via =Finset.univ.filter=
+
+Fully proved:
+- =cell_trichotomy=: every cell is branch, pure-even, pure-odd, or unvisited
+
+Two =sorry= (empirical):
+- =branch_stable_144=: branch count = 9415 for k ≥ 144
+- =pureEven_walls_exist=: pure-even cells exist at k = 729
 
 *** TODO [#B] Define the branched cover and Riemann-Hurwitz
 :PROPERTIES:
@@ -304,43 +312,41 @@ theorem genus_stable (k₁ k₂ N : ℕ) (h₁ : k₁ ≥ 144) (h₂ : k₂ ≥ 
   sorry -- requires deep structural argument
 #+end_src
 
-*** TODO [#B] Define the tunnel: pure-even walls and branch core
+*** DONE [#B] Define the tunnel: pure-even walls and branch core
 :PROPERTIES:
 :Effort:   1w
 :END:
 
-#+begin_src lean4
--- A cell is pure-even if visited only by even steps
-def isPureEven (k : ℕ) (cell : ZMod k × ZMod k) (N : ℕ) : Prop :=
-  (∃ n t, n ≤ N ∧ torusResidue k n t = cell ∧ isEvenStep n t) ∧
-  (∀ n t, n ≤ N → torusResidue k n t = cell → isEvenStep n t)
+Implemented in =CollatzLean/BranchLocus.lean=.
 
--- The tunnel: branch core flanked by pure-even walls
-def tunnel (k N : ℕ) : Set (ZMod k × ZMod k) :=
-  branchLocus k N ∪ {cell | isPureEven k cell N}
-#+end_src
+- =tunnel k N T=: the set of cells that are branch or pure-even
+  (=isBranchCell ∨ isPureEven=)
 
-*** TODO [#A] Formalize the reflecting boundary property
+*** DONE [#A] Formalize the reflecting boundary property
 :PROPERTIES:
 :Effort:   2w
 :END:
 
-The key dynamical property: when a trajectory's torus residue enters
-a pure-even cell, the next step is necessarily even ($n/2$), which
-decrements $u(t)$.
+Implemented across =CollatzLean/BranchLocus.lean= and =CollatzLean/Walk.lean=.
 
-#+begin_src lean4
--- If the trajectory is at a pure-even cell, the next step is even
-theorem pureEven_forces_even (k N n t : ℕ) (cell : ZMod k × ZMod k)
-    (hcell : isPureEven k cell N)
-    (hres : torusResidue k n t = cell)
-    (hn : n ≤ N) :
-    isEvenStep n t := by
-  exact hcell.2 n t hn hres
+Fully proved in BranchLocus.lean:
+- =pureEven_forces_even=: at a pure-even cell, every visit is an even step
 
--- Even step decrements u(t) by 1 - log₂3 · 0 = 1
--- (contribution to walk: Δu = +1 for even, -(log₂3 - 1) for odd)
-#+end_src
+Fully proved in Walk.lean:
+- =walkIncrement_at_pureEven=: at a pure-even cell, the walk increment is +1
+
+Walk.lean also defines and proves the transverse walk infrastructure:
+- =walk n t=: $u(t) = \nu_2 - \log_2(3) \cdot \nu_3$
+- =walkIncrement=: $+1$ if even, $-\log_2(3)$ if odd
+- =meanWalkIncrement=, =p_equilibrium= ($= 1/(1 + \log_2 3)$)
+- =walk_zero=, =walk_step_even=, =walk_step_odd=: base case and step rules
+- =walk_increment_eq=, =walk_eq_sum_increments=: increment characterization
+- =meanWalkIncrement_eq=: $\bar{u}(t) = 1 - (1 + \log_2 3)(p_{\rm odd})$
+- =drift_positive_of_podd_lt=: positive drift when $p_{\rm odd} < p_{\rm eq}$
+
+Two =sorry= (deep results):
+- =podd_lt_equilibrium_limit=: Cesaro $p_{\rm odd} < p_{\rm eq}$ (needs ergodic thm)
+- =walk_diverges=: $u(t) \to +\infty$ (Phase 4 capstone)
 
 ** Phase 3: Baker's Theorem (the hard part)                         :gap:capstone:
 
@@ -593,8 +599,10 @@ argument using the geometric series structure of $R(t)$.
    route.  Otherwise, commit to the Baker formalization.
 6. [ ] *Resolve the mathematical gaps* (previous section) with pen-and-paper
    proofs before attempting Lean formalization.
-7. [ ] *Begin Phase 2* (torus dynamics): define branch locus, tunnel,
-   reflecting boundary on $(\mathbb{Z}/k\mathbb{Z})^2$.
+7. [X] *Formalize Phase 2* (torus dynamics): branch locus, tunnel,
+   reflecting boundary, and transverse walk.  Implemented in
+   =CollatzLean/BranchLocus.lean= and =CollatzLean/Walk.lean=.
+   Four =sorry= remain (2 empirical, 2 deep theoretical).
 
 * Appendix: What Has Been Verified Computationally
 
