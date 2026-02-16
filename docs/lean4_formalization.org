@@ -15,9 +15,10 @@ Our proof strategy (see =next_steps.md= Items 9, 13--14, corrected 2026-02-16)
 rests on four pillars:
 
 1. *Topological rigidity.* The branch locus on $(\mathbb{Z}/k\mathbb{Z})^2$
-   stabilizes for $k \ge 144$: same 9,415+ branch cells, same entropy, same
-   singular structure regardless of resolution.  The "Collatz Surface" is a
-   finite-genus Riemann surface (degree-2 branched cover of $\mathbb{T}^2$).
+   grows with sampling depth: 9,415 branch cells at $N = 10^8$, 16,371 at
+   $N = 10^{10}$ (k=144).  The branch count has /not/ converged, so the genus
+   is not yet defined.  However, the tunnel structure (branch + pure-even)
+   is stable and the core proof uses the reflecting boundary, not the genus.
 
 2. *SFT constraint.* The parity sequence is a golden mean shift (forbidden
    bigram "11").  This alone restricts $p_{\rm odd} \le 1/\varphi^2 = 0.382$,
@@ -567,14 +568,22 @@ the /Cesaro average/ of $p_{\rm odd}$ converges to something $< p_{\rm eq}$.
 This requires the ergodic theorem, which in turn requires the transfer
 operator spectral gap.
 
-** OPEN Does the branch count converge as $N \to \infty$?
+** DONE Does the branch count converge as $N \to \infty$?
 
-Our data shows 9,415 branch cells at $N = 10^8$.  Old code showed ~13,688 at
-$N = 10^9$.  The 10B run will give us the $N = 10^{10}$ number.  If the count
-is still growing, the genus is not yet defined.
+*Answer: No, it has not converged.*  The 10B run ($N = 10^{10}$) gives:
 
-This matters for the Riemann-Hurwitz calculation but NOT for the core proof
-(which uses the tunnel reflecting boundary, not the genus).
+| k | N=10^8 | N=10^{10} | Change |
+|-----+--------+-----------+--------|
+| 144 | 9,415 | 16,371 | +74% |
+| 729 | --- | 16,577 | --- |
+
+The branch count is still growing.  The genus (Riemann-Hurwitz) is therefore
+not yet defined as a finite quantity.  Pure-even walls also grew: 659 at k=144,
+893 at k=729.
+
+This does /not/ affect the core proof, which uses the tunnel reflecting
+boundary (branch + pure-even), not the genus.  The tunnel structure remains
+well-defined at every finite $N$.
 
 ** OPEN Can the spectral gap of the transfer operator on the $k = 144$ torus be computed?
 
@@ -607,7 +616,9 @@ because the recurrence at odd steps introduces =collatzSeq= values.
    (=goldenMean_entropy=).  All other theorems
    fully proved including $\log_2(3) < \varphi$ and the main result
    =collatzParitySeq_in_goldenMean=.
-4. [ ] *Wait for the 10B run* to determine the branch count convergence.
+4. [X] *10B run complete* (2026-02-16, 19.5h wall time).  Branch count has
+   NOT converged: 16,371 at k=144 (up from 9,415 at N=10^8).  Genus undefined.
+   Pure-even walls: 659 (k=144), 893 (k=729).  p_odd=0.3324.  SFT "11" PASS.
 5. [ ] *Decide: Baker vs. finite-state bypass.*  If the transfer operator
    spectral gap can be computed (Item 3 in "Gaps to Close"), take the bypass
    route.  Otherwise, commit to the Baker formalization.
@@ -667,18 +678,22 @@ TunnelWidth sorry's become unnecessary, leaving only 3 independent sorry's
 * Appendix: What Has Been Verified Computationally
 
 These are /not/ formal proofs, but they provide confidence and guide the
-formalization.  All data from =branch_locus.c= at $N = 10^8$--$10^{10}$.
+formalization.  Data from =branch_locus.c=; N=10^{10} run completed 2026-02-16
+(19.5h, 2.27×10^{12} steps).
 
 | Claim | Status | Data |
-|----------------------------------------------+--------+------------------------|
-| "11" forbidden at all torus cells | VERIFIED | 17.8×10⁹ transitions |
-| Branch count stable for $k \ge 144$ | VERIFIED | 25 levels, all = 9,415 |
+|----------------------------------------------+----------+-------------------------------|
+| "11" forbidden at all torus cells | VERIFIED | 2.27×10¹² steps, 0 oo trans. |
+| Branch count at k=144 | GROWING | 9,415 (N=10⁸) → 16,371 (10¹⁰) |
+| Branch count at k=729 | GROWING | 16,577 (N=10¹⁰) |
+| Pure-even walls flank branch core | VERIFIED | k=144: 659, k=729: 893 |
+| Zero pure-odd cells | VERIFIED | All levels, N=10¹⁰ |
 | Profinite compatibility (200 pairs) | VERIFIED | N=10⁹, exact match |
-| Pure-even walls flank branch core | VERIFIED | k=729, 1,269 pure-even |
 | Irrational foliation passes through strip | VERIFIED | 180 branch cells on L |
+| Foliation enrichment drops at high k | NEW | k=729: U=0.045, S=0.426 |
 | Shadow offset bisects strip | VERIFIED | Max offset 0.044 cells |
-| $p_{\rm odd} \approx 0.332 < 0.387$ | VERIFIED | N=10⁸, global mean |
-| Transition fractions ~1/3 each (ee/eo/oe) | VERIFIED | ee=33.5%, eo=33.1% |
+| $p_{\rm odd} = 0.3324 < 0.387$ | VERIFIED | N=10¹⁰, global mean |
+| Transition fractions ~1/3 each (ee/eo/oe) | VERIFIED | ee=33.45%, eo=33.16%, oe=33.39% |
 | $T_{\rm mean} \approx 179$ steps | VERIFIED | N=10⁸ |
 | Strip half-width 13.8 cells at k=729 | VERIFIED | 47% of random walk |
 
