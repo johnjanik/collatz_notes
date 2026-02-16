@@ -6,3 +6,5 @@ import CollatzLean.Identity
 import CollatzLean.SFT
 import CollatzLean.FibCounting
 import CollatzLean.CollatzSFT
+import CollatzLean.BranchLocus
+import CollatzLean.Walk
