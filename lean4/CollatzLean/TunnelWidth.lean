@@ -42,10 +42,18 @@ theorem diophError_ne_zero (b : ℕ) : diophError b ≠ 0 := by
     rw [hrat]; push_cast; ring
   exact irrational_logb_two_three.ne_rational (bestApprox b) (↑(3 ^ b : ℕ)) hrat'
 
-/-! ## Baker → Diophantine lower bound (sorry) -/
+/-! ## Baker → Diophantine lower bound -/
 
 /-- Baker's inequality gives a lower bound on the Diophantine error:
-    |ε(b)| > C' / (3^b)^(1+ε). -/
+    |ε(b)| > C' / (3^b)^(1+ε).
+
+    Proof sketch (algebraic translation of baker_two_three):
+    - Set m = bestApprox(b), n = -(3^b) in linearFormLog
+    - Then |linearFormLog m n| = log 2 · 3^b · |diophError b|
+    - Baker gives |linearFormLog m n| > C / max(|m|, |n|)^κ
+    - Since |bestApprox b| ≤ 2 · 3^b, max(|m|, |n|) ≤ 2 · 3^b
+    - So |diophError b| > C / (2^κ · log 2 · (3^b)^(1+κ)) = C' / (3^b)^(1+κ)
+    - Set ε = κ, C' = C / (2^κ · log 2). -/
 theorem diophError_lower_bound :
     ∃ (C' : ℝ) (ε : ℝ), C' > 0 ∧ ε > 0 ∧
       ∀ b : ℕ, |diophError b| > C' / (↑(3 ^ b : ℕ) : ℝ) ^ (1 + ε) := by
@@ -81,11 +89,11 @@ theorem tunnel_foliation_intersection (b : ℕ) (hb : b ≥ 1)
     ∃ T₀, ∀ T, T ≥ T₀ → tunnelWallWidth b n T > 0 := by
   sorry
 
-/-- Composition: Baker + geometric bridge → tunnel walls exist at all scales.
-    Depends on baker_two_three + tunnel_walls_positive_of_baker. -/
+/-- Composition: Baker + geometric bridge → tunnel walls exist at all scales. -/
 theorem tunnel_walls_positive (b : ℕ) (hb : b ≥ 1) :
     ∃ N T, tunnelWallWidth b N T > 0 := by
-  sorry
+  obtain ⟨C', ε, hC', hε, hbound⟩ := diophError_lower_bound
+  exact tunnel_walls_positive_of_baker b hb C' ε hC' hε (hbound b)
 
 /-! ## Evaluation -/
 

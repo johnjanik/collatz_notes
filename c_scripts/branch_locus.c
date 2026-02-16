@@ -55,8 +55,10 @@ static const struct { int b; long k; long numer; } dioph_levels[] = {
 };
 #define N_DIOPH  (sizeof(dioph_levels)/sizeof(dioph_levels[0]))
 
-/* Target levels for parity transition tracking */
-static const int trans_targets[] = {81, 108, 144, 729, 19683};
+/* Target levels for parity transition tracking.
+ * k=19683 excluded: SFT "11" already verified at k=729 (2.27T steps, 0 oo).
+ * Including k=19683 here adds ~9.3 GB + ~2 days for N=10^11. */
+static const int trans_targets[] = {81, 108, 144, 729};
 #define N_TRANS_TARGETS  (sizeof(trans_targets)/sizeof(trans_targets[0]))
 
 /* ── Structures ─────────────────────────────────────────────────────── */
@@ -91,6 +93,15 @@ static int64_t  total_trajs, total_steps;
 static int64_t  total_even_steps, total_odd_steps;
 static double   global_p_odd, mean_traj_len;
 
+/* ── Checkpoint system ────────────────────────────────────────────── */
+
+#define MAX_CHECKPOINTS 200
+
+static int64_t  ckpt_Ns[MAX_CHECKPOINTS];
+static int      n_ckpts;
+static int      next_ckpt;
+static FILE    *ckpt_fp;
+
 /* ── Timer utility ─────────────────────────────────────────────────── */
 
 static struct timespec _ts;
@@ -110,6 +121,73 @@ static void fmt_time(double s, char *buf, size_t len)
     else
         snprintf(buf, len, "%dh%02dm%02ds",
                  (int)(s / 3600), ((int)s % 3600) / 60, (int)s % 60);
+}
+
+/* ── Checkpoint: periodic snapshot of cell counts ──────────────────── */
+
+static void checkpoint_init(int64_t max_N)
+{
+    n_ckpts = 0;
+
+    /* Generate geometrically spaced checkpoints: 10 per decade */
+    double log_start = (max_N >= 1000000) ? 6.0 : log10(3.0);
+    double log_end = log10((double)max_N);
+
+    for (double logn = log_start; logn <= log_end + 0.001; logn += 0.1) {
+        int64_t n = (int64_t)(pow(10.0, logn) + 0.5);
+        if (n < 2) n = 2;
+        if (n > max_N) n = max_N;
+        if (n_ckpts < MAX_CHECKPOINTS) {
+            if (n_ckpts == 0 || n > ckpt_Ns[n_ckpts - 1])
+                ckpt_Ns[n_ckpts++] = n;
+        }
+    }
+    /* Ensure max_N is included */
+    if (n_ckpts == 0 || ckpt_Ns[n_ckpts - 1] != max_N) {
+        if (n_ckpts < MAX_CHECKPOINTS)
+            ckpt_Ns[n_ckpts++] = max_N;
+    }
+
+    next_ckpt = 0;
+
+    ckpt_fp = fopen("branch_checkpoints.csv", "w");
+    if (!ckpt_fp) {
+        perror("branch_checkpoints.csv");
+        return;
+    }
+    fprintf(ckpt_fp, "checkpoint_N,k,a,b,branch,pure_even,pure_odd,empty\n");
+    fflush(ckpt_fp);
+
+    printf("  Checkpoints: %d snapshots from N=%ld to N=%ld\n",
+           n_ckpts, (long)ckpt_Ns[0], (long)ckpt_Ns[n_ckpts - 1]);
+}
+
+static void checkpoint_snapshot(int64_t current_n)
+{
+    if (!ckpt_fp) return;
+
+    for (int lev = 0; lev < num_levels; lev++) {
+        int k = levels[lev].k;
+        int64_t ncells = (int64_t)k * k;
+
+        int64_t branch = 0, pe = 0, po = 0, empty = 0;
+
+        for (int64_t c = 0; c < ncells; c++) {
+            int64_t ne = levels[lev].even_grid[c];
+            int64_t no = levels[lev].odd_grid[c];
+
+            if (ne == 0 && no == 0)    empty++;
+            else if (ne > 0 && no > 0) branch++;
+            else if (no == 0)          pe++;
+            else                       po++;
+        }
+
+        fprintf(ckpt_fp, "%ld,%d,%d,%d,%ld,%ld,%ld,%ld\n",
+                (long)current_n, k, levels[lev].a, levels[lev].b,
+                (long)branch, (long)pe, (long)po, (long)empty);
+    }
+
+    fflush(ckpt_fp);
 }
 
 /* ── Helper: check if k is a transition-tracking target ────────────── */
@@ -319,6 +397,12 @@ static void compute_branch_data(void)
         }
 
         total_trajs++;
+
+        /* Checkpoint snapshot */
+        if (next_ckpt < n_ckpts && n == ckpt_Ns[next_ckpt]) {
+            checkpoint_snapshot(n);
+            next_ckpt++;
+        }
 
         /* Progress: time-based with in-place overwrite */
         if (n >= next_check) {
@@ -1004,6 +1088,9 @@ int main(int argc, char **argv)
     printf("Initialising levels...\n");
     init_levels();
 
+    printf("\nInitialising checkpoints...\n");
+    checkpoint_init(N);
+
     /* Print Diophantine approximation quality for key levels */
     printf("Diophantine best-approximant levels included:\n");
     for (int d = 0; d < (int)N_DIOPH; d++) {
@@ -1039,6 +1126,10 @@ int main(int argc, char **argv)
     if (ok)
         printf("  PASS: all %d levels have consistent visit counts "
                "(%ld steps)\n", num_levels, (long)total_steps);
+
+    /* Close checkpoint file */
+    if (ckpt_fp) fclose(ckpt_fp);
+    printf("  Saved branch_checkpoints.csv (%d snapshots)\n", n_ckpts);
 
     /* Cleanup */
     for (int i = 0; i < num_levels; i++) {

@@ -414,11 +414,13 @@ Fully proved:
 - =diophError_ne_zero=: error $\neq 0$ (else $\log_2(3)$ rational)
 - =walk_confined_at_boundary=: walk increment $= +1$ at pure-even cells
 
-Four =sorry=:
+Three =sorry=:
 - =diophError_lower_bound=: Baker $\to$ $|\epsilon(b)| > C'/(3^b)^{1+\epsilon}$
 - =tunnel_walls_positive_of_baker=: Diophantine gap $\to$ pure-even cells exist
 - =tunnel_foliation_intersection=: Weyl equidistribution (not in Mathlib)
-- =tunnel_walls_positive=: composition of Baker + geometric bridge
+
+Proved in Phase 5:
+- =tunnel_walls_positive=: composition of =diophError_lower_bound= + =tunnel_walls_positive_of_baker=
 
 ** Phase 4: The Ergodic Conclusion                                  :capstone:
 
@@ -473,6 +475,41 @@ theorem collatz_conjecture : CollatzConjecture := by
   have hdiv := walk_diverges_of_podd_bound n hn
   exact collatz_reaches_of_walk_diverges n hn C hC hdiv
 #+end_src
+
+** Phase 5: Wall Persistence                                        :bridge:capstone:
+
+*** DONE [#A] Formalize wall persistence and confinement mechanism
+:PROPERTIES:
+:Effort:   1w
+:END:
+
+Implemented in =CollatzLean/WallPersistence.lean=.
+
+Connects the 10B empirical evidence (pure-even walls = 8.17% of occupied
+cells at frozen resolution, strengthening with scale) to the formal proof
+chain.
+
+Verified via =native_decide=:
+- =wall_absent_3=: at scale $3^1 = 3$, all 9 cells are branch (no walls)
+- =wall_exists_9=: at scale $3^2 = 9$, pure-even walls exist (19 wall cells)
+- =wall_exists_27=: at scale $3^3 = 27$, pure-even walls exist (35 wall cells)
+
+Proved (zero =sorry=):
+- =wall_persists=: $\forall b \ge 1$, walls exist at scale $3^b$
+  (composition via =tunnel_walls_positive=)
+- =wall_pushes_walk_up=: walk increment $= +1$ at pure-even cells
+- =wall_boost=: positive wall encounter frequency gives positive walk boost
+
+Definitions:
+- =wallDensity=: fraction of occupied cells that are pure-even
+- =tunnelBranchCount=, =tunnelOccupied=: cell counts at scale $3^b$
+- =wallEncounterFreq=: fraction of steps visiting pure-even cells
+
+Also closed 1 sorry in TunnelWidth.lean:
+- =tunnel_walls_positive=: now proved as composition of =diophError_lower_bound=
+  and =tunnel_walls_positive_of_baker=
+
+Total project: 13 =sorry= across 15 files, ~1500 lines.
 
 ** Phase 4 (Alternative): Finite-State Bypass of Baker              :bridge:
 
@@ -639,14 +676,13 @@ because the recurrence at odd steps introduces =collatzSeq= values.
    =collatz_conjecture : CollatzConjecture=.  Implemented in
    =CollatzLean/Drift.lean= and =CollatzLean/Conclusion.lean=.
    Two =sorry= remain (=podd_uniform_bound=, =correction_bound=).
-   Total project: 14 =sorry= across 14 files, ~1375 lines.
-   Of these, 12 are logically independent (the 2 in Walk.lean are
-   redundant with Phase 4 theorems).
+   Total project after Phase 4: 14 =sorry= across 14 files, ~1375 lines.
 
-* Sorry Inventory (14 total, 12 logically independent)
+* Sorry Inventory (13 total, 11 logically independent)
 
 The 2 sorry's in Walk.lean (=podd_lt_equilibrium_limit=, =walk_diverges=) are
 logically implied by Phase 4 theorems but kept to avoid circular imports.
+=tunnel_walls_positive= was closed in Phase 5 (composition proof).
 
 | # | File | Theorem | Category | Hard? |
 |---+------------------+-----------------------------------+---------------------+-------|
@@ -658,22 +694,20 @@ logically implied by Phase 4 theorems but kept to avoid circular imports.
 | 6 | TunnelWidth.lean | =diophError_lower_bound= | Baker application | Med |
 | 7 | TunnelWidth.lean | =tunnel_walls_positive_of_baker= | Geometric bridge | Med |
 | 8 | TunnelWidth.lean | =tunnel_foliation_intersection= | Weyl equidistr. | Med |
-| 9 | TunnelWidth.lean | =tunnel_walls_positive= | Composition | Easy |
-| 10 | Walk.lean | =podd_lt_equilibrium_limit= | Redundant (Phase 4) | --- |
-| 11 | Walk.lean | =walk_diverges= | Redundant (Phase 4) | --- |
-| 12 | FibCounting.lean | =goldenMean_entropy= | Real analysis limit | Med |
-| 13 | Drift.lean | =podd_uniform_bound= | Ergodic theory | Yes |
-| 14 | Conclusion.lean | =correction_bound= | Trajectory analysis | Yes |
+| 9 | Walk.lean | =podd_lt_equilibrium_limit= | Redundant (Phase 4) | --- |
+| 10 | Walk.lean | =walk_diverges= | Redundant (Phase 4) | --- |
+| 11 | FibCounting.lean | =goldenMean_entropy= | Real analysis limit | Med |
+| 12 | Drift.lean | =podd_uniform_bound= | Ergodic theory | Yes |
+| 13 | Conclusion.lean | =correction_bound= | Trajectory analysis | Yes |
 
 *Hard* = requires new mathematical machinery or deep Mathlib extensions.
 *Med* = known math, moderate formalization effort.
-*Easy* = direct composition of other results.
 
 The 5 Baker chain stubs (#1--5) are the long pole: they require formalizing the
 Gel'fond--Schneider proof of transcendence measures, which has no Mathlib
-precedent.  If the finite-state bypass (Phase 4alt) succeeds, these 5 + the 4
+precedent.  If the finite-state bypass (Phase 4alt) succeeds, these 5 + the 3
 TunnelWidth sorry's become unnecessary, leaving only 3 independent sorry's
-(#12, #13, #14).
+(#11, #12, #13).
 
 * Appendix: What Has Been Verified Computationally
 

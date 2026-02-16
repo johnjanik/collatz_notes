@@ -12,3 +12,4 @@ import CollatzLean.Baker
 import CollatzLean.TunnelWidth
 import CollatzLean.Drift
 import CollatzLean.Conclusion
+import CollatzLean.WallPersistence
