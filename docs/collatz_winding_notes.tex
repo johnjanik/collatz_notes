@@ -1497,18 +1497,21 @@ $k = 2^a \cdot 3^b$, $0 \leq a, b \leq 4$.
         \midrule
         72 & $(3,2)$ & 5{,}184 & 5{,}184 & 0 & 1.000 & 95 \\
         81 & $(0,4)$ & 6{,}561 & 6{,}561 & 0 & 1.000 & 188 \\
-        108 & $(2,3)$ & 11{,}664 & 11{,}499 & 11 & 0.986 & 65 \\
-        144 & $(4,2)$ & 20{,}736 & 13{,}688 & 5{,}751 & 0.660 & 127 \\
-        216 & $(3,3)$ & 46{,}656 & 13{,}688 & 31{,}658 & 0.293 & 127 \\
-        1296 & $(4,4)$ & 1{,}679{,}616 & 13{,}688 & 1{,}664{,}618 & 0.008 & 127 \\
+        108 & $(2,3)$ & 11{,}664 & 11{,}664 & 0 & 1.000 & 65 \\
+        144 & $(4,2)$ & 20{,}736 & 16{,}371 & 3{,}706 & 0.789 & 127 \\
+        216 & $(3,3)$ & 46{,}656 & $\approx$16{,}371 & $\approx$29{,}626 & $\approx$0.351 & 127 \\
+        1296 & $(4,4)$ & 1{,}679{,}616 & $\approx$16{,}371 & $\approx$1{,}662{,}586 & $\approx$0.010 & 127 \\
         \bottomrule
     \end{tabular}
     \end{center}
-    All levels $k \leq 81$ are fully saturated (100\% branch cells).
-    Above $k = 81$, the branch fraction drops sharply as empty cells
-    dominate.  For $k \geq 144$, the branch cell count stabilises at
-    $13{,}688$, consistent with the support stabilisation observed in
-    Section~\ref{sec:profinite-compat}.
+    All levels $k \leq 108$ are fully saturated (100\% branch cells)
+    at $N = 10^{10}$.
+    Above $k = 108$, the branch fraction drops sharply as empty cells
+    dominate.  For $k \geq 144$, the branch cell count is approximately
+    stable across resolutions (${\sim}16{,}371$ at $N = 10^{10}$, within
+    ${\sim}1\%$ across $k$), consistent with the support stabilisation
+    observed in Section~\ref{sec:profinite-compat}.  The count grows
+    with~$N$ (see Remark~\ref{rem:branch-convergence}).
 \end{empirical}
 
 
@@ -1526,8 +1529,8 @@ $k = 81 = 3^4$.
         \midrule
         72 & $2^3 \cdot 3^2$ & 95 & 5{,}184 & 1.83\% \\
         \textbf{81} & $\mathbf{3^4}$ & \textbf{188} & \textbf{6{,}561} & \textbf{2.86\%} \\
-        108 & $2^2 \cdot 3^3$ & 65 & 11{,}499 & 0.57\% \\
-        144 & $2^4 \cdot 3^2$ & 127 & 13{,}688 & 0.93\% \\
+        108 & $2^2 \cdot 3^3$ & 65 & 11{,}664 & 0.56\% \\
+        144 & $2^4 \cdot 3^2$ & 127 & 16{,}371 & 0.78\% \\
         \bottomrule
     \end{tabular}
     \end{center}
@@ -1639,14 +1642,14 @@ The spatial structure of singular cells, however, is highly non-trivial.
         \toprule
         Cell class & Mean $p_{\mathrm{odd}}$ & Std.\ dev. \\
         \midrule
-        Global & 0.3323 & --- \\
+        Global & 0.3324 & --- \\
         Non-singular ($k{=}81$) & 0.3070 & 0.060 \\
         \textbf{Singular} ($k{=}81$) & \textbf{0.0595} & 0.073 \\
         \bottomrule
     \end{tabular}
     \end{center}
     Of the 188~singular cells, 187 (99.5\%) have
-    $p_{\mathrm{odd}} < 0.3323$.  These are torus positions where
+    $p_{\mathrm{odd}} < 0.3324$.  These are torus positions where
     trajectories almost exclusively take the even branch (halving),
     rarely encountering an odd step.
 \end{empirical}
@@ -1811,59 +1814,67 @@ scaling of strip width across Diophantine jumps.
 
 \begin{observation}[Frozen branch count]
 \label{obs:frozen-branch}
-    At $N = 10^9$, the number of branch cells stabilises at exactly
-    $13{,}688$ for all $k \geq 144$, including the Diophantine level
-    $k = 729$ ($13{,}688$ branch cells of $531{,}441$ total, branch
-    fraction $2.58\%$).  The branch locus
+    At $N = 10^{10}$, the number of branch cells is approximately
+    stable across resolutions $k \geq 144$: $k = 144$ has $16{,}371$
+    branch cells and $k = 729$ has $16{,}577$ (within ${\sim}1\%$).
+    At $k = 729$ this gives $16{,}577$ branch cells of $531{,}441$
+    total (branch fraction $3.1\%$).  The branch locus
     has \emph{finite complexity}: the set of trajectory signatures
-    producing branching behaviour is fully captured by $k \approx 144$,
-    and larger moduli simply embed the same set in a sparser grid.
+    producing branching behaviour is approximately captured by
+    $k \approx 144$, and larger moduli embed essentially the same set
+    in a sparser grid.
 \end{observation}
 
 \begin{remark}[Branch count convergence with $N$]
 \label{rem:branch-convergence}
-    The ``frozen'' property refers to stability across $k$
+    The ``frozen'' property refers to approximate stability across $k$
     (resolution-independence), not convergence in~$N$ (trajectory count).
-    As $N$ increases, rare trajectories may visit previously unoccupied
+    As $N$ increases, rare trajectories visit previously unoccupied
     cells with both parities, converting pure cells to branch cells.
-    The refactored code at $N = 10^8$ yields $9{,}415$ branch cells;
-    the original run at $N = 10^9$ yielded $13{,}688$.  A definitive
-    $N = 10^{10}$ run is in progress to establish convergence.
-    The qualitative structure---resolution-independent branch count,
+    The branch count at $k = 144$ grows substantially with~$N$:
+    $9{,}415$ ($N = 10^8$) $\to$ $13{,}688$ ($N = 10^9$) $\to$
+    $16{,}371$ ($N = 10^{10}$), an increase of $+74\%$ from $10^8$
+    to $10^{10}$.  The branch count has \textbf{not converged} at
+    $N = 10^{10}$.  Nevertheless, the qualitative
+    structure---approximately resolution-independent branch count,
     finite topological complexity---is robust across all $N$ tested.
 \end{remark}
 
 \begin{observation}[Foliation depletion at Diophantine levels]
 \label{obs:foliation-depletion}
     The enrichment of branch cells on the unstable foliation reverses
-    at large~$k$:
+    at large~$k$.  At $N = 10^{10}$:
     \begin{center}
-    \begin{tabular}{crrrrr}
+    \begin{tabular}{crrrr}
     \toprule
-    $k$ & branch & on foliation & branch $\cap$ fol.\ & expected & enrichment \\
+    $k$ & branch & branch $\cap$ unstable fol.\ & enrichment (unstable) & enrichment (stable) \\
     \midrule
-    6--72  & all     & ---  & all   & ---   & 1.000 \\
-    729    & 13{,}688 & 1{,}367 & 2     & $\sim$35 & 0.057 \\
+    6--72  & all     & all   & 1.000  & 1.000 \\
+    144    & 16{,}371 & ---   & ---    & --- \\
+    729    & 16{,}577 & 12    & 0.045  & 0.426 \\
     \bottomrule
     \end{tabular}
     \end{center}
     At $k \leq 72$ (full saturation), every foliation cell is
     trivially a branch cell.  At $k = 729$, the branch locus is
-    $17\times$ \emph{depleted} on the unstable foliation---branch cells
-    actively avoid the foliation lines.
+    $22\times$ \emph{depleted} on the unstable foliation (enrichment
+    $0.045$)---branch cells actively avoid the unstable foliation lines.
+    The stable foliation shows a milder depletion (enrichment $0.426$,
+    a $2.3\times$ depletion).
 \end{observation}
 
 \begin{observation}[Diagonal band structure at $k = 729$]
 \label{obs:diagonal-band}
-    Despite occupying only $2.8\%$ of the $729 \times 729$ torus, all
-    non-empty cells at $k = 729$ lie on a single coherent diagonal band
-    of width ${\sim}20$~cells, aligned at slope $\approx \log_3 2$.
-    Within this band:
+    At $N = 10^{10}$, $19{,}025$ non-empty cells occupy $3.6\%$ of the
+    $729 \times 729$ torus.  All non-empty cells lie on a single
+    coherent diagonal band of width ${\sim}20$~cells, aligned at slope
+    $\approx \log_3 2$.  Within this band:
     \begin{itemize}
-        \item Branch cells (gold) occupy the core,
-        \item Pure-even cells (1{,}269) flank the branch cells on both
+        \item Branch cells (gold) occupy the core ($16{,}577$),
+        \item Pure-even cells ($893$) flank the branch cells on both
               sides, forming ``laminar tunnel walls,''
-        \item Pure-odd cells (41) are rare and peripheral.
+        \item Pure-odd cells: $0$ (eliminated at $N = 10^{10}$;
+              formerly $41$ at $N = 10^9$).
     \end{itemize}
     The band is \emph{offset} from the exact unstable foliation by
     $15$--$30$~cell units in perpendicular distance.  The radial
@@ -1906,8 +1917,8 @@ scaling of strip width across Diophantine jumps.
         \item \textbf{Band width:} Better approximations produce
         tighter trajectory confinement.  At $k = 81$ (error
         $1.3 \times 10^{-3}$), all cells are visited; at $k = 729$
-        (error $7.2 \times 10^{-5}$), only $2.8\%$ of cells are
-        non-empty.
+        (error $7.2 \times 10^{-5}$), only $3.6\%$ of cells are
+        non-empty (at $N = 10^{10}$).
         \item \textbf{Foliation offset:} The trajectory band follows
         the rational approximation, not the irrational foliation,
         with the offset proportional to the approximation error.
@@ -1940,12 +1951,12 @@ $3 \times k^2 \times 8$~bytes per target level, ${\sim}52$~MB total.
 
 \begin{observation}[``11'' forbidden bigram verified on torus cells]
 \label{obs:oo-verified}
-    At $N = 10^8$ ($17.9 \times 10^9$ total steps), the transition
+    At $N = 10^{10}$ ($2.27 \times 10^{12}$ total steps), the transition
     counts at all four target levels satisfy
     \[
         \mathrm{ee} + \mathrm{eo} + \mathrm{oe}
         = N_{\mathrm{steps}} - N_{\mathrm{trajs}}
-        = 17{,}823{,}493{,}584
+        = 2{,}262{,}503{,}599{,}734
     \]
     exactly, with zero residual.  Since the only missing transition
     type is odd$\to$odd, this confirms $\mathrm{oo} = 0$ at every
@@ -1956,10 +1967,10 @@ $3 \times k^2 \times 8$~bytes per target level, ${\sim}52$~MB total.
 
 \begin{observation}[Transition fractions and valence]
 \label{obs:trans-fractions}
-    The global transition fractions are
-    $\mathrm{ee} : \mathrm{eo} : \mathrm{oe} = 0.335 : 0.331 : 0.334$,
+    At $N = 10^{10}$, the global transition fractions are
+    $\mathrm{ee} : \mathrm{eo} : \mathrm{oe} = 0.3345 : 0.3316 : 0.3339$,
     nearly equal thirds.  The slight asymmetry reflects the departure
-    of $p_{\mathrm{odd}} \approx 0.332$ from the equilibrium value
+    of $p_{\mathrm{odd}} \approx 0.3324$ from the equilibrium value
     $1/(1 + \log_2 3) \approx 0.387$ at finite~$N$.
 
     The \emph{transition valence} of a cell---the number of distinct
@@ -1974,22 +1985,23 @@ $3 \times k^2 \times 8$~bytes per target level, ${\sim}52$~MB total.
 \label{obs:successor}
     For each odd-visited cell $(r_2, r_3)$ at $k = 729$, we classify
     the successor cell $(r_2, (r_3 + 1) \bmod k)$---the cell where
-    the trajectory lands after the odd step.  At $N = 10^8$:
+    the trajectory lands after the odd step.  At $N = 10^{10}$
+    ($17{,}470$ odd-visited cells):
     \begin{center}
     \begin{tabular}{lrr}
     \toprule
     Successor type & Count & Fraction \\
     \midrule
-    branch (both parities) & 8{,}832 & 91.2\% \\
-    pure\_even              & 856    & 8.8\% \\
-    pure\_odd               & 0      & 0\% \\
-    empty                  & 0      & 0\% \\
+    branch (both parities) & 16{,}577 & 94.9\% \\
+    pure\_even              & 893     & 5.1\% \\
+    pure\_odd               & 0       & 0\% \\
+    empty                  & 0       & 0\% \\
     \bottomrule
     \end{tabular}
     \end{center}
     The successor of an odd visit is \emph{never} a pure-odd cell,
     confirming that the ``11'' constraint maps directly onto the
-    pure-even tunnel walls of the foliation shadow.  The 8.8\% of
+    pure-even tunnel walls of the foliation shadow.  The 5.1\% of
     successors landing in pure-even cells correspond to the strip
     boundary, where the odd step shifts $r_3$ by~1 and pushes the
     trajectory outside the branch core.  This boundary structure
@@ -2048,14 +2060,15 @@ $3 \times k^2 \times 8$~bytes per target level, ${\sim}52$~MB total.
 \label{res:branch-locus}
     The per-step Collatz dynamics on $(\Z/k\Z)^2$ for $k = 2^a \cdot 3^b$
     ($0 \leq a,b \leq 4$) and the Diophantine level $k = 3^6 = 729$,
-    computed from $10^8$--$10^9$ trajectories with per-cell parity
-    transition tracking, reveals:
+    computed from up to $10^{10}$ trajectories ($2.27 \times 10^{12}$
+    steps) with per-cell parity transition tracking, reveals:
     \begin{enumerate}[label=(\roman*)]
         \item \textbf{Universal branching at saturation.}  All levels
-        $k \leq 81$ have 100\% branch cells: every torus position is visited
-        by both even and odd steps.  Above $k = 108$, the branch count
-        stabilises at exactly $13{,}688$---the branch locus has finite
-        complexity.
+        $k \leq 108$ have 100\% branch cells at $N = 10^{10}$.  Above
+        $k = 108$, the branch count is approximately stable across
+        resolutions (${\sim}16{,}371$ at $k = 144$, ${\sim}16{,}577$ at
+        $k = 729$, within ${\sim}1\%$).  The count grows with~$N$ and has
+        not converged (see Remark~\ref{rem:branch-convergence}).
 
         \item \textbf{Singular chains along $\log_3 2$.}  At the fully
         saturated levels $k = 72$ and $k = 81$, singular cells form
@@ -2066,8 +2079,8 @@ $3 \times k^2 \times 8$~bytes per target level, ${\sim}52$~MB total.
         \item \textbf{Foliation enrichment and depletion.}  At saturated
         levels ($k \leq 72$), singular cells are $1.6\times$ enriched
         near the unstable foliation.  At the Diophantine level $k = 729$,
-        branch cells are $17\times$ \emph{depleted} on the foliation
-        (enrichment $0.057$)---a complete reversal.
+        branch cells are $22\times$ \emph{depleted} on the unstable foliation
+        (enrichment $0.045$)---a complete reversal.
 
         \item \textbf{Foliation shadow.}  At $k = 729$, non-empty cells
         form a single diagonal band of width ${\sim}20$~cells at slope
@@ -2091,9 +2104,9 @@ $3 \times k^2 \times 8$~bytes per target level, ${\sim}52$~MB total.
 
         \item \textbf{``11'' verification.}  Per-cell transition grids at
         target levels $k \in \{81, 108, 144, 729\}$ confirm that
-        $\mathrm{oo} = 0$ at every cell ($17.8 \times 10^9$ transitions
+        $\mathrm{oo} = 0$ at every cell ($2.27 \times 10^{12}$ transitions
         verified).  The successors of odd-visited cells at $k = 729$ are
-        never pure-odd (91.2\% branch, 8.8\% pure-even), directly linking
+        never pure-odd (94.9\% branch, 5.1\% pure-even), directly linking
         the parity SFT forbidden bigram to the pure-even tunnel walls of
         the foliation shadow.
 
@@ -2171,14 +2184,14 @@ $3 \times k^2 \times 8$~bytes per target level, ${\sim}52$~MB total.
     Diophantine level $3^6 = 729$).  Per-cell parity transition grids
     (ee, eo, oe) are tracked at four target levels
     $k \in \{81, 108, 144, 729\}$, adding ${\sim}52$~MB.  Total memory:
-    ${\sim}100$~MB.  At $N = 10^8$, the program processes
-    $1.79 \times 10^{10}$~steps in 9~minutes
-    (${\sim}34 \times 10^6$~steps/s), writing per-cell data to CSV
+    ${\sim}100$~MB.  The definitive $N = 10^{10}$ run completed in
+    $19.5$~hours, processing $2.27 \times 10^{12}$~steps
+    (${\sim}32 \times 10^6$~steps/s).  Per-cell data is written to CSV
     (\texttt{branch\_cells.csv}, \texttt{branch\_transitions.csv},
     \texttt{branch\_shadow.csv}) for offline analysis.  Companion plots
     are generated by \texttt{plot\_branch\_locus.py} (standard levels)
     and \texttt{plot\_diophantine.py} (Diophantine and transition
-    analysis, 5~figures).  A definitive $N = 10^{10}$ run is in progress.
+    analysis, 5~figures).
 \end{remark}
 
 
