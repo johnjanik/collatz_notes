@@ -1,0 +1,488 @@
+#+TITLE: Collatz Conjecture: Research Program
+#+AUTHOR: John A. Janik
+#+DATE: <2026-02-14 Fri>
+#+STARTUP: overview
+#+TODO: TODO ACTIVE WAIT | DONE CANCELLED
+#+TAGS: computation(c) analytical(a) visualization(v) writing(w) speculative(s) infrastructure(i)
+#+PRIORITIES: A B C
+#+PROPERTY: Effort_ALL 1h 2h 4h 1d 2d 3d 1w 2w 1m
+
+* Overview
+Three layers organise the program: empirical (computational verification),
+topological (pseudo-Anosov / mapping torus / foliations), and arithmetic
+(p-adic / adèlic / profinite). Programs and experiments are ordered so that
+each layer feeds the next. Cross-references to manuscripts: Notes I =
+=collatz_winding_notes.tex=; Notes II = =collatz_next_moves.tex=; Chistyakov
+= =chistyakov_reading_notes.tex=.
+
+* DONE Infrastructure: C/Cairo visualisation engine                     :infrastructure:
+CLOSED: [2026-02-14 Fri]
+** DONE Collatz tree visualisation (=collatz_tree.c=)
+CLOSED: [2026-02-14 Fri]
+:PROPERTIES:
+:Effort:   4h
+:END:
+- 4800×2700, anti-aliased edges, colormap by frequency
+- N, MAX_START, SEED adjustable at runtime
+- 38× speedup over Python original (1.2 s)
+
+** DONE Collatz scatter plot (=collatz_scatter.c=)
+CLOSED: [2026-02-14 Fri]
+:PROPERTIES:
+:Effort:   4h
+:END:
+- 100M points in 2.6 s (720× throughput vs Python)
+- Two-phase stopping time structure visible
+
+** DONE Animated tree growth (=collatz_tree_anim.c=)
+CLOSED: [2026-02-14 Fri]
+:PROPERTIES:
+:Effort:   4h
+:END:
+- One PNG frame per FRAME_INTERVAL starting points
+- splitmix64 prefix-consistent quasi-random for frame stability
+- Heap-allocated hash tables, scales to 100M+
+- Monotonically growing bounding box for smooth camera
+- Tested: 10K starts, 5 frames, 0.5 s/frame
+
+* DONE Empirical I: Winding number statistics                          :computation:
+CLOSED: [2026-02-14 Fri]
+** DONE Winding pair (ν₂, ν₃) for n ∈ [2, 10⁶]
+CLOSED: [2026-02-14 Fri]
+- ρ(n) = ν₂/ν₃ → log₂3, strict positivity δ > 0 verified
+- Results in =collatz_winding.py=
+
+** DONE Torus residue distributions μ_k for k = 3,5,7,8,10,12,16,24
+CLOSED: [2026-02-14 Fri]
+- Forbidden cell at (1,1) mod 3, checkerboard mod 12, diagonal banding mod 24
+
+** DONE Eigenbasis (u,v) coordinates and drift analysis
+CLOSED: [2026-02-14 Fri]
+- u = ν₂ - log₂3·ν₃ (transverse), mean drift ⟨Δu⟩ = 2 - log₂3 ≈ 0.415
+- First-passage: 85.8% have u_min < 0
+- Results in =collatz_anosov.py=
+
+** DONE Step autocorrelation C(k)
+CLOSED: [2026-02-14 Fri]
+- C(1) ≈ 0.15, decays by lag 5, proves non-Markov structure
+
+** DONE LaTeX manuscript Notes I (=collatz_winding_notes.tex=, 10 pp.)
+CLOSED: [2026-02-14 Fri]
+
+* DONE Empirical II: Chistyakov fractal embeddings                     :computation:visualization:
+CLOSED: [2026-02-14 Fri]
+** DONE Implement Υ_s^(m) for p = 2, m = ∞ (=chistyakov_collatz.py=)
+CLOSED: [2026-02-14 Fri]
+- s = 0.42 exp(iπ/5), |s| < s₀ = 1/2 ✓
+- Scaling relation |Υ(2x) − (sΥ(x)+1)| = 1.13e-15 ✓
+- 150K integers embedded, coloured by σ(n)
+
+** DONE Multifractal spectrum D_q: Haar vs Collatz orbit measure
+CLOSED: [2026-02-14 Fri]
+- Haar ≈ constant D_q ≈ D_s = 0.80
+- Collatz: D_q varies (D_{-3}=1.62, D_5=0.75) ⟹ orbit measure ≠ Haar
+- Collatz orbit measure is more concentrated (multifractal)
+
+** DONE Gallery: p = 2 (Cantor), p = 3 (Sierpiński), p = 6 (Koch)
+CLOSED: [2026-02-14 Fri]
+- 6 parameter combinations, all coloured by stopping time
+
+** DONE Collatz trajectories overlaid on fractal
+CLOSED: [2026-02-14 Fri]
+- Trajectories jump across fractal clusters (3n+1 is long-range in embedding)
+
+** DONE Orbit/Haar density ratio heatmap
+CLOSED: [2026-02-14 Fri]
+- Non-uniform ratio confirms Collatz ≠ Haar
+
+** DONE LaTeX reading notes (=chistyakov_reading_notes.tex=, 8 pp.)
+CLOSED: [2026-02-14 Fri]
+
+* DONE Empirical III: Profinite compatibility and extended residues     :computation:
+CLOSED: [2026-02-15 Sat]
+** DONE [#A] Extend torus residues to k = 2^a 3^b for 0 ≤ a,b ≤ 4    :computation:
+CLOSED: [2026-02-15 Sat]
+:PROPERTIES:
+:Effort:   1d
+:END:
+Compute μ_k at levels k ∈ {1,2,3,4,6,8,9,12,16,18,24,27,36,48,72,81,...}.
+Verify that distributions at level k are marginals of distributions at
+level lcm(k,m) for all m. This is the /compatibility condition/ for the
+profinite winding number ŵ(n) ∈ Ẑ₂ × Ẑ₃.
+- Result (N = 10⁹, C implementation):
+  - 25 levels k = 2^a·3^b (0 ≤ a,b ≤ 4), 200 divisibility pairs
+  - All 200 compatibility checks PASS with max|Δ| = 0 (exact integer match)
+  - Support stabilises at 4,089 nonzero cells for k ≥ 144
+  - Entropy ratio H/H_max decays from 1.000 (k=2) to 0.424 (k=1296)
+  - Correction: μ₃(1,1) is NOT forbidden — equals 112,253,124 ≈ N/9 (near-uniform)
+  - Previous N=2×10⁶ result was a finite-sample artifact; all zero cells at k≤36 fill in at scale
+- Implementation: =profinite_compat.c= (C, 222s for N=10⁹)
+- Written up as Notes I §10 (updated with N=10⁹ data).
+
+** DONE [#A] 6-adic ordering experiment                                :computation:
+CLOSED: [2026-02-15 Sat]
+:PROPERTIES:
+:Effort:   1d
+:END:
+Reorder n ∈ [2, 10⁶] by 6-adic expansion. Plot ŵ(n) and test for
+local constancy on 6-adic balls. Directly tests odometer conjugacy
+(Notes II, Conjecture 8.5).
+- Ref: Notes II §10 step 3
+- Result: No privileged 6-adic local constancy for modular observables.
+  7-adic and 5-adic controls match or exceed 6-adic at matched modulus.
+  Negative result for odometer conjugacy in naïve form.
+- Written up as Notes I §11.
+
+** DONE [#B] Higher-order step correlations and Markov approximation   :computation:
+CLOSED: [2026-02-15 Sat]
+:PROPERTIES:
+:Effort:   2d
+:END:
+Compute order-m transition matrices for parity sequences at m = 2,3,4,5.
+Measure how much of C(k) is captured at each order.
+Determine whether subshift of finite type exists and if so its transition matrix.
+- Ref: Notes II §5.4
+- Result (N = 5×10⁸, 98B parity symbols):
+  - Parity SFT is the *golden mean shift* (forbidden bigram "11", order 1)
+  - No higher-order forbidden words at m = 2,3,4,5
+  - h_top = log₂φ ≈ 0.6942 bits/step at all orders
+  - h_μ ≈ 0.6678 (order 1), decreasing to 0.6664 (order 5); entropy gap ≈ 0.028
+  - Collatz measure is sofic, NOT Parry: P(0→1) ≈ 0.498 vs Parry 1/φ² ≈ 0.382
+  - Autocorrelation C(k) ≈ (-1/2)^k for k ≤ 5; persistent non-Markov oscillations at k ≥ 6
+  - Markov orders 1–5 reduce autocorrelation residual by only 4%
+- Implementation: =parity_sft.c= (C port, 100× speedup over Python)
+- Written up as Notes I §12.
+
+* TODO The explicit F map on ℤ₂ × ℤ₃                                  :computation:analytical:
+:PROPERTIES:
+:Effort:   1w
+:END:
+** TODO [#A] Implement F in truncated p-adic arithmetic                :computation:
+:PROPERTIES:
+:Effort:   2d
+:END:
+Work modulo 2^16 × 3^10. Compute F(x,y) = ((x-y)/2, (3y+1)/2).
+Verify orbit recovery: F-orbits of (n,n) project to standard Collatz
+orbits. This is /foundational/ for everything downstream.
+- Ref: Notes II §7
+
+** TODO [#A] Orbit distribution in (ℤ/2^a ℤ) × (ℤ/3^b ℤ)             :computation:
+:PROPERTIES:
+:Effort:   1d
+:END:
+Study how F-orbits distribute in the finite quotients.
+Connection to torus residue patterns.
+
+** TODO [#B] Lyapunov exponent of F                                    :computation:analytical:
+:PROPERTIES:
+:Effort:   1w
+:END:
+The linearisation of F has matrix A = ((1/2, -1/2), (0, 3/2)) with
+eigenvalues λ_s = 1/2 and λ_u = 3/2 (genuinely hyperbolic, area-
+contracting by 3/4). Compute the Lyapunov exponent of the /random/
+matrix product ∏ A_{σᵢ} where σᵢ is the branch label at step i.
+Compare to log(3/2) and log(1/2).
+- The hyperbolicity is a /random/ phenomenon (Furstenberg's theorem):
+  the averaged transfer matrix ⟨M⟩ is parabolic, but fluctuations
+  give positive Lyapunov exponent.
+- Ref: Notes II §5.2, §7
+
+** DONE [#B] Branch locus on finite tori                               :computation:visualization:
+CLOSED: [2026-02-15 Sat]
+:PROPERTIES:
+:Effort:   2d
+:END:
+On each (ℤ/kℤ)², identify the branch set: cells where the Collatz map
+switches between even/odd branches. Overlay foliation directions log₂3
+and -1/log₂3. Check whether singularities coincide with branch set.
+k = 6, 12, 24, 36, 72, 81, 108, 144, 216, 324, 432, 648, 1296.
+- Ref: Notes II §5.3
+- Result (N = 10⁹, C implementation, 25 levels k = 2^a·3^b):
+  - All levels k ≤ 81 reach 100% branch fraction (every cell visited by both parities)
+  - Branch cell count stabilises at 13,688 for k ≥ 144
+  - *Singular cell anomaly at k = 81 (3⁴)*: 188 singular cells (2.86% density),
+    highest of any level — 5× the density at k = 108
+  - Singular cells NOT clustered on 3-adic sublattices (χ² ≈ 0, all sublattices uniform)
+  - Singular cells form *chains* aligned at slope log₃2 ≈ 0.631 (error < 0.01):
+    1 chain of 37, 3 chains of 18, 1 chain of 10, 4 chains of 7
+  - Chains are *even-dominated*: mean p_odd = 0.060 (vs global 0.332)
+  - Singular cells 1.6× enriched near unstable foliation (slope log₂3)
+  - *Phase transition* at saturation boundary:
+    Below (k ≤ 81): even tunnels along log₃2, p_odd ≈ 0.06
+    Above (k ≥ 108): odd outliers, p_odd ≈ 0.69, different geometry
+  - Diophantine interpretation: chains trace direction where log₃2 is
+    approximated by the 3^b lattice; chain lengths reflect approximation quality
+- Implementation: =branch_locus.c= (C, 68 min for N=10⁹)
+- Plots: =plot_branch_locus.py= (4 standard figs + singular analysis fig)
+- Written up as Notes I §13.
+
+** DONE [#A] Transition tracking, "11" verification, shadow offset     :computation:visualization:
+CLOSED: [2026-02-16 Sun]
+:PROPERTIES:
+:Effort:   1d
+:END:
+Extended =branch_locus.c= with per-cell parity transition grids
+(ee, eo, oe) at target levels k ∈ {81, 108, 144, 729}, shadow offset
+computation for k=729, and "11" forbidden bigram verification.
+Addresses next_steps items 6 (Baker bound), 7 (Euler characteristic),
+and 9 (SFT ↔ tunnel).
+- Dropped k=19683 level (saves 5.8 GB; k=729 sufficient for Diophantine analysis)
+- Result (N = 10⁸, 17.9×10⁹ steps, 26 levels, ~100 MB):
+  - *"11" verified*: ee + eo + oe = total_steps − total_trajs at all 4
+    target levels, implying oo = 0 at every cell (17.8×10⁹ transitions)
+  - Transition fractions: ee=33.5%, eo=33.1%, oe=33.4% (nearly equal thirds)
+  - *Successor analysis*: odd-visited cell successors at k=729 are
+    91.2% branch, 8.8% pure_even, 0% pure_odd — "11" constraint maps
+    directly onto pure-even tunnel walls
+  - *Transition valence*: cells in strip core have valence 3 (all transition
+    types), edges have valence 1–2; pattern modulated by 460/729 lattice
+  - *Shadow offset*: crisp sign change at irrational foliation — blue above
+    (closer to irrational), red below (closer to rational). Max offset
+    0.044 cell units. Branch strip boundary shows "blue tendrils" extending
+    along stable foliation direction
+  - "Blue tendrils" = prong-type singularities where strip locally narrows
+    and odd-step successors fall outside branch core into pure-even zone
+- New CSV outputs: =branch_transitions.csv=, =branch_shadow.csv=
+- New Makefile target: =run-branch-10B= (N=10¹⁰, in progress ~16 hrs)
+- Plots: =plot_diophantine.py= now generates 5 figures including
+  =diophantine_transitions.png= (2×3: valence, "11" successor, shadow
+  spatial map, transition comparison, shadow vs foliation position, histogram)
+- Written up as Notes I §13.10.
+
+* TODO Chistyakov embeddings: extended program                         :computation:visualization:
+** TODO [#B] Product embedding Φ: ℤ₂ × ℤ₃ → ℂ × ℂ (Route B)         :computation:
+:PROPERTIES:
+:Effort:   2d
+:END:
+Construct independent Υ_{s₂}^(m): ℤ₂ → ℂ and Υ_{s₃}^(m): ℤ₃ → ℂ.
+This separates the two scaling behaviours:
+- In ℚ₂-image: halving n↦n/2 is clean expansion z ↦ s₂⁻¹(z-1),
+  but 3n+1 is nonlinear
+- In ℚ₃-image: tripling is clean scaling z ↦ s₃z+1,
+  but halving is nonlinear
+This is the geometric content of the F map decoupling (Notes II §7).
+- Ref: Chistyakov §5.2.3
+
+** TODO [#B] Embed (2,3)-solenoid via Ω_{s,a}^(m) in ℝ³ with p=6     :visualization:
+:PROPERTIES:
+:Effort:   3d
+:END:
+Use Chistyakov eq.(32) to produce 3D rendering.
+Overlay Collatz trajectories as curves winding through the embedded
+solenoid. Dense winding property (Theorem 9) means each trajectory
+should approximate full solenoid.
+- Ref: Chistyakov §5, step 3
+
+** TODO [#B] Haar = fractal measure diagnostic                        :computation:
+:PROPERTIES:
+:Effort:   2d
+:END:
+Embed ℤ₂ ∩ [0,N] via Υ_s^(m). Compute empirical distribution weighted
+by (a) uniform (= Haar), and (b) Collatz orbit measure (visitation
+counts). Difference is "Collatz anomaly" in fractal measure.
+Already done at coarse level (D_q spectrum); now do multifractal
+f(α) spectrum (Legendre transform of D_q).
+- Ref: Chistyakov §5, step 4
+
+** TODO [#C] Ruelle transfer operator in Υ basis                      :analytical:computation:
+:PROPERTIES:
+:Effort:   2w
+:END:
+Express Collatz transfer operator Lf(x) = ½f(2x) + ½f((2x-1)/3)
+(for x ∈ ℤ₂) in basis of p-adic characters used by Chistyakov.
+Determine whether matrix elements decay rapidly → justifies truncated
+spectral analysis. Leading eigenvalue = rate of convergence to
+invariant measure. Gap to second eigenvalue = mixing time
+(= "commitment time" from Notes I §5).
+- Ref: Chistyakov §4, §5 step 5
+
+* TODO Thurston program: pseudo-Anosov classification                  :analytical:computation:
+** TODO [#B] Mapping class at finite level k = 6                       :analytical:
+:PROPERTIES:
+:Effort:   2w
+:END:
+Write down the induced permutation on (ℤ/6ℤ)² from the explicit F map.
+Determine order and whether it has a pseudo-Anosov representative.
+- Ref: Notes II §4, Conjecture 4.1
+
+** TODO [#B] Natural extension as Markov shift                         :analytical:
+:PROPERTIES:
+:Effort:   2w
+:END:
+Construct natural extension of T_C|_{ℤ₂} as two-sided shift on {0,1}^ℤ.
+Determine:
+(a) Set of admissible bi-infinite sequences (subshift of finite type?)
+(b) Transition matrix A
+(c) Topological entropy h_top = log ρ(A)
+- Ref: Notes II §5.4
+- Partial result (§12): one-sided parity SFT is golden mean shift with
+  A = ((1,1),(1,0)), h_top = log₂φ. The measure is sofic but not
+  finite-order Markov. Remaining: two-sided extension, natural extension
+  invertibility, connection to F map on ℤ₂ × ℤ₃.
+
+** TODO [#C] Mapping torus volume via SnapPy                          :computation:
+:PROPERTIES:
+:Effort:   1w
+:END:
+If pseudo-Anosov established at some finite level k, compute hyperbolic
+volume of M_{T_C} using SnapPy. Volume is a topological invariant of
+T_C and a canonical numerical measure of "complexity" of Collatz dynamics.
+Depends on: mapping class result above
+- Ref: Notes II §5.5
+
+* TODO Spectral and zeta function theory                               :analytical:speculative:
+** TODO [#C] Dynamical zeta function                                   :analytical:speculative:
+:PROPERTIES:
+:Effort:   1m
+:END:
+ζ_{T_C}(s) = ∏_γ (1 - e^{-s ℓ(γ)})⁻¹ over periodic orbits γ.
+If Collatz conjecture true: only orbit {1,2,4} (length 3), so
+ζ_{T_C}(s) = 1/(1 - e^{-3s}). Additional periodic orbits would
+contribute poles. Analytic continuation (if exists) connects to
+L-functions via adèlic structure.
+- Ref: Notes II §5.6
+
+** TODO [#C] Ruelle-Perron-Frobenius operator spectral analysis        :analytical:
+:PROPERTIES:
+:Effort:   1m
+:END:
+Diagonalise Collatz transfer operator using p-adic Fourier transform
+(cf. Chistyakov §4). Spectrum {E_n = K̃(p^n)} with compactly supported
+eigenfunctions. Leading eigenvalue = convergence rate, spectral gap =
+mixing time.
+- Ref: Chistyakov §4
+
+** TODO [#C] Adèlic L-function and Galois connection                  :speculative:
+:PROPERTIES:
+:Effort:   1m
+:END:
+The profinite winding number ŵ(n) ∈ ℤ₂ × ℤ₃ transforms under the
+cyclotomic character χ: Gal(Q̄/ℚ) → Ẑˣ when n is replaced by a
+Galois conjugate. Speculative connection to Langlands program.
+- Ref: Notes II §11, Conjecture on Galois-dynamical correspondence
+
+* TODO Visualisation program                                           :visualization:
+** TODO [#A] Render high-N animation (≥100K starts)                    :visualization:
+:PROPERTIES:
+:Effort:   4h
+:END:
+Use =collatz_tree_anim.c= with N=100K+, FRAME_INTERVAL=2000.
+ffmpeg to mp4. Test with 4K resolution (-DIMG_W=3840 -DIMG_H=2160).
+
+** TODO [#B] Eigenbasis (u,v) scatter animation                       :visualization:
+:PROPERTIES:
+:Effort:   2d
+:END:
+Animate trajectory growth in eigenbasis coordinates.
+Show excursion→descent two-phase dynamics as motion on (u,v) plane.
+C implementation with cairo for performance.
+
+** TODO [#B] Solenoid 3D rendering                                    :visualization:
+:PROPERTIES:
+:Effort:   3d
+:END:
+Chistyakov Ω_{s,a}^(m) with p=6 → ℝ³.
+Interactive 3D with OpenGL or export to Blender.
+Collatz orbits as coloured curves winding through solenoid.
+
+** TODO [#C] Torus residue animation                                   :visualization:
+:PROPERTIES:
+:Effort:   1d
+:END:
+Animate μ_k filling in as N grows, showing how forbidden cells
+and banding emerge. One frame per 10K trajectories.
+
+* TODO Writing and manuscripts                                         :writing:
+** TODO [#A] Merge Notes I + II + Chistyakov into unified manuscript    :writing:
+:PROPERTIES:
+:Effort:   1w
+:END:
+Single document: Winding numbers → solenoid → Chistyakov embeddings
+→ multifractal diagnostic → pseudo-Anosov → F map → zeta function.
+Target: 25-30 pp, arXiv submission.
+
+** TODO [#B] Substack series on Collatz                                :writing:
+:PROPERTIES:
+:Effort:   2w
+:END:
+Pedagogical sequence for lay audiences:
+1. What is the Collatz conjecture?
+2. What the tree looks like (visualisations)
+3. Winding numbers and the ν₂/ν₃ equilibrium
+4. The (2,3)-solenoid: Collatz lives on a fractal torus
+5. Chistyakov embeddings: seeing the 2-adics
+6. Is the orbit measure Haar? (multifractal spectrum)
+7. The Thurston program: topology of Collatz
+
+** TODO [#C] Formal verification of key results in Lean 4             :writing:analytical:
+:PROPERTIES:
+:Effort:   1m
+:END:
+Formalise: strict positivity δ > 0 (requires: exact identity for ρ(n)),
+mod-3 forbidden cell, profinite compatibility conditions.
+
+* Inventory of completed outputs
+| File                             | Type      | Description                               |
+|----------------------------------+-----------+-------------------------------------------|
+| =collatz_tree.c=                 | C/cairo   | Static tree, 4800×2700                    |
+| =collatz_scatter.c=              | C/cairo   | Scatter plot, 100M pts                    |
+| =collatz_tree_anim.c=            | C/cairo   | Animated tree growth, splitmix64          |
+| =collatz_winding.py=             | Python    | Winding numbers, torus residues, 4 figs   |
+| =collatz_anosov.py=              | Python    | Eigenbasis, autocorrelation, foliations   |
+| =chistyakov_collatz.py=          | Python    | Fractal embedding, D_q spectrum, 3 figs   |
+| =collatz_winding_notes.tex=      | LaTeX     | Notes I (22 pp.)                          |
+| =collatz_next_moves.tex=         | LaTeX     | Notes II (15 pp.)                         |
+| =chistyakov_reading_notes.tex=   | LaTeX     | Chistyakov analysis (8 pp.)               |
+| =parity_sft.c=                   | C         | Parity SFT analysis, N up to 5×10⁸       |
+| =plot_parity_sft.py=             | Python    | Parity SFT plots (4 figs)                 |
+| =profinite_compat.c=             | C         | Profinite compatibility, N up to 10⁹      |
+| =plot_profinite.py=              | Python    | Profinite plots (4 figs)                  |
+| =branch_locus.c=                 | C         | Branch locus + transitions, N up to 10¹⁰  |
+| =plot_branch_locus.py=           | Python    | Branch locus plots (4+1 figs)             |
+| =plot_diophantine.py=            | Python    | Diophantine + transition plots (5 figs)   |
+| =Makefile=                       | build     | Compiles all C targets                    |
+
+* Key conjectures to test computationally
+1. *Pseudo-Anosov type* (Notes II, Conj. 4.1): T_C on appropriate finite
+   quotient of Σ_{2,3} has pseudo-Anosov type with unstable foliation slope
+   log₂3 and stretch factor related to 3/2.
+
+2. *Odometer conjugacy* (Notes II, Conj. 8.5): ∃ measurable φ conjugating
+   F to a skew product over the 6-adic odometer.
+
+3. *Collatz orbit measure ≠ Haar* (verified): D_q spectrum differs.
+   Question: what is the exact multifractal f(α) spectrum?
+
+4. *Parity SFT = golden mean shift* (verified, N = 5×10⁸): Topological
+   skeleton is order-1 SFT with adjacency A = ((1,1),(1,0)), h_top = log₂φ.
+   Invariant measure is sofic (not Parry), non-Markov at all finite orders.
+   Entropy gap Δh ≈ 0.028 bits/step. See Notes I §12.
+
+5. *Profinite compatibility* (verified, N = 10⁹): μ_k at 25 levels
+   k = 2^a 3^b (0 ≤ a,b ≤ 4) form a consistent inverse system.
+   All 200 marginal compatibility checks pass exactly.
+   Correction: μ₃(1,1) is NOT forbidden (≈ N/9); the N=2×10⁶ zero was
+   a finite-sample artifact. See Notes I §10.
+
+6. *Odometer conjugacy* (Notes II, Conj. 8.5): ∃ measurable φ conjugating
+   F to a skew product over the 6-adic odometer.
+   Partial negative result: 6-adic ordering shows no privileged local constancy
+   vs 5-adic/7-adic controls (Notes I §11).
+
+7. *Galois-dynamical correspondence* (Notes II, speculative): ŵ(n)
+   transforms under cyclotomic character.
+
+* Risk assessment
+| Task                       | Type         | Feasibility | Main risk                                       |
+|----------------------------+--------------+-------------+-------------------------------------------------|
+| Profinite compatibility    | Computation  | DONE        | All 200 pairs pass exactly at N=10⁹              |
+| F in p-adic arithmetic     | Computation  | HIGH        | Standard implementation                          |
+| 6-adic ordering            | Computation  | DONE        | Negative result: no privileged local constancy    |
+| Lyapunov exponent of F     | Comp+Anal    | HIGH        | Furstenberg theory is well-studied               |
+| Branch locus + transitions | Computation  | DONE        | "11" verified, shadow offset, valence structure   |
+| Chistyakov ℝ³ embedding    | Visualisation| HIGH        | Engineering, not mathematical difficulty         |
+| Natural extension / Markov | Analytical   | MEDIUM      | SFT is golden mean shift (order 1); measure is non-Markov |
+| Mapping torus volume       | Topological  | MEDIUM      | Requires pseudo-Anosov at finite level first     |
+| Ruelle transfer operator   | Analytical   | MEDIUM      | Matrix element decay not guaranteed              |
+| Dynamical zeta function    | Speculative  | LOW         | No existing framework for Collatz-type maps      |
+| Galois connection          | Speculative  | LOW         | Aspirational; Langlands-level conjecture         |

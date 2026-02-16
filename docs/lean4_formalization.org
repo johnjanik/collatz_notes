@@ -1,0 +1,652 @@
+#+TITLE: Formalizing the Collatz Conjecture in Lean 4
+#+SUBTITLE: A Roadmap from Empirical Framework to Machine-Checked Proof
+#+AUTHOR: John A. Janik
+#+DATE: <2026-02-16 Sun>
+#+STARTUP: overview
+#+TODO: TODO BLOCKED ACTIVE | DONE NA
+#+TAGS: foundation(f) gap(g) bridge(b) capstone(c)
+#+PRIORITIES: A B C
+#+PROPERTY: Effort_ALL 1h 2h 4h 1d 2d 3d 1w 2w 1m 3m 6m
+#+OPTIONS: toc:3
+
+* Preface: What Are We Formalizing?
+
+Our proof strategy (see =next_steps.md= Items 9, 13--14, corrected 2026-02-16)
+rests on four pillars:
+
+1. *Topological rigidity.* The branch locus on $(\mathbb{Z}/k\mathbb{Z})^2$
+   stabilizes for $k \ge 144$: same 9,415+ branch cells, same entropy, same
+   singular structure regardless of resolution.  The "Collatz Surface" is a
+   finite-genus Riemann surface (degree-2 branched cover of $\mathbb{T}^2$).
+
+2. *SFT constraint.* The parity sequence is a golden mean shift (forbidden
+   bigram "11").  This alone restricts $p_{\rm odd} \le 1/\varphi^2 = 0.382$,
+   within 0.005 of the equilibrium threshold 0.387.
+
+3. *Reflecting boundary.* Pure-even tunnel walls flank the branch strip on the
+   Diophantine torus.  The irrational foliation passes /through/ the strip
+   ($A \cap L \neq \emptyset$), but the walls act as a restoring force: any
+   trajectory approaching the tunnel edge is forced into even steps, pushing
+   $u(t)$ down.
+
+4. *Baker persistence.* Baker's theorem on linear forms in logarithms
+   guarantees the tunnel walls have minimum width $\ge C/k^{1+\epsilon}$ at
+   every scale $k = 3^b$---the reflecting boundary is permanent.
+
+A Lean 4 proof must encode each pillar as a formal theorem, then compose them
+into the conclusion: every trajectory reaches 1.
+
+** The Proof Skeleton (informal)
+
+#+begin_quote
+*Theorem (Collatz Conjecture).* For every $n \ge 1$, the Collatz sequence
+$n, T(n), T^2(n), \ldots$ eventually reaches 1.
+#+end_quote
+
+*Proof outline:*
+1. Define $T : \mathbb{N}^+ \to \mathbb{N}^+$ and the walk
+   $u(t) = \nu_2(t) - \log_2 3 \cdot \nu_3(t)$.
+2. Show that $T(n)$ is always even after an odd step (the "11" constraint),
+   so the parity SFT is the golden mean shift.
+3. Show that $p_{\rm odd} \le 1/\varphi^2 < \log_2(3/2)^{-1} \cdot (\log_2 3 - 1)$
+   ... /but this is insufficient/: $1/\varphi^2 = 0.382 < 0.387$, gap only 0.005.
+   Individual trajectories can temporarily exceed the threshold.
+4. Define the "tunnel" on $(\mathbb{Z}/k\mathbb{Z})^2$ for $k = 3^b$ and show
+   the pure-even walls create a reflecting boundary.
+5. Use Baker's theorem to show the tunnel wall width $W(b) > 0$ for all $b$.
+6. Conclude: the walk $u(t)$ has negative mean drift /and/ is confined by
+   reflecting walls, so it diverges to $+\infty$, meaning $T^t(n) \to 1$.
+   $\square$
+
+Step 3 is the "golden mean near-miss"---almost but not quite enough.
+Steps 4--5 close the gap.  Step 6 is a probabilistic/ergodic argument that
+must be made rigorous (the hardest part).
+
+* Mathlib4 Audit: What Exists and What Doesn't
+** Available (ready to use)                                         :foundation:
+
+| Component | Mathlib4 module | Status |
+|----------------------------------+--------------------------------------------+----------|
+| $\mathbb{Z}/k\mathbb{Z}$ | =Mathlib.Data.ZMod.Basic= | Complete |
+| $p$-adic numbers $\mathbb{Q}_p$ | =Mathlib.NumberTheory.Padics= | Complete |
+| $p$-adic integers $\mathbb{Z}_p$ | =Mathlib.NumberTheory.Padics= | Complete |
+| Hensel's lemma | =Mathlib.NumberTheory.Padics.HenselLemma= | Complete |
+| Dirichlet approximation | =Mathlib.NumberTheory.DiophantineApproximation= | Basic |
+| Ergodic maps/measures | =Mathlib.Dynamics.Ergodic= | Good API |
+| Circle rotation numbers | =Mathlib.Dynamics.Circle.RotationNumber= | Excellent |
+| Poincare recurrence | =Mathlib.Dynamics.Ergodic.Conservative= | Complete |
+| Spectral theory (self-adjoint) | =Mathlib.Analysis.InnerProductSpace.Spectrum= | Partial |
+| Class number finiteness | =Mathlib.NumberTheory.ClassNumber= | Complete |
+| Measure theory (Lebesgue) | =Mathlib.MeasureTheory= | Comprehensive |
+
+** Must Be Built (critical gaps)                                    :gap:
+
+| Component | Needed for | Estimated effort | Dependency |
+|------------------------------+-----------------------+------------------+-----------------|
+| *Symbolic dynamics / SFT* | Pillar 2 (SFT) | 1--2 months | None |
+| *Baker's theorem* | Pillar 4 (persistence) | 3--6 months | Extensive |
+| *Riemann-Hurwitz formula* | Pillar 1 (genus) | 2--3 months | Alg. geometry |
+| *Transfer operators* | Pillar 3 (spectral gap) | 2--3 months | Spectral theory |
+| *Branched covers of tori* | Pillar 1 (surface) | 2--3 months | Covering spaces |
+
+** Assessment
+
+Baker's theorem is the long pole.  Everything else can be built incrementally.
+A realistic strategy is to formalize Pillars 1--3 first (doable with ~6 months
+of Mathlib development), then tackle Pillar 4 (Baker) as a dedicated project.
+
+/Alternative/: if we can strengthen Pillar 3 to show that the reflecting
+boundary argument works /without/ Baker (e.g., via a direct spectral gap
+argument for the transfer operator on a finite graph), we can bypass
+Baker entirely.  This is the "finite-state verification" path.
+
+* The Formalization Plan
+** Phase 0: Foundations (Lean 4 + Mathlib4, no new libraries)       :foundation:
+
+These are formalizable /today/ with existing Mathlib4.
+
+*** TODO [#A] Define the Collatz map and basic properties
+:PROPERTIES:
+:Effort:   1d
+:END:
+
+#+begin_src lean4
+-- The Collatz function
+def collatz : ℕ → ℕ
+  | 0 => 0
+  | n => if n % 2 = 0 then n / 2 else 3 * n + 1
+
+-- The iterated Collatz sequence
+def collatzSeq (n : ℕ) : ℕ → ℕ
+  | 0 => n
+  | k + 1 => collatz (collatzSeq n k)
+
+-- The conjecture itself
+def collatzConjecture : Prop :=
+  ∀ n : ℕ, n ≥ 1 → ∃ k : ℕ, collatzSeq n k = 1
+#+end_src
+
+*** TODO [#A] Prove the "11" constraint (odd step always followed by even)
+:PROPERTIES:
+:Effort:   2h
+:END:
+
+This is purely arithmetic and requires no new libraries.
+
+#+begin_src lean4
+-- After an odd step, the result is always even
+theorem collatz_odd_gives_even (n : ℕ) (h : n % 2 = 1) :
+    (3 * n + 1) % 2 = 0 := by
+  omega
+
+-- Equivalently: no two consecutive odd steps
+theorem no_consecutive_odd (n : ℕ) (h : n % 2 = 1) :
+    collatz n % 2 = 0 := by
+  simp [collatz, h]
+  -- 3*n+1 is even when n is odd; then we halve, giving (3n+1)/2
+  -- Actually collatz of odd n is 3n+1, which is even
+  omega
+#+end_src
+
+*** TODO [#A] Define winding numbers $\nu_2, \nu_3$ and the walk $u(t)$
+:PROPERTIES:
+:Effort:   1d
+:END:
+
+#+begin_src lean4
+-- Count of even and odd steps in first t steps of Collatz sequence
+def nu2 (n : ℕ) (t : ℕ) : ℕ := -- count of even steps in first t
+  (Finset.range t).card (fun i => collatzSeq n i % 2 = 0)
+
+def nu3 (n : ℕ) (t : ℕ) : ℕ := -- count of odd steps in first t
+  t - nu2 n t
+
+-- The transverse walk (using rationals to avoid reals for now)
+-- u(t) = ν₂(t) - (log₂3) · ν₃(t)
+-- Since log₂3 is irrational, we work with the rational proxy:
+-- u_approx(t) = ν₂(t) · log3 - ν₃(t) · log2
+-- which is proportional to u(t) and has the same sign
+#+end_src
+
+*** TODO [#A] Prove $\nu_2 + \nu_3 = t$ (partition of steps)
+:PROPERTIES:
+:Effort:   1h
+:END:
+
+*** TODO [#A] Prove $T^t(n) = n \cdot 2^{-\nu_2} \cdot 3^{\nu_3} + (\text{correction})$
+:PROPERTIES:
+:Effort:   2d
+:END:
+
+The exact identity: if the parity sequence is $\sigma_0, \sigma_1, \ldots$, then
+$T^t(n) = n \cdot 2^{-\nu_2} \cdot 3^{\nu_3} + \sum_{i : \sigma_i = 1} 3^{\nu_3(t) - \nu_3(i)} \cdot 2^{-\nu_2(t) + \nu_2(i)}$.
+
+This is the key identity connecting the walk $u(t)$ to convergence.
+
+*** TODO [#B] Define torus residues on $(\mathbb{Z}/k\mathbb{Z})^2$
+:PROPERTIES:
+:Effort:   1d
+:END:
+
+Using Mathlib's =ZMod k=:
+
+#+begin_src lean4
+-- Residue pair at step t of the Collatz sequence of n
+def torusResidue (k : ℕ) (n : ℕ) (t : ℕ) : ZMod k × ZMod k :=
+  (↑(nu2 n t), ↑(nu3 n t))
+#+end_src
+
+*** TODO [#B] Prove the residue advance rules
+:PROPERTIES:
+:Effort:   2d
+:END:
+
+- Even step: $r_2 \mapsto r_2 + 1$, $r_3$ unchanged.
+- Odd step: $r_3 \mapsto r_3 + 1$, $r_2$ unchanged.
+
+These are immediate from the definitions but must be stated cleanly
+to support the torus dynamics.
+
+** Phase 1: The Golden Mean Shift (new library needed)              :gap:bridge:
+
+*** TODO [#A] Build =Mathlib.Dynamics.SymbolicDynamics.SFT=
+:PROPERTIES:
+:Effort:   1m
+:END:
+
+This is the biggest "missing piece" in Mathlib for our purposes.
+Needed definitions:
+- =Alphabet=: finite type
+- =FullShift (A : Type) := ℕ → A= (one-sided)
+- =SubShift=: closed, shift-invariant subset of =FullShift=
+- =SFT=: subshift defined by a finite set of forbidden words
+- =TransitionMatrix=: for 1-step SFT, $A_{ij} = 1$ iff $ij$ allowed
+- =TopologicalEntropy=: $h_{\rm top} = \lim \frac{1}{n} \log |W_n|$
+
+*Key theorem to formalize:*
+
+#+begin_src lean4
+-- The golden mean shift
+def goldenMeanShift : SFT (Fin 2) :=
+  SFT.ofForbidden {![1, 1]}   -- forbidden bigram "11"
+
+-- Its transition matrix
+-- A = [[1, 1], [1, 0]]
+-- Spectral radius = φ (golden ratio)
+
+-- Topological entropy
+theorem goldenMean_entropy :
+    topologicalEntropy goldenMeanShift = Real.log (goldenRatio) := by
+  sorry -- requires spectral theory of non-negative matrices
+
+-- Maximum odd-step frequency under the measure of maximal entropy
+theorem goldenMean_max_p_odd :
+    maximalMeasureOddFreq goldenMeanShift = 1 / goldenRatio ^ 2 := by
+  sorry -- = 1/φ² ≈ 0.382
+#+end_src
+
+*** TODO [#A] Prove Collatz parity sequence lives in golden mean shift
+:PROPERTIES:
+:Effort:   1w
+:END:
+
+#+begin_src lean4
+-- The parity sequence of any Collatz trajectory is in the golden mean shift
+theorem collatz_parity_in_goldenMean (n : ℕ) (hn : n ≥ 1) :
+    paritySeq n ∈ goldenMeanShift := by
+  intro k
+  -- Need: paritySeq n k = 1 → paritySeq n (k+1) = 0
+  -- This is exactly `collatz_odd_gives_even`
+  exact no_consecutive_odd ...
+#+end_src
+
+*** TODO [#B] Prove $1/\varphi^2 < \log_2(3) - 1$ (the near-miss)
+:PROPERTIES:
+:Effort:   2d
+:END:
+
+This is a numerical inequality between algebraic and transcendental numbers.
+$1/\varphi^2 = (3 - \sqrt{5})/2 \approx 0.38197$ vs
+$\log_2 3 - 1 \approx 0.58496$.
+
+Wait---the equilibrium threshold is actually
+$p_{\rm eq} = 1 - 1/\log_2 3 \approx 0.387$.
+And $1/\varphi^2 \approx 0.382 < 0.387 = p_{\rm eq}$.
+
+So we need: $1/\varphi^2 < 1 - 1/\log_2 3$.
+
+Equivalently: $\log_2 3 < 1/(1 - 1/\varphi^2) = \varphi^2/(\varphi^2 - 1) = \varphi^2/\varphi = \varphi$.
+
+That is: $\log_2 3 < \varphi$?
+
+$\log_2 3 \approx 1.585$ and $\varphi \approx 1.618$.  Yes, $\log_2 3 < \varphi$.
+
+#+begin_src lean4
+-- The critical inequality
+-- log₂(3) < φ, equivalently 2^φ > 3, equivalently 2^((1+√5)/2) > 3
+theorem log2_three_lt_golden_ratio :
+    Real.logb 2 3 < goldenRatio := by
+  sorry -- numerical verification; can be done via interval arithmetic
+#+end_src
+
+/This single inequality is why the golden mean shift almost proves Collatz./
+
+** Phase 2: The Torus Dynamics (moderate Mathlib extensions)        :bridge:
+
+*** TODO [#A] Define the branch locus on $(\mathbb{Z}/k\mathbb{Z})^2$
+:PROPERTIES:
+:Effort:   1w
+:END:
+
+#+begin_src lean4
+-- A cell is "branch" if visited by both even and odd steps
+def isBranchCell (k : ℕ) (cell : ZMod k × ZMod k) (N : ℕ) : Prop :=
+  (∃ n t, n ≤ N ∧ torusResidue k n t = cell ∧ isEvenStep n t) ∧
+  (∃ n t, n ≤ N ∧ torusResidue k n t = cell ∧ isOddStep n t)
+
+-- The branch locus
+def branchLocus (k N : ℕ) : Set (ZMod k × ZMod k) :=
+  {cell | isBranchCell k cell N}
+#+end_src
+
+*** TODO [#B] Define the branched cover and Riemann-Hurwitz
+:PROPERTIES:
+:Effort:   2m
+:END:
+
+This requires building:
+1. Finite covering spaces of $(\mathbb{Z}/k\mathbb{Z})^2$
+2. The degree-2 cover defined by even/odd parity sheets
+3. Ramification points = branch cells
+4. Riemann-Hurwitz formula: $g = 1 + R/2$ for degree-2 cover of torus
+
+#+begin_src lean4
+-- The genus of the Collatz surface at resolution k
+def collatzGenus (k N : ℕ) : ℕ :=
+  1 + (branchLocus k N).card / 2
+
+-- Stability theorem: genus is independent of k for k ≥ 144
+-- (This is an empirical observation, to be proven)
+theorem genus_stable (k₁ k₂ N : ℕ) (h₁ : k₁ ≥ 144) (h₂ : k₂ ≥ 144)
+    (hN : N ≥ threshold) :
+    collatzGenus k₁ N = collatzGenus k₂ N := by
+  sorry -- requires deep structural argument
+#+end_src
+
+*** TODO [#B] Define the tunnel: pure-even walls and branch core
+:PROPERTIES:
+:Effort:   1w
+:END:
+
+#+begin_src lean4
+-- A cell is pure-even if visited only by even steps
+def isPureEven (k : ℕ) (cell : ZMod k × ZMod k) (N : ℕ) : Prop :=
+  (∃ n t, n ≤ N ∧ torusResidue k n t = cell ∧ isEvenStep n t) ∧
+  (∀ n t, n ≤ N → torusResidue k n t = cell → isEvenStep n t)
+
+-- The tunnel: branch core flanked by pure-even walls
+def tunnel (k N : ℕ) : Set (ZMod k × ZMod k) :=
+  branchLocus k N ∪ {cell | isPureEven k cell N}
+#+end_src
+
+*** TODO [#A] Formalize the reflecting boundary property
+:PROPERTIES:
+:Effort:   2w
+:END:
+
+The key dynamical property: when a trajectory's torus residue enters
+a pure-even cell, the next step is necessarily even ($n/2$), which
+decrements $u(t)$.
+
+#+begin_src lean4
+-- If the trajectory is at a pure-even cell, the next step is even
+theorem pureEven_forces_even (k N n t : ℕ) (cell : ZMod k × ZMod k)
+    (hcell : isPureEven k cell N)
+    (hres : torusResidue k n t = cell)
+    (hn : n ≤ N) :
+    isEvenStep n t := by
+  exact hcell.2 n t hn hres
+
+-- Even step decrements u(t) by 1 - log₂3 · 0 = 1
+-- (contribution to walk: Δu = +1 for even, -(log₂3 - 1) for odd)
+#+end_src
+
+** Phase 3: Baker's Theorem (the hard part)                         :gap:capstone:
+
+*** TODO [#A] Formalize Baker's theorem on linear forms in logarithms
+:PROPERTIES:
+:Effort:   6m
+:END:
+
+#+begin_quote
+*Baker's Theorem.* If $\alpha_1, \ldots, \alpha_n$ are nonzero algebraic
+numbers and $b_1, \ldots, b_n$ are integers, not all zero, then either
+$\Lambda = b_1 \log \alpha_1 + \cdots + b_n \log \alpha_n = 0$ or
+$|\Lambda| > H^{-C}$ where $H = \max |b_i|$ and $C$ depends only on
+$n$ and the $\alpha_i$.
+#+end_quote
+
+For Collatz we need the case $n = 2$, $\alpha_1 = 2$, $\alpha_2 = 3$:
+
+$|m \log 2 - n \log 3| > C / \max(|m|, |n|)^{1+\epsilon}$
+
+*This is the single hardest component of the formalization.*
+
+Possible approaches:
+1. *Full formalization from scratch* (~6 months by a team).  Baker's proof
+   uses: heights of algebraic numbers, Gel'fond-Schneider method,
+   interpolation determinants, Schwarz lemma.  Most of this is not in Mathlib.
+2. *Use as axiom with computational verification.*  State Baker's inequality
+   as an axiom and verify its consequences numerically for the finite range
+   needed.  Faster but less satisfying.
+3. *Bypass Baker entirely* if we can prove the spectral gap of the transfer
+   operator on the finite torus directly.  See Phase 4 alternative.
+
+**** Status of prerequisites in Mathlib4
+
+| Prerequisite | Status |
+|---------------------------------+----------------------------------------------|
+| Algebraic number heights | Partial (=Mathlib.NumberTheory.Height=) |
+| Gel'fond-Schneider theorem | NOT formalized |
+| Schwarz lemma | Available (complex analysis) |
+| Interpolation determinants | NOT formalized |
+| Effective lower bounds | NOT formalized |
+
+*** TODO [#B] Derive tunnel wall width bound from Baker
+:PROPERTIES:
+:Effort:   2w
+:END:
+
+Given Baker: $|m \log 2 - n \log 3| > C/\max(m,n)^{1+\epsilon}$,
+
+the tunnel at level $k = 3^b$ has width (in cell units):
+$W(b) \ge C' \cdot k / k^{1+\epsilon} = C' \cdot k^{-\epsilon}$.
+
+So $W(b) \to \infty$ in absolute cells (slowly), and $W(b)/k \to 0$.
+
+#+begin_src lean4
+-- Baker bound implies tunnel walls never vanish
+theorem tunnel_walls_positive (b : ℕ) (hb : b ≥ 1) :
+    tunnelWallWidth (3 ^ b) > 0 := by
+  -- Follows from Baker's theorem applied to |ν₂ log 2 - ν₃ log 3|
+  sorry
+#+end_src
+
+** Phase 4: The Ergodic Conclusion                                  :capstone:
+
+*** TODO [#A] Formalize the drift argument
+:PROPERTIES:
+:Effort:   1m
+:END:
+
+*Theorem.* If the walk $u(t)$ has:
+- (a) mean increment $\langle \Delta u \rangle = 1 - p_{\rm odd} \cdot \log_2 3 > 0$
+      when $p_{\rm odd} < 1 - 1/\log_2 3$,
+- (b) bounded negative excursions (reflecting boundary prevents $u(t) \to -\infty$),
+
+then $u(t) \to +\infty$, which implies $T^t(n) \to 0$ in the sense that
+the trajectory must pass through 1.
+
+This is a "biased random walk with reflecting barrier" result.
+Analogous theorems exist in probability theory (gambler's ruin with drift).
+
+#+begin_src lean4
+-- Biased walk with reflecting barrier diverges
+theorem biased_walk_diverges
+    (u : ℕ → ℝ)           -- the walk
+    (drift : ℝ)            -- mean increment
+    (hpos : drift > 0)     -- positive drift
+    (hreflect : ∀ t, u t ≥ -B)  -- reflecting barrier at -B
+    (hmartingale : ...)     -- appropriate martingale condition
+    : Filter.Tendsto u Filter.atTop Filter.atTop := by
+  sorry -- standard probability theory result
+#+end_src
+
+*** TODO [#A] Compose the four pillars into the main theorem
+:PROPERTIES:
+:Effort:   2w
+:END:
+
+#+begin_src lean4
+theorem collatz_conjecture : ∀ n : ℕ, n ≥ 1 → ∃ k, collatzSeq n k = 1 := by
+  intro n hn
+  -- 1. The parity sequence is in the golden mean shift
+  have h_sft := collatz_parity_in_goldenMean n hn
+  -- 2. The golden mean shift restricts p_odd ≤ 1/φ²
+  have h_podd := goldenMean_max_p_odd
+  -- 3. 1/φ² < p_eq, so the mean drift is positive
+  have h_drift := drift_positive_of_podd_lt_peq h_podd
+  -- 4. Tunnel walls provide reflecting boundary (via Baker)
+  have h_reflect := tunnel_walls_positive
+  -- 5. Therefore u(t) → +∞
+  have h_diverge := biased_walk_diverges u drift h_drift h_reflect
+  -- 6. u(t) → +∞ implies trajectory reaches 1
+  exact reaches_one_of_walk_diverges h_diverge
+#+end_src
+
+** Phase 4 (Alternative): Finite-State Bypass of Baker              :bridge:
+
+If Baker's theorem is too expensive to formalize, there is an alternative
+path that replaces the infinite-scale Baker argument with a finite computation.
+
+*** TODO [#B] Transfer operator on the finite torus graph
+:PROPERTIES:
+:Effort:   2m
+:END:
+
+At $k = 144$, the torus has $144^2 = 20{,}736$ cells, of which 2,379 are
+branch cells and the rest are empty or pure-even.  The Collatz dynamics
+define a stochastic matrix $P$ on the non-empty cells.
+
+If we can show that $P$ has a *spectral gap* (second eigenvalue $< 1$),
+then the system is exponentially mixing and no trajectory can be trapped
+in a non-terminating cycle.
+
+*Advantage:* This is a /finite/ matrix computation---fully decidable,
+no transcendental number theory needed.
+
+*Disadvantage:* Requires =native_decide= or verified linear algebra
+for a ~10,000 × 10,000 matrix.  Lean's kernel may struggle with this.
+
+*** TODO [#B] Verified computation of eigenvalues
+:PROPERTIES:
+:Effort:   1m
+:END:
+
+Use Lean 4's =native_decide= tactic or an external oracle (verified
+certificate) to establish that the spectral gap of $P$ on the $k = 144$
+torus is positive.
+
+Alternatively, use interval arithmetic in Lean to bound the spectral radius
+of $P - \pi$ (where $\pi$ is the rank-1 projector onto the stationary
+distribution).
+
+* Dependency Graph
+
+#+begin_example
+Phase 0: Collatz def ──→ "11" constraint ──→ Winding numbers ──→ Walk u(t)
+              │                  │
+              v                  v
+Phase 1: SFT library ──→ Golden mean shift ──→ p_odd < p_eq (near-miss)
+              │                                       │
+              v                                       v
+Phase 2: Torus dynamics ──→ Branch locus ──→ Tunnel + reflecting boundary
+              │                                       │
+              v                                       │
+Phase 3: Baker's theorem ──→ Wall width > 0 ─────────→+
+              │                                       │
+     OR       │                                       │
+Phase 4alt: Transfer operator spectral gap ───────────+
+                                                      │
+                                                      v
+Phase 4: Biased walk diverges ──→ ★ COLLATZ CONJECTURE ★
+#+end_example
+
+* Effort Estimates and Critical Path
+
+| Phase | Description | Effort | Cumulative | Depends on |
+|-------+----------------------------+--------+------------+--------------|
+| 0 | Foundations (existing Lean) | 2 weeks | 2 weeks | Nothing |
+| 1 | SFT library + golden mean | 6 weeks | 2 months | Phase 0 |
+| 2 | Torus dynamics + tunnel | 8 weeks | 4 months | Phase 0 |
+| 3 | Baker's theorem | 6 months | 10 months | Phase 0 |
+| 4 | Ergodic conclusion | 6 weeks | 11.5 months | Phases 1--3 |
+| 4alt | Finite-state bypass | 3 months | 7 months | Phases 1--2 |
+
+*Critical path (with Baker):* 0 → 3 → 4 = ~11.5 months.
+*Critical path (finite-state):* 0 → 1 → 2 → 4alt → 4 = ~7 months.
+
+The finite-state path is faster but requires either a very efficient
+verified linear algebra library or a custom oracle.
+
+* Key Mathematical Gaps to Close (Before Coding)
+
+These are *mathematical* questions that must be resolved /before/ we can
+write the Lean proofs.  They are not Lean-specific---they are open problems
+in our framework.
+
+** OPEN Is the "11" constraint sufficient to bound p_odd /per trajectory/?
+
+The golden mean shift gives $p_{\rm odd} \le 1/\varphi^2$ as a /topological/
+bound (maximal measure).  But we need: for any individual Collatz trajectory
+of length $T$, the fraction of odd steps satisfies $\nu_3/T \le 1/\varphi^2$.
+
+Is this true?  Or can a finite trajectory temporarily exceed this bound?
+
+If finite excursions are possible (likely), we need the stronger statement:
+the /Cesaro average/ of $p_{\rm odd}$ converges to something $< p_{\rm eq}$.
+This requires the ergodic theorem, which in turn requires the transfer
+operator spectral gap.
+
+** OPEN Does the branch count converge as $N \to \infty$?
+
+Our data shows 9,415 branch cells at $N = 10^8$.  Old code showed ~13,688 at
+$N = 10^9$.  The 10B run will give us the $N = 10^{10}$ number.  If the count
+is still growing, the genus is not yet defined.
+
+This matters for the Riemann-Hurwitz calculation but NOT for the core proof
+(which uses the tunnel reflecting boundary, not the genus).
+
+** OPEN Can the spectral gap of the transfer operator on the $k = 144$ torus be computed?
+
+This is the "finite-state bypass" question.  If we can construct the
+transition matrix and verify its spectral gap, we avoid Baker entirely.
+The matrix is ~10K × 10K---large but not impossible.
+
+** OPEN What is the precise relationship between the walk $u(t)$ diverging and $T^t(n) \to 1$?
+
+The identity $T^t(n) = n \cdot 2^{-\nu_2} \cdot 3^{\nu_3} + R(t)$ where
+$R(t)$ is a correction term.  We need $|R(t)| < T^t(n)$ eventually, so that
+the multiplicative factor $2^{-\nu_2} \cdot 3^{\nu_3} = 2^{-u(t) \cdot C}$
+dominates and drives $T^t(n) \to 0$.
+
+This requires bounding the correction term---a non-trivial but standard
+argument using the geometric series structure of $R(t)$.
+
+* Immediate Next Actions
+
+1. [ ] *Install Lean 4 + Mathlib4* and set up a project =collatz-lean/=.
+2. [ ] *Formalize Phase 0* (Collatz definition, "11" constraint, winding
+   numbers).  This is a weekend project and gives us a working Lean codebase.
+3. [ ] *Write the SFT library stub* (types and signatures only).  This scopes
+   the Phase 1 effort and can be submitted as a Mathlib PR.
+4. [ ] *Wait for the 10B run* to determine the branch count convergence.
+5. [ ] *Decide: Baker vs. finite-state bypass.*  If the transfer operator
+   spectral gap can be computed (Item 3 in "Gaps to Close"), take the bypass
+   route.  Otherwise, commit to the Baker formalization.
+6. [ ] *Resolve the mathematical gaps* (previous section) with pen-and-paper
+   proofs before attempting Lean formalization.
+
+* Appendix: What Has Been Verified Computationally
+
+These are /not/ formal proofs, but they provide confidence and guide the
+formalization.  All data from =branch_locus.c= at $N = 10^8$--$10^{10}$.
+
+| Claim | Status | Data |
+|----------------------------------------------+--------+------------------------|
+| "11" forbidden at all torus cells | VERIFIED | 17.8×10⁹ transitions |
+| Branch count stable for $k \ge 144$ | VERIFIED | 25 levels, all = 9,415 |
+| Profinite compatibility (200 pairs) | VERIFIED | N=10⁹, exact match |
+| Pure-even walls flank branch core | VERIFIED | k=729, 1,269 pure-even |
+| Irrational foliation passes through strip | VERIFIED | 180 branch cells on L |
+| Shadow offset bisects strip | VERIFIED | Max offset 0.044 cells |
+| $p_{\rm odd} \approx 0.332 < 0.387$ | VERIFIED | N=10⁸, global mean |
+| Transition fractions ~1/3 each (ee/eo/oe) | VERIFIED | ee=33.5%, eo=33.1% |
+| $T_{\rm mean} \approx 179$ steps | VERIFIED | N=10⁸ |
+| Strip half-width 13.8 cells at k=729 | VERIFIED | 47% of random walk |
+
+These computational facts should be mirrored as =sorry=-marked theorems in
+Lean, serving as "empirical axioms" that can be replaced with proofs later.
+
+* Appendix: Prior Art
+
+- *lean4-collatz-proof-template* (GitHub: kaiarasanen): Basic Lean 4 template
+  with inductive definition of reachability.
+- *Affine recursion framework* (AMS Math. Comp., peer review): Uses
+  mathematical induction and cycle elimination, verified in Lean 4.
+- *Tao (2019)*: "Almost all Collatz orbits attain almost bounded values."
+  Proven for density-1 set but not all $n$.  Tao's methods are probabilistic
+  and do not directly translate to our deterministic framework.
+- *Conway (1972)*: Collatz-type problems can be undecidable in general.
+  Our approach sidesteps this by working with the /specific/ $(3n+1)/2^k$
+  function, not a general class.

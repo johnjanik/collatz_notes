@@ -1,0 +1,412 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{mathrsfs}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{tikz-cd}
+
+\geometry{margin=1in}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\T}{\mathbb{T}}
+\newcommand{\A}{\mathbb{A}}
+\newcommand{\Zhat}{\widehat{\Z}}
+\newcommand{\Zp}{\Z_p}
+\newcommand{\Qp}{\Q_p}
+\DeclareMathOperator{\Ran}{Ran}
+\DeclareMathOperator{\Haar}{Haar}
+\DeclareMathOperator{\diam}{diam}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{question}[theorem]{Question}
+
+\tcbuselibrary{theorems}
+
+\newtcolorbox{keyinsight}[1][]{
+    colback=green!5,
+    colframe=green!50!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{nextstep}[1][]{
+    colback=violet!5,
+    colframe=violet!50!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{caution}[1][]{
+    colback=red!5,
+    colframe=red!50!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{\textbf{Reading Notes: Chistyakov (2002)\\
+and Applications to Collatz Dynamics\\
+on the $(2,3)$-Solenoid}}
+
+\author{John A.\ Janik\\
+\texttt{john.janik@gmail.com}}
+
+\date{February 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Paper Summary}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Chistyakov~\cite{Chistyakov2002} constructs explicit continuous mappings
+\begin{equation}
+    \Upsilon_s^{(m)}: \Qp \to \C, \qquad
+    \Omega_{s,a}^{(m)}: \T_p \to \R^3,
+\end{equation}
+depending on parameters $s \in \C$ with $|s| < 1$, $a \in \C$, and $m \in \N \cup \{\infty\}$, where $\T_p = (\R \times \Zp)/\Z$ is the $p$-adic solenoid. The main results are:
+
+\begin{enumerate}[label=(\roman*)]
+    \item For $|s| < s_0 = \sin(\pi/p)/(1 + \sin(\pi/p))$, the map $\Upsilon_s^{(m)}$ is a Lipschitz embedding (an $L$-isometry from $(\Qp, |\cdot|_p^{D_s^{-1}})$ into $(\C, |\cdot|)$) with scaling dimension $D_s = -\log_p^{-1}(|s|)$.
+
+    \item The Hausdorff dimension of $\Upsilon_s^{(m)}(\Qp)$ equals $D_s$, and the \textbf{fractal measure on the image coincides with the Haar measure on $\Qp$} (Theorem~7, formula~(23)):
+    \begin{equation}\label{eq:haar-fractal}
+        \mu_f(\cdot) = \chi\bigl((\Upsilon_s^{(m)})^{-1}(\cdot)\bigr).
+    \end{equation}
+
+    \item The solenoid embedding $\Omega_{s,a}^{(m)}: \T_p \to \R^3$ realizes $\T_p$ as a fractal subset of $\R^3$ of Hausdorff dimension $D_s + 1$, with the structure of a fiber bundle over $S^1$ with fractal (Cantor-like) fibers.
+
+    \item For $m = \infty$, the image $\Omega_{s,a}^{(\infty)}(\T_p)$ is an \textbf{invariant set of a smooth dynamical system} in $\R^3$ (Theorem~9): there exists a global Lipschitz vector field $\Gamma: \R^3 \to \R^3$ such that the $\R$-orbits in $\T_p$ map to integral curves of $\dot{\mathbf{r}} = \Gamma(\mathbf{r})$.
+
+    \item Specific instances: $\Upsilon_{1/3}^{(0)}(\Z_2)$ is the Cantor set, $\Upsilon_{1/2}^{(0)}(\Z_3)$ is the Sierpi\'nski triangle, and $\Upsilon_{1/3}^{(0)}(\Z_6)$ has boundaries consisting of Koch curves.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{What We Can Use Directly}\label{sec:direct}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Concrete Visualization of the $(2,3)$-Solenoid}\label{sec:viz}
+
+Chistyakov's embeddings are explicit and computable. The key formula is
+\begin{equation}\label{eq:upsilon}
+    \Upsilon_s^{(m)}(x) = \frac{1 - s^{v(x)}}{1 - s}
+    + \sum_{n=v(x)}^{\infty} s^n \chi_n^{(m)}(x),
+    \qquad x \in \Qp,
+\end{equation}
+where $v(x)$ is the $p$-adic valuation, $\chi_n^{(m)}(x) = \exp(i2\pi p^{-1} \sum_{k=0}^{m} x_{n-k} p^{-k})$, and $x_n$ is the $n$-th coefficient in the $p$-adic expansion.
+
+\begin{keyinsight}[Footnote~3 of Chistyakov: $p$ need not be prime]
+    Chistyakov notes that ``the part of $p$ can be played by any positive integer.'' This means we can set $p = 6$ and obtain embeddings $\Upsilon_s^{(m)}: \Q_6 \to \C$ directly. His Figure~1.9 shows $\Upsilon_{1/3}^{(0)}(\Z_6)$, whose complementary components have Koch-curve boundaries. Since $\Z_6 \cong \Z_2 \times \Z_3$ (Chinese Remainder Theorem), this is already an embedding of the fiber of our $(2,3)$-solenoid.
+\end{keyinsight}
+
+Thus the solenoid embedding $\Omega_{s,a}^{(m)}: \T_6 \to \R^3$ gives an explicit realization of $\Sigma_{2,3}$ as a fractal subset of $\R^3$. The Collatz orbits, which live on $\Sigma_{2,3}$ by our Notes~II construction, become curves in $\R^3$ that we can plot.
+
+\begin{nextstep}[Implementation: embed Collatz orbits in $\R^3$]
+    \begin{enumerate}
+        \item Implement Chistyakov's $\Upsilon_s^{(m)}$ for $p = 6$ (or separately for $p = 2$ and $p = 3$).
+        \item For each Collatz trajectory $n \to 1$, compute the sequence of $6$-adic expansions of the intermediate values.
+        \item Map the trajectory through $\Upsilon_s^{(m)}$ to obtain a curve in $\C$ (or through $\Omega_{s,a}^{(m)}$ to $\R^3$).
+        \item Visualize: do ``hard'' trajectories (high stopping time) trace qualitatively different curves from ``easy'' ones?
+    \end{enumerate}
+\end{nextstep}
+
+
+\subsection{Haar Measure $=$ Fractal Measure: A Diagnostic Tool}\label{sec:haar}
+
+Chistyakov's Theorem~7 states that for the embedding $\Upsilon_s^{(m)}$ (when it is an $L$-isometry), the fractal measure $\mu_f$ on the image coincides with the Haar measure pulled back through the embedding:
+\begin{equation}
+    \mu_f(B) = \chi\bigl((\Upsilon_s^{(m)})^{-1}(B)\bigr), \qquad \forall B \subset \C.
+\end{equation}
+This is a \textbf{rigidity result}: the embedding $\Upsilon_s^{(m)}$ is so well-adapted to the $p$-adic structure that the Hausdorff measure on the fractal image is \emph{exactly} the Haar measure, not just equivalent to it up to constants.
+
+For our program, this means:
+
+\begin{keyinsight}[Detecting Collatz deviations from Haar measure]
+    Under the heuristic hypothesis (Lagarias~\cite{Lagarias1985}), the Collatz orbit measure on $\Z_2$ is absolutely continuous with respect to Haar measure. Any deviation from this hypothesis would appear as a \textbf{fractal anomaly} in the image $\Upsilon_s^{(m)}(\Z_2)$: the orbit measure would have a different Hausdorff dimension or a different multifractal spectrum than the Haar measure.
+
+    Concretely: embed $\Z_2$ via $\Upsilon_s^{(m)}$ for some $s$ with $|s| < s_0$. Color each point $\Upsilon_s^{(m)}(n)$ by the stopping time $\sigma(n)$. If the Collatz dynamics respects the Haar measure, the coloring should be statistically uniform across scales. If there is arithmetic structure (as our torus residue data suggests), it will appear as non-uniform coloring correlated with the fractal structure of the image.
+\end{keyinsight}
+
+
+\subsection{The Scaling Property and Collatz}\label{sec:scaling}
+
+The fundamental scaling relation (Chistyakov's eq.~(17)) is:
+\begin{equation}\label{eq:scaling}
+    \Upsilon_s^{(m)}(px) = s\, \Upsilon_s^{(m)}(x) + 1.
+\end{equation}
+This says multiplication by $p$ in $\Qp$ becomes contraction by $s$ (plus translation) in $\C$.
+
+For the Collatz map on $\Z_2$: the even branch $n \mapsto n/2$ is multiplication by $p^{-1} = 2^{-1}$ in $\Q_2$. Under the embedding $\Upsilon_s^{(m)}$ with $p = 2$, this becomes:
+\begin{equation}
+    \Upsilon_s^{(m)}(n/2) = s^{-1}\bigl(\Upsilon_s^{(m)}(n) - 1\bigr).
+\end{equation}
+That is, the halving step of Collatz becomes \textbf{expansion by $s^{-1}$} in the image. Since $|s| < 1$, this is magnification---exactly the ``unstable'' direction.
+
+The odd branch $n \mapsto 3n + 1$ involves multiplication by $3$ (expansion in the $3$-adic direction) followed by addition of $1$. Under the embedding with $p = 2$, the multiplication by $3$ does \emph{not} have a simple scaling form, because $3$ is a unit in $\Z_2$ (it has $2$-adic valuation~$0$). This asymmetry---$2$ scales cleanly, $3$ does not---is the source of the dynamical complexity.
+
+\begin{observation}[The two-prime problem, geometrized]
+    Using two separate embeddings, $\Upsilon_{s_2}^{(m)}: \Q_2 \to \C$ and $\Upsilon_{s_3}^{(m)}: \Q_3 \to \C$, we can track how the Collatz map acts in each coordinate:
+    \begin{itemize}
+        \item In the $\Q_2$-image: the halving step is a clean scaling $z \mapsto s_2^{-1}(z - 1)$, but the $3n+1$ step is a complicated nonlinear perturbation.
+        \item In the $\Q_3$-image: the $3n+1$ step involves multiplication by $3$ (a clean scaling $z \mapsto s_3 z + 1$), but the halving step is a unit in $\Z_3$ and acts nonlinearly.
+    \end{itemize}
+    This is the geometric content of the decoupling we identified in Notes~II, \S7: the map $F(x,y) = ((x-y)/2, (3y+1)/2)$ on $\Z_2 \times \Z_3$ separates the two scaling behaviors. Chistyakov's embeddings make this separation \textbf{visible}.
+\end{observation}
+
+
+\subsection{The Dynamical System on the Embedded Solenoid}\label{sec:dynsys}
+
+Chistyakov's Theorem~9 is the most striking result for our purposes. For $m = \infty$, the image $\Omega_{s,a}^{(\infty)}(\T_p) \subset \R^3$ is an invariant set of a smooth ODE:
+\begin{equation}\label{eq:Gamma}
+    \dot{\mathbf{r}} = \Gamma(\mathbf{r}),
+\end{equation}
+where $\Gamma: \R^3 \to \R^3$ is a global Lipschitz vector field. The $\R$-action on $\T_p$ (which generates dense orbits winding around the solenoid) maps to integral curves of this ODE.
+
+\begin{keyinsight}[From number theory to smooth dynamics]
+    If we can construct the analogous embedding for the $(2,3)$-solenoid $\Sigma_{2,3}$, the Collatz map---which generates a discrete dynamical system on $\Sigma_{2,3}$---would become a Poincar\'e first-return map of the smooth flow $\dot{\mathbf{r}} = \Gamma(\mathbf{r})$ restricted to a cross-section of the embedded solenoid. The Collatz conjecture would then become: \emph{every orbit of the Poincar\'e map on the cross-section eventually reaches the fixed point corresponding to $n = 1$}.
+
+    This is a standard formulation in smooth dynamics, where tools like Conley index theory, Floer homology, and Lyapunov functions are available.
+\end{keyinsight}
+
+The explicit form of $\Gamma$ (Chistyakov's eq.~(37)) involves the Levi-Civita symbol and the additive characters of $\T_p$:
+\begin{equation}
+    \Gamma(\Omega_{s,a}^{(\infty)}(f))
+    = -2\pi\Bigl[
+    L^{(2)}\Omega_{s,a}^{(\infty)}(f)
+    + p^{-1}\operatorname{Re}\bigl(
+    \tilde{\chi}_{-1}^{(\infty)}(f)(L^{(3)} + iL^{(1)})
+    \bigr)\Omega_{s/p,+0a}^{(\infty)}(f)
+    \Bigr],
+\end{equation}
+where $(L^{(k)})_{i,j} = \varepsilon_{i,j,k}$. This is a rotation (the $L^{(2)}$ term) plus a correction involving the character $\tilde{\chi}_{-1}^{(\infty)}$ that encodes the $p$-adic structure of the fiber. For $p = 6$, this correction would mix the $2$-adic and $3$-adic information---exactly the ``communication term'' in our map $F$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{What Requires Generalization}\label{sec:generalize}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{From Single-Prime to Two-Prime Solenoids}
+
+Chistyakov works with $\T_p$ for a single prime $p$. Our $(2,3)$-solenoid $\Sigma_{2,3} = (\R \times \Z_2 \times \Z_3)/\Z$ is a \emph{two-prime} solenoid. There are two routes to generalization:
+
+\begin{enumerate}[label=\textbf{Route \Alph*:}]
+    \item \textbf{Use $p = 6$ directly.} As Chistyakov notes (footnote~3), $p$ need not be prime. Setting $p = 6$ gives $\Z_6 \cong \Z_2 \times \Z_3$ and $\T_6 = (\R \times \Z_6)/\Z$. The formulas carry over directly. The $6$-adic expansion of $x \in \Z_6$ has digits $x_n \in \{0, 1, 2, 3, 4, 5\}$, and the characters $\chi_n^{(m)}(x) = \exp(i2\pi \cdot 6^{-1}\sum_{k=0}^{m} x_{n-k} 6^{-k})$ are well-defined.
+
+    \emph{Advantage}: No modification of Chistyakov's formulas needed.
+
+    \emph{Disadvantage}: The $6$-adic expansion does not separate the $2$-adic and $3$-adic information cleanly. Since the Collatz map acts differently on the two components, this mixing obscures the dynamics.
+
+    \item \textbf{Construct a product embedding.} Define
+    \begin{equation}
+        \Phi: \Z_2 \times \Z_3 \to \C \times \C, \qquad
+        \Phi(x, y) = \bigl(\Upsilon_{s_2}^{(m)}(x),\; \Upsilon_{s_3}^{(m)}(y)\bigr),
+    \end{equation}
+    using independent embeddings for each factor. The solenoid embedding is then
+    \begin{equation}
+        \tilde{\Omega}: \Sigma_{2,3} \to \R \times \C \times \C \cong \R^5,
+        \qquad (t, x, y) \mapsto (t, \Upsilon_{s_2}^{(m)}(x), \Upsilon_{s_3}^{(m)}(y)).
+    \end{equation}
+    To get into $\R^3$, project $\C \times \C \to \R^2$ (e.g., take one real coordinate from each factor) and use the $\R$-coordinate as the third dimension.
+
+    \emph{Advantage}: The $\Z_2$ and $\Z_3$ components are decoupled, matching the structure of our map $F(x,y) = ((x-y)/2, (3y+1)/2)$.
+
+    \emph{Disadvantage}: The projection $\C \times \C \to \R^2$ loses information and may destroy the $L$-isometry property.
+\end{enumerate}
+
+\begin{nextstep}[Recommended: implement both routes]
+    Route~A is simpler and gives immediate visualizations. Route~B is more faithful to the dynamics and should be pursued in parallel. The choice between them is ultimately empirical: which one reveals more structure when Collatz orbits are plotted?
+\end{nextstep}
+
+
+\subsection{From Additive Characters to Collatz Characters}
+
+Chistyakov's embeddings are built from additive characters $\chi_n^{(m)}$ of $\Qp$. These form the Pontryagin dual of $\Qp$ and are the natural basis for harmonic analysis. However, the Collatz map is \textbf{not additive}: $T_C(x + y) \neq T_C(x) + T_C(y)$ in general.
+
+This means the embedding $\Upsilon_s^{(m)}$ does not intertwine the Collatz map with a linear map on $\C$. Instead, the image of the Collatz map under $\Upsilon_s^{(m)}$ is a nonlinear map on the fractal $\Upsilon_s^{(m)}(\Qp)$. The relevant question is:
+
+\begin{question}
+    Is there a \emph{different} family of embeddings---perhaps built from ``Collatz characters'' rather than additive characters---for which the Collatz map becomes (approximately) linear on the image?
+\end{question}
+
+This is related to the odometer conjugacy conjecture from Notes~II (Conjecture~8.5). If such a conjugacy exists, the ``Collatz characters'' would be the eigenfunctions of the conjugated map, and the corresponding embedding would linearize the dynamics.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Quantum Mechanics Connection}\label{sec:quantum}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Chistyakov's \S4 (around eq.~(26)--(27)) sketches a remarkable application: a quantum particle confined to the fractal $F = \Ran(\Upsilon_s^{(m)})$, with Hilbert space $L^2(\C, \mu_f)$ and Hamiltonian
+\begin{equation}\label{eq:schrodinger-fractal}
+    E\Psi(z) = \int K(|z - z'|)\,\Psi(z')\,d\mu_f(z').
+\end{equation}
+Using Theorem~7 (Haar $=$ fractal measure), this becomes an integral equation on $L^2(\Qp, \chi)$ with kernel $K(|\Upsilon_s^{(m)}(x) - \Upsilon_s^{(m)}(y)|)$.
+
+The key observation: for $|s| \ll 1$, the kernel simplifies (eq.~(27)) to
+\begin{equation}
+    K\bigl(|x - y|_p^\alpha \cdot |(\chi_{v(x-y)}^{(m)}(x-y) - 1) - O_{x,y}(s)|\bigr),
+\end{equation}
+where $|O_{x,y}(s)| \leq |s|/(1 - |s|)$. To leading order in $s$, the kernel depends only on $x - y$ and is therefore \textbf{translation-invariant} in $\Qp$. The $p$-adic Fourier transform diagonalizes the Hamiltonian, giving spectrum $\{E_n = \widetilde{K}(p^n) : n \in \Z\}$ with compactly supported eigenfunctions.
+
+\begin{keyinsight}[Connection to our broader program]
+    This is precisely the structure we expect from the modular spacetime framework: a Hamiltonian on a $p$-adic space, diagonalized by Fourier transform, with discrete spectrum indexed by $p$-adic valuations. The eigenfunctions are ``$p$-adically localized''---they have compact support in $\Qp$, which means they are supported on finite unions of $p$-adic balls.
+
+    For the Collatz problem specifically: if we could write the ``transfer operator'' of the Collatz map (the Ruelle--Perron--Frobenius operator) in the form of eq.~\eqref{eq:schrodinger-fractal}, then Chistyakov's diagonalization would give us the spectral decomposition of the Collatz dynamics. The leading eigenvalue would determine the rate of convergence to the invariant measure, and the gap to the second eigenvalue would quantify the mixing time---which is precisely the ``commitment time'' we identified in Notes~I, \S5.
+\end{keyinsight}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Concrete Extraction: What to Implement}\label{sec:implement}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In decreasing order of priority:
+
+\begin{enumerate}
+    \item \textbf{Implement $\Upsilon_s^{(m)}$ for $p = 2$, $p = 3$, and $p = 6$.} The formula~\eqref{eq:upsilon} converges rapidly (geometric in $|s|^n$). For integers $n < N$, only $O(\log_p N)$ terms are needed. Plot $\Upsilon_s^{(m)}(\Z_p \cap [0, N])$ for $N = 10^4$--$10^6$, colored by Collatz stopping time. Parameters: $s = 1/3$ for $p = 2$ (Cantor set), $s = 1/2$ for $p = 3$ (Sierpi\'nski), $s = 1/3$ for $p = 6$ (Koch boundaries). \textbf{Estimated effort: 1--2 days.}
+
+    \item \textbf{Overlay Collatz orbits.} For a Collatz trajectory $n_0 \to n_1 \to \cdots \to 1$, compute $\Upsilon_s^{(m)}(n_i)$ for each step. Connect consecutive points to form a path on the fractal. Compare ``easy'' trajectories (low $\sigma$) with ``hard'' ones (high $\sigma$, e.g., $n = 837799$). The two-phase dynamics (excursion $\to$ descent) from Notes~I should be visible as a geometric transition on the fractal. \textbf{Estimated effort: 1 day.}
+
+    \item \textbf{Embed the $(2,3)$-solenoid via $\Omega_{s,a}^{(m)}$ with $p = 6$.} Use Chistyakov's formula~(32) to produce a 3D rendering. Overlay Collatz trajectories as curves winding through the embedded solenoid. The ``dense winding'' property (Theorem~9) means each trajectory should approximate the full solenoid. \textbf{Estimated effort: 2--3 days.}
+
+    \item \textbf{Test Haar $=$ fractal measure against Collatz orbit measure.} Embed $\Z_2 \cap [0, N]$ via $\Upsilon_s^{(m)}$ and compute the empirical distribution of $\Upsilon_s^{(m)}(n)$ weighted by (a)~uniform measure (which should reproduce Haar), and (b)~the Collatz orbit measure (weighting by the number of times $n$ is visited by all trajectories starting in $[2, M]$). The difference between (a) and (b) is the ``Collatz anomaly'' in the fractal measure. \textbf{Estimated effort: 1--2 days.}
+
+    \item \textbf{Compute the Ruelle transfer operator in the $\Upsilon_s^{(m)}$ basis.} Express the Collatz transfer operator $\mathcal{L}f(x) = \frac{1}{2}f(2x) + \frac{1}{2}f((2x-1)/3)$ (for $x \in \Z_2$) in the basis of $p$-adic characters used by Chistyakov. Determine whether the matrix elements decay rapidly, which would justify a truncated spectral analysis. \textbf{Estimated effort: 1--2 weeks.}
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Limitations and Cautions}\label{sec:caution}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{caution}[What Chistyakov does NOT give us]
+    \begin{enumerate}
+        \item \textbf{No Collatz-specific results.} The paper is about general embeddings of $\Qp$ and $\T_p$; the Collatz map is never mentioned. All connections to Collatz dynamics are our extrapolations.
+
+        \item \textbf{Single-prime theory only.} The extension to $p = 6$ (or to $\Z_2 \times \Z_3$ directly) uses footnote~3 but has not been worked out in detail. The $L$-isometry conditions ($\Delta_s^{(m)} > 0$) need to be verified for $p = 6$ specifically: the critical parameter is
+        \begin{equation}
+            s_0(p=6) = \frac{\sin(\pi/6)}{1 + \sin(\pi/6)} = \frac{1/2}{3/2} = \frac{1}{3}.
+        \end{equation}
+        So we need $|s| < 1/3$ for the embedding to be guaranteed injective.
+
+        \item \textbf{The dynamical system (Theorem~9) requires $m = \infty$.} The case $m < \infty$ gives piecewise-smooth embeddings without a global ODE. For computational purposes, $m$ finite (even $m = 0$) is usually sufficient for visualization, but the smooth dynamics requires the full character series.
+
+        \item \textbf{The ad\`elic embedding $\A/\Q \to \R^3$ is mentioned but not constructed.} Chistyakov's concluding remark---``constructing an embedding of $\A/\Q$ in $\R^3$ could be interesting''---is exactly what our program needs, but it remains open. The difficulty is that $\A/\Q$ involves all primes simultaneously, not just $2$ and $3$.
+    \end{enumerate}
+\end{caution}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Synthesis with Our Program}\label{sec:synthesis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Chistyakov embeddings fit into our three-layer framework (Notes~II, \S9) as follows:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\small
+\begin{tabular}{lp{5cm}p{5cm}}
+    \toprule
+    \textbf{Layer} & \textbf{Before Chistyakov} & \textbf{After Chistyakov} \\
+    \midrule
+    Empirical & Torus residues $\mu_k$ on $(\Z/k\Z)^2$ & $+$ Fractal images in $\C$ and $\R^3$, with Collatz orbits as curves \\[6pt]
+    Topological & Pseudo-Anosov foliations, mapping torus & $+$ Smooth ODE $\dot{\mathbf{r}} = \Gamma(\mathbf{r})$ on embedded solenoid; Poincar\'e map formulation \\[6pt]
+    Arithmetic & $F$ on $\Z_2 \times \Z_3$, profinite $\hat{w}(n)$ & $+$ Ruelle operator in $p$-adic character basis; spectral decomposition of Collatz transfer operator \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+The most important single result is the equivalence $\mu_f = \chi \circ (\Upsilon_s^{(m)})^{-1}$ (Haar $=$ fractal measure). This converts our torus residue analysis (which detects deviations from uniformity at finite modular levels) into a fractal geometry problem (detecting deviations from Haar measure in the Hausdorff measure of the image). The two perspectives give complementary information:
+
+\begin{itemize}
+    \item The \textbf{torus residue} approach is algebraic: it works modulo $k$ and detects forbidden cells, diagonal banding, and profinite compatibility.
+    \item The \textbf{fractal image} approach is geometric: it works in $\C$ or $\R^3$ and detects multifractal structure, anomalous dimensions, and geometric correlations between nearby points.
+\end{itemize}
+
+Both are windows into the same underlying object---the Collatz orbit measure on $\Sigma_{2,3}$---viewed through different projections.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Updated Priority List}\label{sec:priorities}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Incorporating the Chistyakov embeddings into the research program from Notes~II:
+
+\begin{enumerate}
+    \item \textbf{Implement $\Upsilon_s^{(m)}$ for $p = 2, 3, 6$} and generate fractal images colored by Collatz stopping time. [Comp., 1--2 days]
+
+    \item \textbf{Implement $F$ in truncated $p$-adic arithmetic} (unchanged from Notes~II). [Comp., 1--2 days]
+
+    \item \textbf{Extend torus residues to $k = 2^a 3^b$} and verify profinite compatibility (unchanged). [Comp., 1 day]
+
+    \item \textbf{Overlay Collatz trajectories on the fractal images.} Identify the geometric signature of the two-phase dynamics. [Comp., 1 day]
+
+    \item \textbf{Embed $\T_6$ in $\R^3$} via $\Omega_{s,a}^{(m)}$ with Collatz orbits as $3$D curves. [Comp., 2--3 days]
+
+    \item \textbf{Compute Lyapunov exponent} of the explicit map $F$ (from Notes~II). [Comp.+Anal., 1 week]
+
+    \item \textbf{Test Haar vs.\ Collatz orbit measure} on the embedded fractal. [Comp., 1--2 days]
+
+    \item \textbf{Spectral analysis of Ruelle operator} in $p$-adic character basis. [Anal., 2+ weeks]
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% References
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{thebibliography}{99}
+
+\bibitem{Chistyakov2002}
+D.~V.~Chistyakov,
+``Fractal geometry for images of continuous map of $p$-adic numbers and $p$-adic solenoids into Euclidean spaces,''
+arXiv:\texttt{math/0202089v1} [math.DS], 2002.
+
+\bibitem{Lagarias1985}
+J.~C.~Lagarias,
+``The $3x+1$ problem and its generalizations,''
+\emph{Amer.\ Math.\ Monthly} \textbf{92} (1985), 3--23.
+
+\bibitem{Wirsching1998}
+G.~J.~Wirsching,
+\emph{The Dynamical System Generated by the $3n+1$ Function},
+LNM 1681, Springer, 1998.
+
+\bibitem{VVZ1994}
+V.~S.~Vladimirov, I.~V.~Volovich, and E.~I.~Zelenov,
+\emph{$p$-Adic Analysis and Mathematical Physics},
+World Scientific, 1994.
+
+\end{thebibliography}
+
+\end{document}

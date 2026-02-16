@@ -1,0 +1,25 @@
+# Python virtualenv
+.math/
+
+# Compiled C binaries
+c_scripts/parity_sft
+c_scripts/collatz_tree
+c_scripts/collatz_tree_big
+c_scripts/collatz_tree_anim
+c_scripts/collatz_scatter
+c_scripts/profinite_compat
+c_scripts/branch_locus
+
+# Video output
+c_scripts/frames/output.mp4
+
+# Emacs backup/lock files
+*~
+\#*\#
+.#*
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc

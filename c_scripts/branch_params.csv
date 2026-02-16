@@ -1,0 +1,9 @@
+key,value
+N,100000
+num_levels,27
+total_trajs,99999
+total_steps,10753840
+total_even_steps,7188948
+total_odd_steps,3564892
+mean_traj_len,107.54
+global_p_odd,0.331499446

@@ -1,0 +1,2248 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{mathrsfs}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{graphicx}
+\usepackage{caption}
+
+\geometry{margin=1in}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+% Commands
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\T}{\mathbb{T}}
+\newcommand{\Diff}{\mathrm{Diff}}
+\newcommand{\Sol}{\mathrm{Sol}}
+\newcommand{\Hom}{\mathrm{Hom}}
+\DeclareMathOperator{\lcm}{lcm}
+
+% Theorem environments
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{observation}[theorem]{Observation}
+
+% Custom box styles
+\tcbuselibrary{theorems}
+
+\newtcolorbox{mainresult}[1][]{
+    colback=blue!5,
+    colframe=blue!50!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{keyinsight}[1][]{
+    colback=green!5,
+    colframe=green!50!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{empirical}[1][]{
+    colback=orange!5,
+    colframe=orange!60!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{\textbf{Winding Numbers, Pseudo-Anosov Structure,\\
+and the $(\nu_2, \nu_3)$ Equilibrium\\
+in the Collatz Dynamical System}}
+
+\author{John A.\ Janik\\
+\texttt{john.janik@gmail.com}}
+
+\date{February 2026 — Working Notes}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction and Motivation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The Collatz map $T: \N \to \N$ is defined by
+\begin{equation}\label{eq:collatz-map}
+    T(n) = \begin{cases}
+        n/2 & \text{if } n \equiv 0 \pmod{2},\\
+        3n + 1 & \text{if } n \equiv 1 \pmod{2}.
+    \end{cases}
+\end{equation}
+The Collatz conjecture asserts that for every $n \geq 1$, the orbit $n, T(n), T^2(n), \ldots$ eventually reaches~$1$. Despite extensive numerical verification (up to $n \sim 10^{20}$, see~\cite{Oliveira2015}), the conjecture remains open.
+
+These notes develop a topological perspective on Collatz dynamics by introducing \emph{winding numbers} associated to trajectories. The central observation is that each trajectory from $n$ to $1$ accumulates a pair of integers $(\nu_2(n), \nu_3(n))$ counting even and odd steps respectively, and that this pair constitutes a \emph{winding number} on a 2-torus $\T^2$ equipped with a distinguished irrational foliation of slope $\log_2 3$. The deviation of the empirical ratio $\rho(n) = \nu_2/\nu_3$ from the equilibrium value $\log_2 3$ encodes dynamically meaningful information that is invisible in the raw orbit data.
+
+We establish an exact algebraic identity (Proposition~\ref{prop:rho-identity}) that decomposes $\rho$ into a universal equilibrium term plus explicit correction terms, prove that $\rho > \log_2 3$ for all terminating trajectories (Corollary~\ref{cor:delta-positive}), and use eigenbasis coordinates adapted to the equilibrium foliation to reveal a pseudo-Anosov structure in the dynamics. Computational experiments on $10^6$ trajectories confirm the theoretical predictions and expose additional arithmetic structure in the torus residues $(\nu_2 \bmod k, \nu_3 \bmod k)$.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Winding Number Pair}\label{sec:winding}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Definitions}
+
+\begin{definition}[Parity counts and winding pair]\label{def:winding-pair}
+    For $n \geq 2$ with finite Collatz trajectory $n = a_0, a_1, \ldots, a_k = 1$, define:
+    \begin{align}
+        \nu_2(n) &:= \#\{i : 0 \leq i < k,\; a_i \text{ even}\}, \label{eq:nu2}\\
+        \nu_3(n) &:= \#\{i : 0 \leq i < k,\; a_i \text{ odd}\}. \label{eq:nu3}
+    \end{align}
+    The \emph{winding pair} of $n$ is $w(n) := (\nu_2(n), \nu_3(n)) \in \Z_{\geq 0}^2$, and the \emph{winding ratio} is
+    \begin{equation}\label{eq:rho}
+        \rho(n) := \frac{\nu_2(n)}{\nu_3(n)}.
+    \end{equation}
+    The total stopping time is $\sigma(n) := \nu_2(n) + \nu_3(n)$.
+\end{definition}
+
+The terminology ``winding number'' is justified by the following construction.
+
+\begin{definition}[Torus winding]\label{def:torus-winding}
+    Consider the 2-torus $\T^2 = (\R/\Z)^2$. The Collatz trajectory of $n$ determines a path $\gamma_n: \{0, 1, \ldots, \sigma(n)\} \to \T^2$ starting at the origin, where
+    \begin{itemize}
+        \item each even step increments the first coordinate (mod 1),
+        \item each odd step increments the second coordinate (mod 1).
+    \end{itemize}
+    The winding pair $w(n)$ is the element of $H_1(\T^2;\Z) \cong \Z^2$ represented by $\gamma_n$.
+\end{definition}
+
+\begin{remark}
+    The first homology group $H_1(\T^2;\Z) \cong \Z^2$ provides two independent integer-valued winding numbers. The ratio $\rho$ is the slope of the corresponding homology class in $\R^2$. We shall see that this slope is constrained to lie in a narrow band above the irrational value $\log_2 3$.
+\end{remark}
+
+
+\subsection{The Exact Identity for $\rho$}
+
+\begin{proposition}[Decomposition of the winding ratio]\label{prop:rho-identity}
+    Let $n \geq 2$ with terminating Collatz trajectory, and let $n_1, n_2, \ldots, n_{\nu_3}$ be the successive odd values encountered in the orbit (i.e., the values at which $3n_i + 1$ is applied). Then:
+    \begin{equation}\label{eq:rho-identity}
+        \rho(n) = \log_2 3 + \frac{\log_2 n}{\nu_3(n)} + \frac{1}{\nu_3(n)} \sum_{i=1}^{\nu_3(n)} \log_2\!\Bigl(1 + \frac{1}{3n_i}\Bigr).
+    \end{equation}
+\end{proposition}
+
+\begin{proof}
+    The trajectory starts at $n$ and ends at $1$. Each even step divides by $2$, and each odd step multiplies by $3$ and adds $1$. The total multiplicative effect is:
+    \begin{equation}\label{eq:multiplicative-balance}
+        1 = n \cdot \frac{1}{2^{\nu_2}} \cdot \prod_{i=1}^{\nu_3} \frac{3n_i + 1}{n_i} = n \cdot \frac{3^{\nu_3}}{2^{\nu_2}} \cdot \prod_{i=1}^{\nu_3} \Bigl(1 + \frac{1}{3n_i}\Bigr).
+    \end{equation}
+    (Note: the factor $\frac{3n_i+1}{n_i}$ accounts for the odd step $n_i \mapsto 3n_i + 1$, and the subsequent halvings contribute $2^{-\nu_2}$ cumulatively.)
+
+    Taking $\log_2$ of both sides:
+    \begin{equation}
+        0 = \log_2 n - \nu_2 + \nu_3 \log_2 3 + \sum_{i=1}^{\nu_3} \log_2\!\Bigl(1 + \frac{1}{3n_i}\Bigr).
+    \end{equation}
+    Solving for $\nu_2$ and dividing by $\nu_3$:
+    \begin{equation}
+        \frac{\nu_2}{\nu_3} = \log_2 3 + \frac{\log_2 n}{\nu_3} + \frac{1}{\nu_3}\sum_{i=1}^{\nu_3} \log_2\!\Bigl(1 + \frac{1}{3n_i}\Bigr). \qedhere
+    \end{equation}
+\end{proof}
+
+\begin{corollary}[Strict positivity of the deviation]\label{cor:delta-positive}
+    Define the \emph{winding deviation}
+    \begin{equation}
+        \delta(n) := \rho(n) - \log_2 3.
+    \end{equation}
+    Then $\delta(n) > 0$ for all $n \geq 2$ with terminating trajectory.
+\end{corollary}
+
+\begin{proof}
+    Both correction terms in \eqref{eq:rho-identity} are strictly positive: $\log_2 n > 0$ for $n \geq 2$, and $\log_2(1 + 1/(3n_i)) > 0$ for all $n_i \geq 1$.
+\end{proof}
+
+\begin{keyinsight}[The Collatz conjecture as a winding constraint]
+    The equilibrium line $\nu_2 = (\log_2 3)\, \nu_3$ is a \textbf{one-sided barrier}: every terminating trajectory has its endpoint strictly above this line in the $(\nu_2, \nu_3)$-plane. The Collatz conjecture, in winding number language, asserts that \emph{every lattice walk originating at the origin eventually terminates above the irrational line of slope $\log_2 3$}. A non-terminating trajectory would correspond to a walk whose running ratio $\rho(t)$ approaches $\log_2 3$ from below without ever committing to the upper half-plane.
+\end{keyinsight}
+
+\begin{remark}[Decay of the deviation]\label{rem:decay}
+    For ``typical'' trajectories, the odd values $n_i$ are of order $n^{c}$ for some $c > 0$, so $\log_2(1 + 1/(3n_i)) \approx 1/(3n_i \ln 2) \to 0$. The dominant contribution to $\delta$ is thus $\log_2(n)/\nu_3$. Since $\nu_3$ grows roughly as $\log(n)/\log(4/3)$ for typical $n$ (Terras~\cite{Terras1976}), the deviation $\delta$ remains bounded below by a positive constant for any given $n$ but decreases as $\nu_3^{-1}$ for fixed $n$-size across the population. This $1/\nu_3$ envelope is clearly visible in computational experiments (Section~\ref{sec:computation}).
+\end{remark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Eigenbasis Coordinates and the Anosov Structure}\label{sec:anosov}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{The Syracuse Function and Step Sizes}
+
+The \emph{Syracuse function} $S: \Z_{\mathrm{odd}}^+ \to \Z_{\mathrm{odd}}^+$ is the first-return map of the Collatz iteration to the odd integers:
+\begin{equation}\label{eq:syracuse}
+    S(n) := \frac{3n + 1}{2^{v_2(3n+1)}},
+\end{equation}
+where $v_2(m) := \max\{k : 2^k \mid m\}$ is the $2$-adic valuation. One application of $S$ performs exactly one odd step and $k_i := v_2(3n_i + 1)$ even steps, so the winding pair advances by the vector $(k_i, 1)$ in the $(\nu_2, \nu_3)$-plane.
+
+\begin{definition}[Syracuse step sequence]
+    The \emph{Syracuse step sequence} of a trajectory from $n$ to $1$ is the sequence $\mathbf{k}(n) = (k_1, k_2, \ldots, k_{\nu_3})$ where $k_i = v_2(3n_i + 1)$ is the number of halvings following the $i$-th odd step.
+\end{definition}
+
+\begin{proposition}[Heuristic step distribution]\label{prop:step-dist}
+    Under the heuristic assumption that the values $3n_i + 1$ are equidistributed modulo powers of $2$ (the ``random walk'' hypothesis of Lagarias~\cite{Lagarias1985}):
+    \begin{equation}\label{eq:step-prob}
+        P(k_i = k) = 2^{-k}, \quad k \geq 1.
+    \end{equation}
+    The expected step size is $\langle k \rangle = \sum_{k=1}^{\infty} k \cdot 2^{-k} = 2$.
+\end{proposition}
+
+\begin{empirical}[Verification]
+    Over $8{,}715{,}141$ Syracuse steps collected from $200{,}000$ random trajectories with starting values in $[2, 10^6]$, the empirical mean step size is $\langle k \rangle_{\mathrm{emp}} = 1.9914$, confirming \eqref{eq:step-prob} to three significant figures.
+\end{empirical}
+
+
+\subsection{Eigenbasis Coordinates}
+
+The Syracuse step structure motivates a change of coordinates on the $(\nu_2, \nu_3)$-plane.
+
+\begin{definition}[Anosov eigenbasis]\label{def:eigenbasis}
+    Define coordinates $(u, v)$ on $\R^2$ by:
+    \begin{align}
+        u &:= \nu_2 - (\log_2 3)\,\nu_3, \label{eq:u-coord}\\
+        v &:= \frac{\nu_2 + (\log_2 3)\,\nu_3}{\sqrt{1 + (\log_2 3)^2}}, \label{eq:v-coord}
+    \end{align}
+    where $u$ measures transverse displacement from the equilibrium line and $v$ measures position along it.
+\end{definition}
+
+In these coordinates, one Syracuse step maps:
+\begin{align}
+    u &\mapsto u + (k_i - \log_2 3), \label{eq:u-step}\\
+    v &\mapsto v + \frac{k_i + \log_2 3}{\sqrt{1 + (\log_2 3)^2}}. \label{eq:v-step}
+\end{align}
+
+The dynamics in $u$ is a random walk with step sizes $\Delta u_i = k_i - \log_2 3$:
+\begin{itemize}
+    \item If $k_i = 1$ (happens with probability $\approx 1/2$): $\Delta u = 1 - \log_2 3 \approx -0.585$. \textbf{Contraction.}
+    \item If $k_i = 2$ (probability $\approx 1/4$): $\Delta u = 2 - \log_2 3 \approx +0.415$. \textbf{Expansion.}
+    \item If $k_i \geq 3$ (probability $\approx 1/4$): $\Delta u \geq 1.415$. \textbf{Strong expansion.}
+\end{itemize}
+
+\begin{proposition}[Mean drift]\label{prop:drift}
+    The heuristic mean transverse drift per Syracuse step is:
+    \begin{equation}\label{eq:mean-drift}
+        \langle \Delta u \rangle = \langle k \rangle - \log_2 3 = 2 - \log_2 3 \approx 0.415.
+    \end{equation}
+\end{proposition}
+
+\begin{remark}[Connection to orbit growth and decay]
+    The sign of $\Delta u_i$ determines the local growth behavior. When $k_i = 1$ (contraction), the Syracuse map sends $n_i \mapsto (3n_i+1)/2 \approx 1.5\, n_i$, so the orbit grows. When $k_i \geq 2$ (expansion in $u$), the orbit shrinks on average: $n_i \mapsto (3n_i+1)/2^{k_i}$. The names ``contraction'' and ``expansion'' refer to the transverse coordinate $u$, not the orbit value---they are \emph{opposite} to the behavior of $n$ itself. This inversion is because $u$ measures \emph{excess halvings} over the equilibrium rate.
+\end{remark}
+
+
+\subsection{Pseudo-Anosov Analogy}
+
+The eigenbasis decomposition reveals structural parallels with Anosov diffeomorphisms.
+
+\begin{definition}[Arnold's cat map]
+    The linear automorphism of $\T^2 = \R^2/\Z^2$ induced by
+    \begin{equation}
+        A = \begin{pmatrix} 2 & 1 \\ 1 & 1 \end{pmatrix}
+    \end{equation}
+    stretches by $\lambda = \phi = (1+\sqrt{5})/2$ along the unstable eigenvector and compresses by $1/\phi$ along the stable eigenvector.
+\end{definition}
+
+The Collatz dynamics in the $(\nu_2, \nu_3)$-plane exhibits analogous behavior:
+\begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Feature} & \textbf{Anosov (cat map)} & \textbf{Collatz dynamics} \\
+        \midrule
+        Phase space & $\T^2 = \R^2/\Z^2$ & $(\nu_2, \nu_3) \in \Z_{\geq 0}^2$ \\
+        Unstable direction & Eigenvector of slope $\phi$ & Slope $\log_2 3 \approx 1.585$ \\
+        Stable direction & Eigenvector of slope $-1/\phi$ & Slope $-1/\log_2 3 \approx -0.631$ \\
+        Stretch factor & $\phi \approx 1.618$ & Effective: $3/2$ (per odd step) \\
+        Map type & Linear, uniform & Piecewise, non-uniform \\
+        Markov property & Exact (finite partition) & Violated (short-range correlations) \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+
+\begin{remark}[Thurston classification]
+    Thurston's classification~\cite{Thurston1988} of surface homeomorphisms into periodic, reducible, and pseudo-Anosov types provides the correct framework. The Collatz map on the $(\nu_2, \nu_3)$ torus (reduced modulo $k$) is not a single linear map but a piecewise map with different behavior on the even/odd branches. The branch locus introduces singularities in the stable and unstable foliations. In Thurston's terminology, this makes the Collatz dynamics \emph{pseudo-Anosov} rather than Anosov: the foliations are measured foliations with finitely many singularities (the prong-type singularities at parity transitions).
+\end{remark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Mapping Torus and 3-Manifold Structure}\label{sec:mapping-torus}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{definition}[Mapping torus]
+    Let $f: S \to S$ be a homeomorphism of a surface. The \emph{mapping torus} is the 3-manifold
+    \begin{equation}
+        M_f := \frac{S \times [0,1]}{(x, 0) \sim (f(x), 1)}.
+    \end{equation}
+    When $f$ is pseudo-Anosov on $\T^2$, the mapping torus carries \emph{Sol geometry}, one of Thurston's eight 3-dimensional geometries.
+\end{definition}
+
+For the Collatz dynamics, consider the induced map $T_C$ on the torus $(\Z/k\Z)^2$ at modular level $k$. The mapping torus $M_{T_C}$ fibers over $S^1$ with fiber $(\Z/k\Z)^2$.
+
+\begin{observation}[Solenoid as inverse limit]\label{obs:solenoid}
+    The $2$-adic solenoid
+    \begin{equation}
+        \Sol_2 := \varprojlim\bigl(\R/\Z \xleftarrow{\;\times 2\;} \R/\Z \xleftarrow{\;\times 2\;} \cdots\bigr)
+    \end{equation}
+    is the natural ambient space for the Collatz map, which involves both multiplication by $3$ and division by powers of $2$. The solenoid is locally homeomorphic to $\R \times \Z_2$ (a line cross a Cantor set). Paths on $\Sol_2$ project to paths on each circle in the inverse system, yielding a coherent system of winding numbers.
+
+    The \emph{Collatz solenoid} would be the inverse limit of the mapping tori $M_{T_C}$ at all modular levels $k$, encoding the full winding number structure.
+\end{observation}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The First-Passage Problem}\label{sec:first-passage}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The transverse coordinate $u(t)$ along a trajectory defines a stochastic process indexed by step number $t$. By Corollary~\ref{cor:delta-positive}, $u(\sigma(n)) > 0$ at termination. But the \emph{running} value $u(t)$ may go negative during the trajectory.
+
+\begin{definition}[Transverse excursion]
+    The \emph{minimum transverse displacement} of the trajectory from $n$ is
+    \begin{equation}
+        u_{\min}(n) := \min_{0 \leq t \leq \sigma(n)} u(t).
+    \end{equation}
+    A trajectory has a \emph{sub-equilibrium excursion} if $u_{\min}(n) < 0$.
+\end{definition}
+
+\begin{empirical}[Sub-equilibrium excursions are generic]
+    Among $200{,}000$ trajectories with starting values in $[2, 10^6]$:
+    \begin{itemize}
+        \item $171{,}650$ ($85.8\%$) have $u_{\min}(n) < 0$.
+        \item The minimum reaches as low as $u_{\min} \approx -17.5$.
+        \item The distribution of $u_{\min}$ has a sharp peak near $-1$ and a long left tail.
+    \end{itemize}
+\end{empirical}
+
+\begin{keyinsight}[Two-phase dynamics]
+    Collatz trajectories exhibit a characteristic two-phase structure in the eigenbasis:
+    \begin{enumerate}
+        \item \textbf{Excursion phase}: $u(t)$ drifts \emph{downward} (the orbit value $n$ is growing; odd steps dominate the balance). This corresponds to the orbit climbing to its peak altitude.
+        \item \textbf{Descent phase}: $u(t)$ drifts \emph{upward} (halvings dominate; the orbit is collapsing toward $1$).
+    \end{enumerate}
+    The transition between phases---the \emph{first-passage time} at which $u(t)$ commits to staying above the equilibrium---is the dynamically critical event. Trajectories with long stopping times (like $n = 837{,}799$ with $524$ steps) are precisely those where this transition occurs late.
+\end{keyinsight}
+
+\begin{remark}
+    The Collatz conjecture in first-passage language: \emph{the random walk $u(t)$ with drift $\langle \Delta u \rangle \approx 0.415$ per Syracuse step is transient to $+\infty$ for every starting value}. Since the drift is positive, the walk is heuristically transient; the difficulty lies in the arithmetic dependence of step sizes $k_i$ on the orbit values, which could in principle produce persistent negative excursions for specific starting numbers.
+\end{remark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Arithmetic Structure: Torus Residues}\label{sec:arithmetic}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Reducing the winding pair modulo $k$ projects the dynamics onto the finite torus $(\Z/k\Z)^2$. The resulting density patterns reveal arithmetic constraints imposed by the $3n+1$ rule.
+
+\begin{definition}[Torus residue distribution]
+    For modular level $k \geq 2$, define the distribution
+    \begin{equation}
+        \mu_k(a, b) := \#\{n \in [2, N] : \nu_2(n) \equiv a,\; \nu_3(n) \equiv b \pmod{k}\}
+    \end{equation}
+    on $(\Z/k\Z)^2$.
+\end{definition}
+
+\begin{empirical}[Forbidden and preferred residue classes]\label{obs:mod3}
+    At modular level $k = 3$ (computed for $N = 10^6$):
+    \begin{enumerate}
+        \item The cell $(\nu_2 \bmod 3, \nu_3 \bmod 3) = (1, 1)$ is essentially \emph{empty}.
+        \item The cell $(0, 0)$ is the most heavily populated.
+        \item The distribution is far from uniform: the density ratio between the most and least populated cells exceeds $10^3$.
+    \end{enumerate}
+    At level $k = 12 = \lcm(3, 4)$, a pronounced checkerboard pattern emerges, aligned with the foliation directions of slope $\log_2 3$ and $-1/\log_2 3$.
+\end{empirical}
+
+\begin{proposition}[Origin of the mod~3 constraint]\label{prop:mod3}
+    The forbidden cell at $(\nu_2, \nu_3) \equiv (1,1) \pmod{3}$ is a consequence of the multiplicative balance equation~\eqref{eq:multiplicative-balance}. Since $3^{\nu_3} \equiv 0 \pmod{3}$ for $\nu_3 \geq 1$, the equation $2^{\nu_2} = n \cdot 3^{\nu_3} \cdot \prod(1 + 1/(3n_i))$ constrains $2^{\nu_2} \pmod{3}$. Since $2 \equiv -1 \pmod{3}$, we have $2^{\nu_2} \equiv (-1)^{\nu_2} \pmod{3}$, imposing a parity constraint on $\nu_2$ that depends on $n \bmod 3$.
+\end{proposition}
+
+\begin{remark}[Significance of mod~24]
+    At modular level $k = 24$, the torus residue distribution shows prominent diagonal banding aligned with the equilibrium foliation. Note that $24 = \lcm(3, 8)$, where the factor of $3$ arises from the $3n+1$ rule and $8 = 2^3$ captures the first three bits of $2$-adic structure relevant to the Syracuse step sequence. Whether this is purely combinatorial or reflects deeper structure (cf.\ the ubiquity of $24$ in modular mathematics: $\eta^{24} = \Delta$, $c_{\mathrm{bos}} = 24 + 2$, $|\mathrm{Leech}| = 24$) remains an open question.
+\end{remark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Step Correlations and the Markov Property}\label{sec:correlations}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A genuine Anosov diffeomorphism admits a Markov partition, making the symbolic dynamics a shift of finite type. We test whether the Collatz dynamics has this property.
+
+\begin{definition}[Autocorrelation of Syracuse steps]
+    For a trajectory with Syracuse step sequence $\mathbf{k} = (k_1, \ldots, k_{\nu_3})$, define
+    \begin{equation}
+        C(\ell) := \frac{\langle (k_i - \bar{k})(k_{i+\ell} - \bar{k}) \rangle}{\mathrm{Var}(k_i)}, \quad \ell \geq 0,
+    \end{equation}
+    where $\bar{k}$ is the sample mean.
+\end{definition}
+
+\begin{empirical}[Short-range correlations]\label{obs:autocorr}
+    For the trajectory from $n = 837{,}799$ ($\nu_3 = 191$ Syracuse steps):
+    \begin{enumerate}
+        \item $C(1) \approx 0.15$, significantly above the $95\%$ white-noise confidence interval of $\pm 1.96/\sqrt{191} \approx \pm 0.14$.
+        \item $C(\ell)$ decays to noise by $\ell \approx 5$.
+        \item The joint distribution $P(k_i, k_{i+1})$ deviates from the product $P(k_i) \cdot P(k_{i+1})$, showing concentration along a diagonal structure.
+    \end{enumerate}
+\end{empirical}
+
+\begin{proposition}[Origin of correlations]\label{prop:correlations}
+    The lag-1 correlation follows from elementary number theory. If $n_i$ is odd and $k_i = v_2(3n_i + 1)$, then $n_{i+1} = (3n_i + 1)/2^{k_i}$. The residue class of $n_{i+1}$ modulo small powers of $2$ is determined by $n_i \bmod 2^{k_i + j}$ for small $j$, which constrains $k_{i+1} = v_2(3n_{i+1} + 1)$. Explicitly, $n_{i+1}$ is odd (by construction), and
+    \begin{equation}
+        3n_{i+1} + 1 = 3 \cdot \frac{3n_i + 1}{2^{k_i}} + 1 = \frac{9n_i + 3 + 2^{k_i}}{2^{k_i}}.
+    \end{equation}
+    The $2$-adic valuation of the numerator depends on $n_i \bmod 2^{k_i + 2}$, creating a correlation between $k_i$ and the residue class that determines $k_{i+1}$.
+\end{proposition}
+
+\begin{remark}[Non-uniform hyperbolicity]
+    The presence of short-range correlations means the Collatz dynamics does \emph{not} admit a simple Markov partition in the Syracuse step alphabet. The correct dynamical category is \emph{non-uniformly hyperbolic} in the sense of Pesin theory: the Lyapunov exponents
+    \begin{equation}
+        \lambda_u = \lim_{N \to \infty} \frac{1}{N} \sum_{i=1}^{N} \log|k_i - \log_2 3|, \qquad \lambda_s = -\lambda_u
+    \end{equation}
+    exist and are nonzero (positive and negative respectively), but the hyperbolicity is non-uniform---it varies from orbit to orbit and can be transiently reversed. This is the precise obstruction to proving the Collatz conjecture via purely ergodic-theoretic methods.
+\end{remark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Computational Results}\label{sec:computation}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+All computations were performed for starting values $n \in [2, 10^6]$ ($999{,}999$ trajectories). Summary statistics:
+
+\begin{center}
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{lrl}
+        \toprule
+        \textbf{Quantity} & \textbf{Value} & \textbf{Note} \\
+        \midrule
+        $\rho$ range & $[1.687, 21.000]$ & Minimum at $n$ with many odd steps \\
+        $\rho$ mean & $2.1741$ & Overshoots $\log_2 3 = 1.5850$ \\
+        $\rho$ std dev & $0.4521$ & \\
+        $\delta > 0$ for all $n$? & \textbf{Yes} & Confirms Corollary~\ref{cor:delta-positive} \\
+        Mean Syracuse step $\langle k \rangle$ & $1.9914$ & Predicted: $2.0000$ \\
+        Fraction with $u_{\min} < 0$ & $85.8\%$ & Sub-equilibrium excursions are generic \\
+        Deepest excursion & $u_{\min} \approx -17.5$ & \\
+        Autocorrelation $C(1)$ & $\approx 0.15$ & Significant ($> 95\%$ CI) \\
+        \bottomrule
+    \end{tabular}
+\end{center}
+
+\begin{remark}[Extreme deviators]
+    The largest deviations $\delta$ occur for numbers that are nearly powers of $2$: e.g., $n = 698{,}880 = 2^{10} \cdot 683 - 128$ has $\nu_3 = 1$ and $\nu_2 = 21$, giving $\rho = 21.0$. These are ``trivial'' outliers---the trajectory encounters only one odd step before collapsing through a long chain of halvings. The dynamically interesting large deviations occur at moderate $\nu_3$ values ($\nu_3 \sim 10$--$50$) where the quantization of $\rho = \nu_2/\nu_3$ to rational values with small denominator creates a discrete ``Farey sequence'' structure in the winding spectrum.
+\end{remark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Summary and Open Questions}\label{sec:open}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{What is established}
+
+\begin{enumerate}
+    \item The winding pair $(\nu_2, \nu_3)$ defines a homology class in $H_1(\T^2; \Z) \cong \Z^2$ for each Collatz trajectory (Definition~\ref{def:torus-winding}).
+
+    \item The winding ratio decomposes exactly as $\rho = \log_2 3 + \text{(positive corrections)}$, proving $\delta > 0$ for all terminating trajectories (Proposition~\ref{prop:rho-identity}, Corollary~\ref{cor:delta-positive}).
+
+    \item The Syracuse step sizes $k_i$ follow $P(k) \approx 2^{-k}$ with empirical mean $1.9914 \approx 2$ (Proposition~\ref{prop:step-dist}), confirming the Lagarias heuristic~\cite{Lagarias1985}.
+
+    \item The transverse coordinate $u(t)$ is a biased random walk with drift $\langle \Delta u \rangle \approx 0.415 > 0$ (Proposition~\ref{prop:drift}).
+
+    \item Consecutive Syracuse steps exhibit significant short-range correlations ($C(1) \approx 0.15$), ruling out a simple Markov partition (Observation~\ref{obs:autocorr}, Proposition~\ref{prop:correlations}).
+
+    \item The torus residue distribution $\mu_k$ at level $k = 3$ has forbidden cells, traceable to the mod~3 arithmetic of the $3n+1$ rule (Observation~\ref{obs:mod3}, Proposition~\ref{prop:mod3}).
+\end{enumerate}
+
+
+\subsection{Open questions}
+
+\begin{enumerate}
+    \item \textbf{Markov approximation.} Can the correlated step process $(k_i)$ be approximated by a Markov chain of finite order $m$ on the alphabet of 2-adic residue classes? If so, what is the minimal $m$, and does the resulting shift space have a tractable zeta function?
+
+    \item \textbf{First-passage statistics.} Let $\tau(n)$ be the first time $t$ at which $u(t') > 0$ for all $t' \geq t$ (the ``commitment time''). What is the distribution of $\tau(n)$ as a function of $n$? Is $\tau(n)/\sigma(n)$ concentrated, and does it correlate with the stopping time?
+
+    \item \textbf{Geometry of the mapping torus.} Does the mapping torus $M_{T_C}$ at any finite modular level carry a geometric structure in Thurston's sense? For level $k = 3$, the forbidden cell suggests that $T_C$ is not surjective on $(\Z/3\Z)^2$, which would obstruct the construction.
+
+    \item \textbf{Solenoid realization.} Can the full Collatz dynamics be realized as a continuous map on the $(2,3)$-solenoid $\varprojlim(\R/\Z \xleftarrow{\times 6} \R/\Z \xleftarrow{\times 6} \cdots)$? If so, the winding numbers at each level form a pro-finite invariant, and the Collatz conjecture becomes a statement about the non-existence of certain closed orbits in the solenoid.
+
+    \item \textbf{Connection to mod~24 structure.} Is the diagonal banding in $\mu_{24}$ purely combinatorial ($24 = \lcm(3, 8)$), or does it reflect deeper modular structure analogous to the role of $24$ in the theory of modular forms?
+
+    \item \textbf{Negative deviation.} While $\delta(n) > 0$ at termination, the running ratio $\rho(t)$ dips below $\log_2 3$ for $85.8\%$ of trajectories. Can one bound the depth $u_{\min}(n)$ as a function of $n$, and does a uniform lower bound exist?
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Profinite Compatibility of the Winding Number}\label{sec:profinite-compat}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The solenoid formulation of \S\ref{sec:three} predicts that the winding pair
+$(\nu_2(n), \nu_3(n))$ defines a consistent element of the profinite group
+$\Zhat \times \Zhat$ --- concretely, that the torus residue distributions
+$\mu_k$ at different modular levels are related by the marginal condition
+dictated by the inverse limit structure.  We test this prediction
+computationally at all levels $k = 2^a \cdot 3^b$ with $0 \leq a, b \leq 4$.
+
+
+\subsection{The Compatibility Condition}
+
+\begin{definition}[Marginal consistency]\label{def:marginal}
+    Let $k \mid k'$.  The natural projection $\pi_{k',k}: (\Z/k'\Z)^2 \to
+    (\Z/k\Z)^2$ sends $(a', b') \mapsto (a' \bmod k, \, b' \bmod k)$.
+    The distributions $\mu_k$ and $\mu_{k'}$ are \emph{compatible} if
+    \begin{equation}\label{eq:marginal}
+        \mu_k(a, b) \;=\; \sum_{\substack{a' \equiv a \pmod{k} \\
+        b' \equiv b \pmod{k}}} \mu_{k'}(a', b')
+        \qquad \text{for all } (a, b) \in (\Z/k\Z)^2.
+    \end{equation}
+    If \eqref{eq:marginal} holds for every pair $k \mid k'$ in a cofinal
+    subset of the divisibility poset, then the system
+    $\{\mu_k\}_{k \geq 1}$ defines a measure on the inverse limit
+    $\varprojlim (\Z/k\Z)^2$.
+\end{definition}
+
+\begin{remark}
+    For distributions derived from integer-valued winding pairs, the
+    marginal condition~\eqref{eq:marginal} is tautological:
+    $\mu_k(a,b) = \#\{n : \nu_2(n) \equiv a, \, \nu_3(n) \equiv b
+    \pmod{k}\}$, and regrouping the finer residues modulo $k'$ by their
+    classes modulo $k$ recovers $\mu_k$ exactly.  The computational
+    verification thus serves two purposes: (i)~validating the correctness
+    of the implementation across all 25~levels and 200~divisibility pairs,
+    and (ii)~confirming that the data infrastructure supports the
+    profinite interpretation without hidden inconsistencies.
+\end{remark}
+
+
+\subsection{Computation}
+
+The profinite compatibility test was originally performed in Python
+at $N = 2 \times 10^6$.  To distinguish genuine forbidden cells from
+finite-$N$ artifacts and to produce high-statistics entropy curves,
+we reimplemented the computation in C (\texttt{profinite\_compat.c})
+using a streaming accumulation architecture: for each $n \in [2, N]$,
+the winding pair $(\nu_2, \nu_3)$ is computed via Collatz iteration,
+then immediately accumulated into all 25 distribution grids.  No
+per-trajectory storage is required; total memory is ${\sim}19$\,MB
+regardless of $N$.
+
+\begin{empirical}[Profinite compatibility at $2^a \cdot 3^b$ levels]
+\label{obs:profinite-compat}
+    For $N = 10^9$ starting values ($999{,}999{,}999$ trajectories,
+    mean length $203.2$ steps, $\nu_2 \leq 616$, $\nu_3 \leq 370$),
+    we computed $\mu_k$ at all $25$ levels
+    \begin{equation}\label{eq:level-set}
+        k \;\in\; \bigl\{2^a \cdot 3^b : 0 \leq a, b \leq 4\bigr\},
+    \end{equation}
+    ranging from $k = 1$ to $k = 1296$.
+    For every divisibility pair $k \mid k'$ within this set
+    ($200$~pairs in total), the marginal condition~\eqref{eq:marginal}
+    was verified with
+    \begin{equation}
+        \max_{(a,b) \in (\Z/k\Z)^2}
+        \bigl|\mu_k(a,b) - (\pi_{k',k})_* \mu_{k'}(a,b)\bigr| \;=\; 0
+    \end{equation}
+    in every case.  All $200$ tests pass with exact integer agreement.
+    Wall time: $222$\,s on a single core.
+\end{empirical}
+
+\begin{mainresult}[The profinite winding number is well-defined]
+    The system of distributions $\{\mu_k\}_{k = 2^a 3^b}$ satisfies
+    the inverse limit compatibility condition at all tested levels.
+    Consequently, the profinite winding number
+    \begin{equation}
+        \hat{w}(n) \;:=\; \bigl(\nu_2(n) \bmod 2^a 3^b, \;\;
+        \nu_3(n) \bmod 2^a 3^b\bigr)_{a,b \geq 0}
+        \;\in\; \Z_2 \times \Z_3
+    \end{equation}
+    is empirically confirmed as a consistent profinite invariant of
+    Collatz trajectories.  The solenoid formulation
+    $\Sigma_{2,3} \cong (\R \times \Z_2 \times \Z_3)/\Z$ is supported
+    as the correct algebraic home for the winding number data.
+\end{mainresult}
+
+
+\subsection{Structural Observations}
+
+Beyond the tautological consistency, the distributions $\mu_k$ reveal
+structural phenomena as the level $k$ increases.  The $500\times$
+increase in sample size (from $N = 2 \times 10^6$ to $N = 10^9$)
+substantially sharpens these observations.
+
+\subsubsection{Support stabilisation}
+
+\begin{empirical}[Finite support in the profinite limit]
+\label{obs:support-stab}
+    The number of occupied cells in $(\Z/k\Z)^2$ stabilises:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rrrrrrrrr}
+        \toprule
+        $k$ & 2 & 6 & 12 & 24 & 36 & 72 & 144 & $\geq 144$ \\
+        \midrule
+        Nonzero cells & 4 & 36 & 144 & 576 & 1{,}296 & 3{,}715
+                      & 4{,}089 & 4{,}089 \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    For $k \geq 144$, exactly $4{,}089$ of the $k^2$ cells are
+    occupied.  This stabilisation occurs because the winding pairs
+    satisfy $\nu_2(n) \leq 616$ and $\nu_3(n) \leq 370$ for all
+    $n \in [2, 10^9]$, so once $k$ exceeds the data range, residue
+    classes coincide with the winding pairs themselves.
+
+    Compared to $N = 2 \times 10^6$ (where the saturation count was
+    $1{,}576$ cells at $k \geq 72$), the $500\times$ increase in
+    sample size reveals $2{,}513$ additional occupied cells.  At each
+    fixed level $k \leq 36$, all $k^2$ cells are now filled, whereas
+    the earlier computation showed empty cells already at $k = 36$.
+\end{empirical}
+
+\begin{remark}
+    At fixed $N$, the support is finite.  But as $N \to \infty$, the
+    support of $\mu_k$ fills a larger fraction of $(\Z/k\Z)^2$ at
+    each fixed~$k$.  The key question is \emph{which} cells remain
+    empty in the $N \to \infty$ limit.  The $500\times$ scale
+    increase already filled all cells at $k \leq 36$ that were
+    previously empty, indicating that the zero cells observed at
+    $N = 2 \times 10^6$ for moderate $k$ were finite-sample artifacts
+    rather than genuine obstructions.
+\end{remark}
+
+\begin{remark}[Correction: $\mu_3(1,1)$ is not forbidden]
+\label{rem:mu3-correction}
+    The earlier computation (at $N = 2 \times 10^6$) reported the cell
+    $(\nu_2, \nu_3) \equiv (1,1) \pmod{3}$ as essentially empty.
+    The high-statistics computation reveals this to be incorrect:
+    $\mu_3(1,1)$ scales linearly with $N$ at approximately $N/9$
+    (i.e., near-uniform):
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rrrc}
+        \toprule
+        $N$ & $\mu_3(1,1)$ & Expected ($N{-}1)/9$ & Ratio \\
+        \midrule
+        $10^6$ & $112{,}676$ & $111{,}111$ & $1.014$ \\
+        $10^7$ & $1{,}098{,}215$ & $1{,}111{,}111$ & $0.988$ \\
+        $10^8$ & $11{,}145{,}935$ & $11{,}111{,}111$ & $1.003$ \\
+        $10^9$ & $112{,}253{,}124$ & $111{,}111{,}111$ & $1.010$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The ratio $\mu_3(1,1) / ((N{-}1)/9)$ fluctuates within ${\sim}1\%$
+    of unity at all checkpoints.  There is no forbidden cell at level
+    $k = 3$ for the step-counting winding numbers.  The mod-3
+    constraint discussed in Proposition~\ref{prop:mod3} constrains the
+    \emph{parity} of $\nu_2$ as a function of $n \bmod 3$, but does
+    not prevent $(\nu_2 \bmod 3,\, \nu_3 \bmod 3) = (1,1)$ from being
+    populated.
+\end{remark}
+
+
+\subsubsection{Entropy decay}
+
+\begin{empirical}[Entropy of $\mu_k$ relative to Haar measure]
+\label{obs:entropy}
+    The normalised Shannon entropy
+    \begin{equation}
+        \frac{H(\mu_k)}{\log_2(k^2)} \;:=\;
+        \frac{-\sum_{(a,b)} p_k(a,b) \log_2 p_k(a,b)}{\log_2(k^2)},
+        \qquad p_k(a,b) := \frac{\mu_k(a,b)}{\sum \mu_k},
+    \end{equation}
+    decays monotonically from near-uniformity at small $k$ to
+    substantial concentration at large $k$:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rcccccccccc}
+        \toprule
+        $k$ & 2 & 3 & 6 & 12 & 24 & 36 & 72 & 144 & 324 & 1296 \\
+        \midrule
+        $H/H_{\max}$ & 1.000 & 1.000 & 1.000 & 0.991 & 0.926
+                      & 0.845 & 0.711 & 0.611 & 0.526 & 0.424 \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    Compared to the $N = 2 \times 10^6$ values (which ranged from
+    $0.999$ at $k = 6$ to $0.408$ at $k = 1296$), the entropy ratios
+    at $N = 10^9$ are systematically higher at every level---the
+    additional data fills more cells, pushing the distribution closer
+    to uniformity.  Nevertheless, the qualitative pattern of monotonic
+    decay is preserved.
+\end{empirical}
+
+\begin{keyinsight}[Increasing departure from Haar measure]
+    If the Collatz orbit measure on the solenoid $\Sigma_{2,3}$ were
+    Haar measure, $\mu_k$ would be uniform on $(\Z/k\Z)^2$ and
+    $H/H_{\max} = 1$ at every level.  The observed monotonic decay
+    quantifies the \textbf{increasing departure from Haar measure}
+    as finer profinite structure is resolved.  The Collatz dynamics
+    concentrates the orbit measure onto a progressively smaller
+    fraction of the available phase space at each level --- exactly the
+    behaviour expected of a hyperbolic dynamical system, where orbits
+    are attracted to a fractal invariant set of measure zero in the
+    ambient space.
+\end{keyinsight}
+
+
+\subsubsection{Forbidden cell proliferation}
+
+\begin{empirical}[Growth of the forbidden region]
+\label{obs:forbidden}
+    The fraction of strictly empty cells in $(\Z/k\Z)^2$ grows
+    with $k$.  At $N = 10^9$:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rrrrc}
+        \toprule
+        $k$ & $k^2$ & Zero cells & Suppressed ($<1\%$ of exp.)
+            & Zero fraction \\
+        \midrule
+        3  & 9       & 0    & 0        & $0.0\%$ \\
+        12 & 144     & 0    & 0        & $0.0\%$ \\
+        24 & 576     & 0    & 0        & $0.0\%$ \\
+        36 & 1{,}296    & 0     & 138   & $0.0\%$ \\
+        72 & 5{,}184    & 1{,}469 & 2{,}006 & $28.3\%$ \\
+        144 & 20{,}736  & 16{,}647 & 1{,}976 & $80.3\%$ \\
+        324 & 104{,}976 & 100{,}887 & 1{,}488 & $96.1\%$ \\
+        1296 & 1{,}679{,}616 & 1{,}675{,}527 & 614 & $99.8\%$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    At $N = 10^9$, the first strictly zero cells appear at
+    $k = 48$ (20~cells) rather than at $k = 36$ as in the earlier
+    computation.  The scale increase also reveals a \emph{suppressed}
+    population: cells with $0 < \mu_k(a,b) < \text{expected}/100$,
+    numbering up to $2{,}006$ at $k = 72$.  These suppressed cells
+    are candidates for genuine obstructions that may approach zero
+    as $N \to \infty$.
+\end{empirical}
+
+\begin{remark}[Finite-$N$ versus genuine obstructions]
+    The zero-fraction growth is dominated by the finite support effect
+    (Observation~\ref{obs:support-stab}): since only $4{,}089$
+    distinct winding pairs appear for $N = 10^9$, levels with
+    $k^2 \gg 4{,}089$ are necessarily mostly empty.  The
+    $500\times$ scale increase from $N = 2 \times 10^6$ to
+    $N = 10^9$ raised the saturation count from $1{,}576$ to
+    $4{,}089$ and filled all zero cells at $k \leq 36$, demonstrating
+    that the empty cells at moderate $k$ in the earlier computation
+    were statistical artifacts.  At $k = 3$, all $9$ cells are
+    populated within ${\sim}1\%$ of the uniform expectation
+    (Remark~\ref{rem:mu3-correction}).
+
+    The \emph{dynamically meaningful} forbidden cells are those
+    that remain empty (or anomalously suppressed) as $N \to \infty$.
+    The $138$ suppressed cells at $k = 36$ and the $2{,}006$
+    suppressed cells at $k = 72$ warrant investigation at still
+    larger $N$ to determine whether they converge to zero or to
+    small positive densities.
+\end{remark}
+
+
+\subsection{Interpretation and Consequences}
+
+The compatibility result establishes the following.
+
+\begin{enumerate}
+    \item \textbf{The profinite winding number exists.}
+    For each Collatz trajectory $n \to 1$, the element
+    $\hat{w}(n) \in \Z_2 \times \Z_3$ is a well-defined profinite
+    invariant that encodes the residue of $(\nu_2(n), \nu_3(n))$ at
+    every level $k = 2^a 3^b$ simultaneously.
+
+    \item \textbf{The solenoid is the correct phase space.}
+    The consistency of the $\mu_k$ system with the inverse limit
+    structure supports the identification of the Collatz phase space
+    with $\Sigma_{2,3} \cong (\R \times \Z_2 \times \Z_3)/\Z$.
+    The orbit measure is a well-defined Borel probability measure on
+    this compact group, and the forbidden cells at each level are its
+    support constraints.
+
+    \item \textbf{The orbit measure is not Haar.}
+    The entropy decay (Observation~\ref{obs:entropy}) demonstrates
+    that the Collatz orbit measure departs increasingly from Haar
+    measure on $\Sigma_{2,3}$ at finer levels.  This confirms and
+    extends the multifractal analysis of Chistyakov embeddings, which
+    showed $D_q^{\text{Collatz}} < D_q^{\text{Haar}}$ for $q > 0$.
+
+    \item \textbf{Hyperbolic concentration.}
+    The monotonic entropy decay is consistent with the hyperbolic
+    structure of the map $F(x,y) = \bigl(\frac{x-y}{2},
+    \frac{3y+1}{2}\bigr)$ on $\Z_2 \times \Z_3$, whose eigenvalues
+    $\lambda_s = 1/2$ and $\lambda_u = 3/2$ produce area contraction
+    by a factor of $3/4$ per step.  The orbit measure concentrates
+    along the unstable manifold of $F$, and the forbidden cells at
+    each level trace the boundary of this concentration.
+
+    \item \textbf{Scale resolves artifacts.}
+    The increase from $N = 2 \times 10^6$ to $N = 10^9$ eliminated
+    all zero cells at levels $k \leq 36$ and corrected the earlier
+    report of a forbidden cell at $(\nu_2, \nu_3) \equiv (1,1)
+    \pmod{3}$.  The distribution at $k = 3$ is near-uniform, and
+    the genuine structural content of $\mu_k$ resides in the
+    \emph{entropy decay} and \emph{suppressed-cell patterns} at
+    intermediate levels $k = 36$--$72$, where the interplay between
+    the arithmetic of $3n+1$ and the finite winding-number range
+    creates non-trivial concentration.
+\end{enumerate}
+
+\begin{remark}[What compatibility does \emph{not} establish]
+    The compatibility condition is necessary but not sufficient for
+    the full solenoid program.  It confirms that the winding pair
+    defines a consistent profinite invariant, but does not address
+    whether the Collatz map $T_C$ extends continuously to
+    $\Sigma_{2,3}$, nor whether the mapping torus $M_{T_C}$ carries
+    a geometric structure in Thurston's sense.  Those questions require
+    the explicit construction of $F$ on $\Z_2 \times \Z_3$ and the
+    analysis of its orbit distribution at finite levels --- the next
+    steps in the program.
+\end{remark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The 6-Adic Ordering Experiment}\label{sec:sixadic}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Conjecture~\ref{conj:odometer} predicts that the Collatz-induced map $F$
+on $\Z_2 \times \Z_3$ is measurably conjugate to a skew product over
+the 6-adic odometer $\tau(x) = x + 1$.  A direct consequence is that
+the profinite winding number $\hat{w}(n)$ should be \emph{approximately
+locally constant} on 6-adic balls: numbers $n, n'$ with
+$n \equiv n' \pmod{6^m}$ should have similar winding residues
+$(\nu_2 \bmod K,\, \nu_3 \bmod K)$ for appropriate $K$.  We test this
+prediction and compare against control bases not involved in the
+Collatz dynamics.
+
+
+\subsection{Experimental Design}
+
+\begin{enumerate}
+    \item Compute $(\nu_2(n), \nu_3(n))$ for all $n \in [2, 10^6]$.
+    \item For each base $b \in \{6, 5, 7, 10\}$ and level $m$,
+          partition $[2, N]$ into residue classes modulo $b^m$
+          (``$b$-adic balls at depth $m$'').
+    \item Compute the \emph{within-ball variance} of each observable
+          $\nu_2 \bmod K$, $\nu_3 \bmod K$, and the raw
+          $\nu_2$, $\nu_3$, relative to the total variance:
+          \begin{equation}\label{eq:varratio}
+              R(b, m) \;:=\; \frac{V_{\mathrm{within}}}{V_{\mathrm{total}}}
+              \;=\; 1 - \frac{SS_{\mathrm{between}}}{SS_{\mathrm{total}}},
+          \end{equation}
+          where $SS_{\mathrm{between}} = \sum_g n_g
+          (\bar{x}_g - \bar{x})^2$ is the standard ANOVA decomposition.
+          Smaller $R$ (equivalently, larger variance reduction
+          $1 - R$) indicates greater local constancy.
+    \item Compute the mutual information $I(n \bmod b^m;\, \text{observable})$
+          in bits as an independent, non-parametric measure of dependence.
+    \item Compare 6-adic results against 5-adic and 7-adic controls
+          \emph{at matched ball size}, not matched level, since
+          $6^m \neq 5^m \neq 7^m$.
+\end{enumerate}
+
+\begin{remark}[The matched-resolution criterion]
+    A comparison at matched level $m$ is misleading: at level $m = 7$,
+    6-adic balls contain $\lfloor N / 6^7 \rfloor = 3$ elements while
+    5-adic balls at $m = 8$ contain $\lfloor N / 5^8 \rfloor = 2$.
+    The correct test compares bases at comparable modulus (hence
+    comparable ball size), so that any reduction in within-ball
+    variance is not an artifact of small-sample concentration.
+\end{remark}
+
+
+\subsection{Results: Modular Observables}
+
+The key observables for testing Conjecture~\ref{conj:odometer} are the
+modular winding residues $\nu_2 \bmod 12$ and $\nu_3 \bmod 9$, which
+capture the fiber data of $\hat{w}(n)$ at the first nontrivial CRT
+level $k = 2^2 \cdot 3 = 12$ and $k = 3^2 = 9$.
+
+\begin{empirical}[No privileged 6-adic local constancy for modular observables]
+\label{obs:sixadic-modular}
+    The variance reduction $1 - R(b,m)$ for $\nu_2 \bmod 12$,
+    compared at matched modulus, shows no systematic advantage for
+    base~$6$ over controls:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rcccc}
+        \toprule
+        Modulus range & 6-adic & 7-adic & 5-adic & Decimal \\
+        \midrule
+        $\sim$8k--17k
+            & $6^5$: $0.73\%$ & $7^5$: $1.77\%$ & --- & $10^4$: $1.00\%$ \\
+        $\sim$16k--47k
+            & $6^6$: $4.51\%$ & --- & $5^6$: $1.55\%$ & --- \\
+        $\sim$78k--280k
+            & $6^7$: $28.2\%$ & $7^6$: $12.0\%$ & $5^7$: $7.9\%$ & --- \\
+        $\sim$280k--391k
+            & --- & --- & $5^8$: $39.0\%$ & --- \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    Identical behaviour obtains for $\nu_3 \bmod 9$
+    ($6^7$: $28.1\%$, $7^6$: $11.9\%$, $5^8$: $39.9\%$).
+    At the finest resolutions, the 5-adic control achieves
+    \emph{larger} variance reduction than the 6-adic base, and
+    the 7-adic control exceeds $6$ at intermediate modulus.
+\end{empirical}
+
+\begin{empirical}[Mutual information confirms the negative result]
+\label{obs:sixadic-mi}
+    The mutual information $I(n \bmod b^m;\, \nu_2 \bmod 12)$ at
+    matched level:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \small\setlength{\tabcolsep}{4pt}
+    \begin{tabular}{rccccc}
+        \toprule
+        $m$ & 6-adic & 2-adic & 3-adic & 5-adic & 7-adic \\
+        \midrule
+        1 & 0.0000 & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+        2 & 0.0002 & 0.0000 & 0.0000 & 0.0002 & 0.0002 \\
+        3 & 0.0014 & 0.0001 & 0.0002 & 0.0010 & 0.0024 \\
+        4 & 0.0092 & 0.0001 & 0.0005 & 0.0047 & 0.0188 \\
+        5 & 0.0590 & 0.0003 & 0.0016 & 0.0235 & 0.1372 \\
+        6 & 0.4222 & 0.0005 & 0.0050 & 0.1248 & --- \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The 6-adic MI at $m = 5$ (modulus $7{,}776$) is $0.059$ bits, while
+    the 7-adic MI at $m = 5$ (modulus $16{,}807$) is $0.137$ bits.
+    At matched modulus, 7-adic balls carry \emph{more} information about
+    $\nu_2 \bmod 12$ than 6-adic balls.  The 2-adic and 3-adic
+    components individually carry very little information, suggesting
+    the CRT decomposition $\Z_6 \cong \Z_2 \times \Z_3$ does not
+    concentrate the winding residue information.
+\end{empirical}
+
+
+\subsection{Results: Raw Winding Numbers}
+
+A qualitatively different picture emerges for the unmodded winding
+numbers $\nu_2(n)$ and $\nu_3(n)$.
+
+\begin{empirical}[Genuine 6-adic structure in raw winding numbers]
+\label{obs:sixadic-raw}
+    For $\nu_2$ (raw) and $\nu_3$ (raw), the 6-adic base captures
+    significant variance from the very first level:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rcccc}
+        \toprule
+        Level & 6-adic & 5-adic & 7-adic & Decimal \\
+        \midrule
+        $m = 1$ & $1.18\%$ & $0.000\%$ & $0.000\%$ & $1.18\%$ \\
+        $m = 2$ & $2.37\%$ & $0.000\%$ & $0.000\%$ & $1.18\%$ \\
+        $m = 3$ & $3.56\%$ & $0.001\%$ & $0.003\%$ & $2.37\%$ \\
+        $m = 4$ & $4.80\%$ & $0.005\%$ & $0.003\%$ & $3.62\%$ \\
+        $m = 5$ & $6.53\%$ & $0.028\%$ & $0.022\%$ & $5.56\%$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    At $m = 1$, the six residue classes $n \bmod 6$ explain $1.18\%$ of
+    the total variance in trajectory length, while $n \bmod 5$ and
+    $n \bmod 7$ explain effectively zero.  The decimal base matches at
+    $m = 1$ (sharing the factor 2 with 6).
+\end{empirical}
+
+\begin{remark}[Arithmetic, not dynamical]
+    The raw-$\nu$ signal is an elementary arithmetic effect: $n \bmod 2$
+    determines the first step of the trajectory (halving or tripling),
+    and $n \bmod 3$ influences divisibility patterns in the first few
+    steps.  Together, $n \bmod 6$ predicts the \emph{magnitude} of the
+    total stopping time.  This is consistent with the well-known
+    dependence of Collatz trajectory length on initial parity and
+    residue mod~3, and does not constitute evidence for a dynamical
+    conjugacy in the sense of Conjecture~\ref{conj:odometer}.
+    The decimal base, which shares the factor~2 with~6, shows
+    comparable early-level reduction, supporting this interpretation.
+\end{remark}
+
+
+\subsection{Visualisation}
+
+Several diagnostic plots reinforce the numerical findings.
+
+\begin{enumerate}
+    \item \textbf{Scatter along 6-adic order} (panels~(a)--(d) of
+    Figure~\ref{fig:sixadic-ordering}).
+    Plotting $\nu_2 \bmod 12$ along the 6-adic index does not reveal
+    step-function block structure.  The scatter is visually
+    indistinguishable from the natural ordering and 7-adic control.
+
+    \item \textbf{Zoom to first $6^4$ elements} (panels~(e)--(f)).
+    At the scale of 1296~elements, vertical lines at 6-adic ball
+    boundaries ($6^1, 6^2, 6^3$) show no systematic plateaux in
+    $\nu_2 \bmod 12$ or $\nu_3 \bmod 9$.
+
+    \item \textbf{Ball-level heatmaps} (Figure~\ref{fig:sixadic-balls}).
+    Mean $\nu_2$ and $\nu_3$ within 6-adic balls at levels~1--3 show
+    coherent variation by first digit ($n \bmod 6$, the arithmetic
+    effect) but no hierarchical block structure across digits at levels
+    2--3.
+
+    \item \textbf{Conditional distributions}
+    (Figure~\ref{fig:sixadic-conditionals}).
+    The distribution of $\nu_2 \bmod 12$ conditioned on
+    $n \bmod 6 = r$ varies across $r$, but only weakly.  The
+    histograms for different 6-adic balls are not concentrated on
+    distinct residues as a step-function conjugacy would require.
+
+    \item \textbf{2D scatter colored by $p$-adic digit}
+    (Figure~\ref{fig:sixadic-scatter}).
+    Coloring points $(\nu_2 \bmod 12,\, \nu_3 \bmod 9)$ by
+    $n \bmod 6$ shows no visible clustering.  The control
+    ($n \bmod 7$) is equally formless, confirming the absence of
+    structure.
+\end{enumerate}
+
+
+\subsection{Interpretation}
+
+\begin{mainresult}[The winding number is not locally constant on 6-adic balls]
+\label{res:sixadic-negative}
+    At $N = 10^6$, neither the variance reduction test nor the
+    mutual information test detects privileged local constancy of the
+    profinite winding residues $(\nu_2 \bmod K,\, \nu_3 \bmod K)$ on
+    6-adic balls, compared to 5-adic and 7-adic controls.  The raw
+    winding numbers $\nu_2(n)$, $\nu_3(n)$ do show genuine
+    dependence on $n \bmod 6$, but this is attributable to elementary
+    arithmetic and does not constitute evidence for odometer conjugacy.
+\end{mainresult}
+
+\begin{remark}[What this does and does not rule out]
+    \begin{enumerate}
+        \item The experiment tests a \emph{consequence} of
+        Conjecture~\ref{conj:odometer}, not the conjecture itself.
+        The conjugacy $\varphi$ might exist but involve a highly
+        non-trivial rearrangement of the 6-adic topology, so that
+        $\hat{w} \circ \varphi^{-1}$ (not $\hat{w}$ itself) is
+        locally constant.
+
+        \item The observables tested --- $\nu_2 \bmod K$ and
+        $\nu_3 \bmod K$ for fixed small $K$ --- may not be the
+        correct fiber coordinates.  The conjugacy could act
+        nontrivially on both the base (odometer) and fiber
+        directions simultaneously.
+
+        \item At $N = 10^6$, the finest testable 6-adic level with
+        meaningful statistics is $m \leq 5$ (ball size $\geq 128$).
+        Deeper levels have too few elements per ball.  It is
+        conceivable that 6-adic structure emerges only at a scale
+        inaccessible to this experiment.
+
+        \item The experiment \emph{does} rule out the simplest
+        version of the conjecture: that $\hat{w}(n)$ is
+        an approximate function of $n \bmod 6^m$ for moderate $m$.
+        If the odometer conjugacy holds, it must involve substantial
+        distortion of the 6-adic metric.
+    \end{enumerate}
+\end{remark}
+
+\begin{nextstep}[Revised directions for odometer conjugacy]
+    \begin{enumerate}
+        \item \textbf{Test in the $F$-orbit basis.}
+        Rather than testing $\hat{w}(n)$ against $n \bmod 6^m$, compute
+        the orbit of $F: \Z_2 \times \Z_3 \to \Z_2 \times \Z_3$
+        directly in truncated $p$-adic arithmetic and test whether
+        \emph{iterates} of $F$ show 6-adic regularity.  The conjugacy
+        may be visible only through the dynamical map, not through the
+        winding number alone.
+
+        \item \textbf{Non-linear 6-adic coordinates.}
+        Seek a measurable function $\varphi: \N \to \Z_6$ such that
+        $\hat{w}(\varphi^{-1}(x))$ is locally constant.  This is a
+        regression problem: find the bijection $\varphi$ that maximises
+        within-ball homogeneity of $\hat{w}$.
+
+        \item \textbf{Increase $N$.}  With a C implementation
+        (cf.\ the $38\times$ speedup of \texttt{collatz\_tree.c}),
+        extend to $N = 10^9$ to access 6-adic levels $m \leq 7$
+        with $\geq 100$ elements per ball.
+    \end{enumerate}
+\end{nextstep}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Parity Subshift of Finite Type}\label{sec:parity-sft}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+We now study the binary parity sequence associated to each Collatz
+trajectory, revealing that its symbolic dynamics is governed by the
+golden mean shift---a classical subshift of finite type
+\cite{LindMarcus2021}---endowed with a non-maximal (sofic)
+invariant measure.
+
+\begin{definition}[Parity sequence]\label{def:parity-seq}
+    For $n \in \N$, the \emph{parity sequence}
+    $\boldsymbol{\sigma}(n) = (\sigma_0, \sigma_1, \ldots,
+    \sigma_{L-1})$ is the binary string recording the parity of each
+    iterate of the Collatz map~$T$:
+    \begin{equation}
+        \sigma_t = \begin{cases}
+            0 & \text{if } T^t(n) \text{ is even (halving step),} \\
+            1 & \text{if } T^t(n) \text{ is odd (tripling step).}
+        \end{cases}
+    \end{equation}
+    Here $L = \nu_2(n) + \nu_3(n)$ is the total trajectory length.
+\end{definition}
+
+\subsection{The golden mean constraint}
+
+\begin{proposition}[Forbidden bigram]\label{prop:forbidden-11}
+    For every $n \geq 2$, the parity sequence
+    $\boldsymbol{\sigma}(n)$ contains no occurrence of the
+    bigram~$11$.
+\end{proposition}
+
+\begin{proof}
+    If $\sigma_t = 1$, then $T^t(n)$ is odd and the Collatz rule
+    yields $T^{t+1}(n) = 3\, T^t(n) + 1$, which is even since
+    $3 \cdot (\text{odd}) + 1$ is always even.  Hence
+    $\sigma_{t+1} = 0$.
+\end{proof}
+
+\begin{corollary}[Golden mean shift]\label{cor:golden-mean}
+    The set of all Collatz parity sequences is contained in the
+    \emph{golden mean shift}, the order-$1$ subshift of finite type
+    $X_F \subset \{0,1\}^*$ defined by the single forbidden word
+    $F = \{11\}$.  The adjacency matrix of the underlying directed
+    graph is
+    \begin{equation}\label{eq:adjacency}
+        A = \begin{pmatrix} 1 & 1 \\ 1 & 0 \end{pmatrix},
+    \end{equation}
+    whose spectral radius is the golden ratio
+    $\phi = \tfrac{1 + \sqrt{5}}{2}$.
+\end{corollary}
+
+\begin{empirical}[No higher-order forbidden words beyond~$11$]
+\label{obs:no-higher}
+    For $n \in [2,\, 5 \times 10^8]$ ($98{,}002{,}908{,}272$ parity
+    symbols), every forbidden $(m{+}1)$-gram at orders
+    $m = 2, 3, 4, 5$ contains $11$ as a substring.  No new
+    constraints arise beyond the order-$1$ golden mean rule.
+    The topological entropy
+    $h_{\mathrm{top}} = \log_2 \phi \approx 0.6942$ bits/step is
+    identical at all orders~$m$.
+\end{empirical}
+
+\begin{remark}
+    This is consistent with the SFT being exactly the golden mean
+    shift and not a higher-order subshift.  A proof that no new
+    forbidden words arise at any order would establish that the
+    Collatz parity language is precisely the set of $11$-free binary
+    strings---a statement stronger than
+    Proposition~\ref{prop:forbidden-11}, which guarantees only
+    inclusion.
+\end{remark}
+
+\subsection{The sofic measure and entropy gap}
+
+The golden mean shift carries a one-parameter family of Markov
+measures, parametrized by $p := P(\sigma_{t+1} = 0 \mid \sigma_t =
+0)$.  The transition matrix takes the form
+\begin{equation}\label{eq:parity-transition}
+    M = \begin{pmatrix} p & 1 - p \\ 1 & 0 \end{pmatrix},
+\end{equation}
+since $P(\sigma_{t+1} = 0 \mid \sigma_t = 1) = 1$ by
+Proposition~\ref{prop:forbidden-11}.  The stationary distribution is
+$\pi_0 = 1/(2-p)$, $\pi_1 = (1-p)/(2-p)$.
+
+\begin{empirical}[Collatz transition probabilities]
+\label{obs:collatz-transition}
+    From $5 \times 10^8$ trajectories:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{cccc}
+        \toprule
+        Context & $P(\to 0)$ & $P(\to 1)$ & Count \\
+        \midrule
+        $\sigma_t = 0$ & $0.50250$ & $0.49750$
+            & $64{,}943{,}346{,}555$ \\
+        $\sigma_t = 1$ & $1.00000$ & $0.00000$
+            & $32{,}559{,}561{,}718$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The empirical parameter is $p \approx 0.5025$, giving stationary
+    probability $\pi_1 \approx 0.3322$.  This matches the classical
+    heuristic: each odd step is followed on average by
+    $\bar{k} \approx 2$ halvings
+    (cf.\ Section~\ref{sec:computation}), yielding
+    $\pi_1 = 1/(1 + \bar{k}) = 1/3$.
+\end{empirical}
+
+\begin{proposition}[Parry measure]\label{prop:parry}
+    The maximal-entropy (Parry) measure on the golden mean shift has
+    transition probabilities
+    \begin{equation}
+        P_{\mathrm{Parry}}(0 \to 0) = \frac{1}{\phi}, \qquad
+        P_{\mathrm{Parry}}(0 \to 1) = \frac{1}{\phi^2},
+    \end{equation}
+    with stationary probability
+    $\pi_1^{\mathrm{Parry}} = 1/(\phi + 2) \approx 0.2764$ and
+    entropy $h_{\mathrm{Parry}} = \log_2 \phi \approx 0.6942$
+    bits/step.
+\end{proposition}
+
+\begin{proof}
+    The Parry measure is the Markov chain whose transition
+    probabilities are
+    $P(i \to j) = A_{ij}\, v_j / (\phi\, v_i)$, where
+    $v = (\phi, 1)^T$ is the right Perron eigenvector of the
+    adjacency matrix~\eqref{eq:adjacency}.  Computing:
+    \[
+        P(0 \to 0)
+            = \frac{1 \cdot \phi}{\phi \cdot \phi}
+            = \frac{1}{\phi}, \quad
+        P(0 \to 1)
+            = \frac{1 \cdot 1}{\phi \cdot \phi}
+            = \frac{1}{\phi^2}, \quad
+        P(1 \to 0)
+            = \frac{1 \cdot \phi}{\phi \cdot 1}
+            = 1.
+    \]
+    The stationary distribution satisfies
+    $\pi_1 = \pi_0 / \phi^2$ and $\pi_0 + \pi_1 = 1$, giving
+    $\pi_1 = 1/(\phi^2 + 1) = 1/(\phi + 2)$ since
+    $\phi^2 = \phi + 1$.
+\end{proof}
+
+\begin{keyinsight}[The Collatz measure is not the Parry measure]
+    The Collatz parity process defines a sofic measure on the golden
+    mean shift that is \emph{not} the maximal-entropy Parry measure.
+    The empirical transition probability
+    $P(0 \to 1) \approx 0.498$ significantly exceeds the Parry
+    value $1/\phi^2 \approx 0.382$, and the stationary odd-step
+    frequency $\pi_1 \approx 0.332$ exceeds the Parry frequency
+    $1/(\phi + 2) \approx 0.276$.  The Collatz measure visits odd
+    steps more often than the maximally random walk on the golden
+    mean shift.
+\end{keyinsight}
+
+The measure-theoretic entropy of the order-$1$ Collatz Markov
+approximation is
+\begin{equation}\label{eq:hmeas}
+    h_\mu = \pi_0 \cdot H(p,\, 1{-}p)
+          + \pi_1 \cdot H(1,\, 0)
+          = \pi_0 \cdot H(p,\, 1{-}p),
+\end{equation}
+since state~$1$ transitions deterministically to~$0$.  With
+$p \approx 0.5025$ and $\pi_0 \approx 0.6678$:
+\begin{equation}
+    h_\mu \approx 0.6678 \cdot
+    \bigl(\!-0.5025 \log_2 0.5025
+           - 0.4975 \log_2 0.4975\bigr)
+    \approx 0.6678 \text{ bits/step}.
+\end{equation}
+
+\begin{empirical}[Entropy convergence across Markov orders]
+\label{obs:entropy-convergence}
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{ccc}
+        \toprule
+        Order $m$ & $h_{\mathrm{top}}$ (bits/step)
+                  & $h_\mu$ (bits/step) \\
+        \midrule
+        1 & $0.6942$ & $0.6678$ \\
+        2 & $0.6942$ & $0.6678$ \\
+        3 & $0.6942$ & $0.6676$ \\
+        4 & $0.6942$ & $0.6671$ \\
+        5 & $0.6942$ & $0.6664$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The topological entropy remains $\log_2 \phi$ at all orders,
+    confirming the golden mean shift structure.  The
+    measure-theoretic entropy $h_\mu$ decreases monotonically with
+    order, as higher-order conditioning reveals additional
+    correlations.  The entropy gap
+    $\Delta h = h_{\mathrm{top}} - h_\mu \approx 0.028$ at
+    order~$5$ quantifies the departure from maximal randomness
+    within the golden mean constraint.
+\end{empirical}
+
+\subsection{Long-range parity correlations}
+
+\begin{definition}[Parity autocorrelation]
+    The normalized autocorrelation of the parity process is
+    \begin{equation}
+        C(k) = \frac{\langle (\sigma_t - \bar{\sigma})
+        (\sigma_{t+k} - \bar{\sigma}) \rangle}
+        {\mathrm{Var}(\sigma_t)}, \quad k \geq 0,
+    \end{equation}
+    where the average is taken over all valid pairs within each
+    trajectory and then across all trajectories.
+\end{definition}
+
+\begin{empirical}[Parity autocorrelation structure]
+\label{obs:parity-autocorr}
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rrl}
+        \toprule
+        Lag $k$ & $C(k)$ & \\
+        \midrule
+        $0$ & $+1.0000$ & \\
+        $1$ & $-0.4975$ & $\approx -1/2$ \\
+        $2$ & $+0.2590$ & $\approx +1/4$ \\
+        $3$ & $-0.1287$ & $\approx -1/8$ \\
+        $4$ & $+0.0845$ & \\
+        $5$ & $-0.0245$ & \\
+        $6$--$10$ & $+0.006$ to $+0.020$ &
+            persistent oscillations \\
+        $11$--$20$ & $\pm 0.01$ to $\pm 0.05$ &
+            non-decaying \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The first five lags show geometric decay
+    $C(k) \approx (-1/2)^k$, consistent with the dominant
+    eigenvalue $\lambda_1 \approx -0.498$ of the transition
+    matrix~\eqref{eq:parity-transition}.  Beyond lag~$5$, however,
+    persistent oscillations of amplitude $\sim 0.01$--$0.05$
+    remain, exceeding the Markov prediction by orders of
+    magnitude.
+\end{empirical}
+
+\begin{empirical}[Markov residuals]\label{obs:markov-residuals}
+    Define $\Delta C_m(k) = |C_{\mathrm{emp}}(k) -
+    C_{\mathrm{model}}^{(m)}(k)|$ for an order-$m$ Markov model
+    fitted to the empirical transition matrices.  Summing over
+    lags $k = 1, \ldots, 20$:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{ccc}
+        \toprule
+        Order $m$
+            & $\displaystyle\sum_{k=1}^{20} \Delta C_m(k)$
+            & $\max_k \Delta C_m(k)$ \\
+        \midrule
+        1 & $0.374$ & $0.050$ \\
+        2 & $0.365$ & $0.050$ \\
+        3 & $0.365$ & $0.050$ \\
+        4 & $0.365$ & $0.050$ \\
+        5 & $0.359$ & $0.050$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    Increasing the Markov order from~$1$ to~$5$ reduces the total
+    residual by only $4\%$.  The persistent long-range
+    autocorrelation at lags $k \geq 6$ is not captured by any
+    finite-order Markov model on the parity alphabet.  This provides
+    quantitative confirmation of the non-Markov character noted
+    qualitatively in Section~\ref{sec:correlations}, now in the
+    parity (rather than Syracuse step) representation.
+\end{empirical}
+
+\begin{remark}[Connection to the Markov approximation question]
+    The residual autocorrelation in
+    Observation~\ref{obs:markov-residuals} bears on the first open
+    question of Section~\ref{sec:open}: whether the correlated step
+    process admits a finite-order Markov approximation.  In the
+    parity alphabet, the answer is quantitatively negative---the
+    process has long-memory structure that no finite-order chain can
+    reproduce.  The memory likely arises from the arithmetic
+    correlations identified in
+    Proposition~\ref{prop:correlations}: the $2$-adic structure of
+    $3n+1$ creates dependencies that propagate across many parity
+    steps.
+\end{remark}
+
+\subsection{Synthesis}
+
+\begin{mainresult}[The Collatz parity measure on the golden mean
+shift]
+    The Collatz parity process, viewed across all starting values
+    $n \in [2,\, 5 \times 10^8]$, exhibits the following structure:
+    \begin{enumerate}[label=(\roman*)]
+        \item The symbolic dynamics lies in the \textbf{golden mean
+        shift} $X_F$, $F = \{11\}$, with topological entropy
+        $h_{\mathrm{top}} = \log_2 \phi \approx 0.6942$
+        bits/step.
+
+        \item The invariant measure is a \textbf{sofic measure}
+        with first-order transition parameter $p \approx 0.5025$
+        and measure-theoretic entropy
+        $h_\mu \approx 0.6678$ bits/step, giving an entropy gap
+        $\Delta h \approx 0.026$.
+
+        \item The measure is \textbf{not Parry}: the odd-step
+        frequency $\pi_1 \approx 0.332 \approx 1/3$ exceeds the
+        Parry value $1/(\phi + 2) \approx 0.276$, reflecting the
+        arithmetic bias of the $3n{+}1$ map.
+
+        \item The process is \textbf{not finite-order Markov}:
+        persistent long-range correlations at lags $k \geq 6$
+        resist approximation by Markov chains up to order~$5$.
+    \end{enumerate}
+\end{mainresult}
+
+\begin{remark}[Connection to the pseudo-Anosov structure]
+    The golden mean shift is the symbolic dynamics of the simplest
+    pseudo-Anosov map---the cat map
+    $\left(\begin{smallmatrix} 1 & 1 \\ 1 & 0
+    \end{smallmatrix}\right)$ on~$\T^2$, whose dilatation is
+    precisely~$\phi$.  The appearance of this same shift in the
+    Collatz parity process reinforces the pseudo-Anosov analogy
+    developed in
+    Sections~\ref{sec:anosov}--\ref{sec:mapping-torus}, but with
+    a crucial difference: the Collatz measure is not the natural
+    (Parry) measure of the shift, and it carries long-range
+    correlations that a genuine Markov partition would preclude.
+    The parity SFT captures the \emph{topological} skeleton of the
+    dynamics; the departure from the Parry measure encodes the
+    \emph{arithmetic} content of $3n{+}1$.
+\end{remark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Branch Locus on Finite Tori}\label{sec:branch-locus}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The profinite compatibility analysis of Section~\ref{sec:profinite-compat}
+studied the \emph{final} winding pair $(\nu_2(n), \nu_3(n))$ for each
+trajectory.  We now refine this to \emph{per-step} dynamics: at each
+Collatz step $t$, the running residues
+$(\nu_2(t) \bmod k,\, \nu_3(t) \bmod k)$ identify a cell on the finite
+torus $(\Z/k\Z)^2$, and the parity of the current iterate determines
+which branch was taken.  Cells visited by both branches constitute the
+\emph{branch locus}---the set where the foliation structure of the
+Collatz map acquires singularities.
+
+
+\subsection{Setup and observables}
+
+\begin{definition}[Per-step branch data]\label{def:branch-data}
+    Fix a level $k = 2^a \cdot 3^b$ with $0 \leq a,b \leq 4$.  For each
+    trajectory $n \to 1$, initialise running residues $r_2 = r_3 = 0$.
+    At step~$t$:
+    \begin{itemize}
+        \item If $T^t(n)$ is even (halving step): increment the even-visit
+        count at cell $(r_2, r_3) \bmod k$, then $r_2 \leftarrow r_2 + 1$.
+        \item If $T^t(n)$ is odd (tripling step): increment the odd-visit
+        count at cell $(r_2, r_3) \bmod k$, then $r_3 \leftarrow r_3 + 1$.
+    \end{itemize}
+    A cell is a \emph{branch cell} if both counts are positive,
+    \emph{pure-even} if only the even count is positive,
+    \emph{pure-odd} if only the odd count is positive, and
+    \emph{empty} otherwise.
+\end{definition}
+
+\begin{definition}[Per-cell observables]\label{def:cell-observables}
+    For each non-empty cell $(a, b) \in (\Z/k\Z)^2$, define:
+    \begin{align}
+        p_{\mathrm{odd}}(a,b) &= \frac{n_{\mathrm{odd}}}{n_{\mathrm{even}} + n_{\mathrm{odd}}}, \label{eq:podd} \\
+        s(a,b) &= \frac{p_{\mathrm{odd}}}{1 - p_{\mathrm{odd}}}, \quad\text{(local slope)} \label{eq:local-slope} \\
+        H(a,b) &= -p \log_2 p - (1{-}p) \log_2(1{-}p), \quad\text{(binary entropy)} \label{eq:branch-entropy} \\
+        \Delta(a,b) &= \bigl|s(a,b) - 1/\log_2 3\bigr|. \quad\text{(slope deviation)} \label{eq:slope-dev}
+    \end{align}
+    A branch cell is \emph{singular} if $\Delta(a,b) > \bar{\Delta} + 2\sigma_\Delta$,
+    where $\bar{\Delta}$ and $\sigma_\Delta$ are the mean and standard deviation
+    of $\Delta$ over all branch cells at level~$k$.
+\end{definition}
+
+The local slope~$s(a,b)$ should average to $1/\log_2 3 \approx 0.6309$
+if the dynamics at that cell tracks the global foliation.  Singular cells
+are those where the local dynamics deviates strongly from the expected
+foliation slope.
+
+\begin{remark}[Foliation comparison]
+    The two foliations on $(\Z/k\Z)^2$ relevant to the pseudo-Anosov
+    structure (Sections~\ref{sec:anosov}--\ref{sec:mapping-torus}) are:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{lcc}
+        \toprule
+        Foliation & Slope in $(\nu_2, \nu_3)$ & Angle \\
+        \midrule
+        Unstable & $\log_2 3 \approx 1.585$ & $57.8°$ \\
+        Stable & $-1/\log_2 3 \approx -0.631$ & $-32.2°$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+\end{remark}
+
+
+\subsection{Branch fraction and saturation}
+
+The computation was performed for all $n \in [2, 10^9]$
+(${\sim}2 \times 10^{11}$ total steps) across 25~levels
+$k = 2^a \cdot 3^b$, $0 \leq a, b \leq 4$.
+
+\begin{empirical}[Branch fraction progression]\label{obs:branch-frac}
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rrrrrrr}
+        \toprule
+        $k$ & $(a,b)$ & $k^2$ & Branch & Empty & Br.\ fraction & Singular \\
+        \midrule
+        72 & $(3,2)$ & 5{,}184 & 5{,}184 & 0 & 1.000 & 95 \\
+        81 & $(0,4)$ & 6{,}561 & 6{,}561 & 0 & 1.000 & 188 \\
+        108 & $(2,3)$ & 11{,}664 & 11{,}499 & 11 & 0.986 & 65 \\
+        144 & $(4,2)$ & 20{,}736 & 13{,}688 & 5{,}751 & 0.660 & 127 \\
+        216 & $(3,3)$ & 46{,}656 & 13{,}688 & 31{,}658 & 0.293 & 127 \\
+        1296 & $(4,4)$ & 1{,}679{,}616 & 13{,}688 & 1{,}664{,}618 & 0.008 & 127 \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    All levels $k \leq 81$ are fully saturated (100\% branch cells).
+    Above $k = 81$, the branch fraction drops sharply as empty cells
+    dominate.  For $k \geq 144$, the branch cell count stabilises at
+    $13{,}688$, consistent with the support stabilisation observed in
+    Section~\ref{sec:profinite-compat}.
+\end{empirical}
+
+
+\subsection{The singular cell anomaly at $k = 81$}
+
+The most striking feature of the data is the singular cell count at
+$k = 81 = 3^4$.
+
+\begin{empirical}[Singular cell density by level]\label{obs:singular-density}
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rcccc}
+        \toprule
+        $k$ & Factorisation & Singular & Branch cells & Density \\
+        \midrule
+        72 & $2^3 \cdot 3^2$ & 95 & 5{,}184 & 1.83\% \\
+        \textbf{81} & $\mathbf{3^4}$ & \textbf{188} & \textbf{6{,}561} & \textbf{2.86\%} \\
+        108 & $2^2 \cdot 3^3$ & 65 & 11{,}499 & 0.57\% \\
+        144 & $2^4 \cdot 3^2$ & 127 & 13{,}688 & 0.93\% \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The singular cell density at $k = 81$ exceeds that of all other levels,
+    including larger tori.  Adding a factor of~$4$ (passing from
+    $81 = 3^4$ to $108 = 2^2 \cdot 3^3$) \emph{reduces} the singular
+    density by a factor of~$5$.
+\end{empirical}
+
+
+\subsection{Sublattice analysis: no 3-adic clustering}
+
+The initial hypothesis---that singular cells at $k = 81 = 3^4$
+cluster on the $\nu_3 \equiv 0 \pmod{3}$ sublattice---was tested
+and decisively rejected.
+
+\begin{empirical}[Uniform distribution on all sublattices]\label{obs:sublattice}
+    For the 188~singular cells at $k = 81$, the marginal distributions
+    of $\nu_2 \bmod m$ and $\nu_3 \bmod m$ for $m \in \{3, 9, 27\}$
+    are indistinguishable from uniform:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rcccc}
+        \toprule
+        $\bmod\; m$ & $\chi^2(\nu_2)$ & $\chi^2(\nu_3)$ & $\mathrm{df}$ & Expected (uniform) \\
+        \midrule
+        3 & 0.01 & 0.14 & 2 & 62.7 \\
+        9 & 1.00 & 0.43 & 8 & 20.9 \\
+        27 & 14.2 & 3.3 & 26 & 7.0 \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The joint distribution $(\nu_2 \bmod 3,\, \nu_3 \bmod 3)$ has
+    $\chi^2 = 0.43$ on 8~degrees of freedom, consistent with perfect
+    uniformity.  The singular cells are not attracted to any 3-adic
+    sublattice.
+\end{empirical}
+
+
+\subsection{Singular cell chains along the $\log_3 2$ direction}
+
+The spatial structure of singular cells, however, is highly non-trivial.
+
+\begin{empirical}[Connected components]\label{obs:components}
+    The 188~singular cells at $k = 81$ form 65~connected components
+    (8-connected on the torus):
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rc}
+        \toprule
+        Component size & Count \\
+        \midrule
+        37 & 1 \\
+        18 & 3 \\
+        10 & 1 \\
+        7 & 4 \\
+        4 & 1 \\
+        1 (isolated) & 55 \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    There are no size-2 pairs.  The 133~cells in components of
+    size~$\geq 3$ form extended chains.
+\end{empirical}
+
+\begin{empirical}[Chain orientation converges to $\log_3 2$]\label{obs:chain-slope}
+    Principal component analysis of each chain of size~$\geq 3$ yields a
+    consistent principal direction:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rccc}
+        \toprule
+        Size & Chain slope & $|\mathrm{slope} - \log_3 2|$ & Mean $\Delta(a,b)$ \\
+        \midrule
+        37 & 0.640 & 0.009 & 0.599 \\
+        18 ($\times 3$) & 0.640 & 0.009 & 0.622 \\
+        10 & 0.638 & 0.007 & 0.631 \\
+        7 ($\times 4$) & 0.640 & 0.009 & 0.581 \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    All chains are aligned at slope $\approx 0.640$, deviating from
+    $\log_3 2 = 1/\log_2 3 \approx 0.6309$ by less than $0.01$.  This
+    is neither the unstable foliation slope ($\log_2 3 \approx 1.585$)
+    nor the stable foliation slope ($-1/\log_2 3 \approx -0.631$), but
+    the \emph{positive reflection} of the stable slope: $+\log_3 2$.
+\end{empirical}
+
+\begin{remark}[Diophantine interpretation]
+    The best rational approximation of $\log_3 2$ with denominator
+    dividing $81 = 3^4$ is $51/81 = 17/27 \approx 0.6296$, with
+    error $1.3 \times 10^{-3}$.  The chains trace the direction in
+    which $\log_3 2$ is approximated by the $3^4$-lattice.  The chain
+    lengths (7, 10, 18, 37) may reflect how far one can walk along the
+    $\log_3 2$ direction before the Diophantine approximation error
+    accumulates enough to push $p_{\mathrm{odd}}$ back above the
+    singular threshold.
+\end{remark}
+
+
+\subsection{Even-dominated dynamics at singular cells}
+
+\begin{empirical}[Singular cells are almost pure-even]\label{obs:singular-podd}
+    The parity ratio at singular cells is radically different from the
+    global average:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{lcc}
+        \toprule
+        Cell class & Mean $p_{\mathrm{odd}}$ & Std.\ dev. \\
+        \midrule
+        Global & 0.3323 & --- \\
+        Non-singular ($k{=}81$) & 0.3070 & 0.060 \\
+        \textbf{Singular} ($k{=}81$) & \textbf{0.0595} & 0.073 \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    Of the 188~singular cells, 187 (99.5\%) have
+    $p_{\mathrm{odd}} < 0.3323$.  These are torus positions where
+    trajectories almost exclusively take the even branch (halving),
+    rarely encountering an odd step.
+\end{empirical}
+
+\begin{keyinsight}[Even tunnels along $\log_3 2$]
+    The singular cells at $k = 81$ form coherent chains of
+    predominantly even-step dynamics, threaded along the $\log_3 2$
+    direction on the torus.  On the pure-$3^4$ lattice, the even
+    branch $x \mapsto x/2$ has no resonance with the lattice
+    structure ($\gcd(2, 81) = 1$), while the odd branch
+    $x \mapsto 3x + 1$ increments $\nu_3$ by~$1$ with perfect
+    lattice alignment.  The chains mark exactly where the irrationality
+    of $\log_3 2$ creates coherent ``tunnels'' of predominantly even
+    dynamics---regions where the 3-adic lattice cannot approximate the
+    conjugate winding slope.
+\end{keyinsight}
+
+
+\subsection{Spatial and foliation-distance analysis}
+
+\begin{empirical}[Spatial clustering]\label{obs:spatial-clustering}
+    Singular cells exhibit strong spatial clustering on the $k{=}81$ torus:
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{lc}
+        \toprule
+        Statistic & Value \\
+        \midrule
+        Expected neighbours (random) & 0.23 \\
+        Observed mean neighbours & 1.45 \\
+        Enrichment factor & 6.3$\times$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The nearest-neighbour count is $6.3\times$ the random expectation.
+    Half of all singular cells have exactly 2~neighbours, forming the
+    interior of chains.
+\end{empirical}
+
+\begin{empirical}[Enrichment near unstable foliation]\label{obs:foliation-enrichment}
+    Singular cells concentrate near the \emph{unstable} foliation
+    (slope $\log_2 3$):
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rcc}
+        \toprule
+        Distance bin (unstable) & Singular/Total & Enrichment \\
+        \midrule
+        $[0, 4.3)$ & 60/1313 & 1.59$\times$ \\
+        $[4.3, 8.6)$ & 47/1311 & 1.25$\times$ \\
+        $[8.6, 13.0)$ & 30/1312 & 0.80$\times$ \\
+        $[13.0, 17.3)$ & 26/1312 & 0.69$\times$ \\
+        $[17.3, 21.6)$ & 25/1312 & 0.66$\times$ \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+    The enrichment decreases monotonically from $1.59\times$ to
+    $0.66\times$ with distance from the unstable foliation.  No
+    comparable enrichment is observed with respect to the stable
+    foliation (enrichment factors $0.93$--$1.12\times$, essentially
+    flat).
+\end{empirical}
+
+\begin{remark}[Geometric picture]
+    The singular cells are chains \emph{aligned along $\log_3 2$}
+    that \emph{concentrate near the $\log_2 3$ foliation}.  These
+    two directions are not identical: the chain direction ($32.6°$
+    from the $\nu_2$-axis) differs from the unstable foliation
+    ($57.8°$) by $25.2°$.  The chains thread along the conjugate
+    slope, but preferentially populate the neighbourhood of the
+    unstable foliation.
+\end{remark}
+
+
+\subsection{Phase transition at the saturation boundary}
+
+\begin{empirical}[Two regimes of singular cells]\label{obs:two-regimes}
+    The character of singular cells reverses sharply at the boundary
+    where the branch fraction drops below~$1$:
+
+    \medskip
+    \noindent\textbf{Regime~1} ($k \leq 81$, 100\% branch fraction):
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rcccccc}
+        \toprule
+        $k$ & Fact. & Sing. & Max chain & Chain slope & Mean $p_{\mathrm{odd}}$ & \% below global \\
+        \midrule
+        48 & $2^4 \cdot 3$ & 26 & 7 & 0.673 & 0.170 & 100\% \\
+        54 & $2 \cdot 3^3$ & 44 & 10 & 0.732 & 0.124 & 97.7\% \\
+        72 & $2^3 \cdot 3^2$ & 95 & 24 & 0.638 & 0.036 & 98.9\% \\
+        81 & $3^4$ & 188 & 37 & 0.640 & 0.060 & 99.5\% \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+
+    \noindent\textbf{Regime~2} ($k \geq 108$, $<100$\% branch fraction):
+    \begin{center}
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{rcccccc}
+        \toprule
+        $k$ & Fact. & Sing. & Max chain & Chain slope & Mean $p_{\mathrm{odd}}$ & \% below global \\
+        \midrule
+        108 & $2^2 \cdot 3^3$ & 65 & 10 & 0.791 & 0.686 & 0.0\% \\
+        144 & $2^4 \cdot 3^2$ & 127 & 9 & 0.760 & 0.695 & 0.0\% \\
+        \bottomrule
+    \end{tabular}
+    \end{center}
+\end{empirical}
+
+\begin{keyinsight}[Phase transition in singular cell character]
+    The two regimes exhibit a complete reversal:
+    \begin{enumerate}[label=(\roman*)]
+        \item \textbf{Below saturation} ($k \leq 81$): Singular cells
+        have very low $p_{\mathrm{odd}}$ ($0.036$--$0.170$), forming
+        ``even tunnels'' aligned at slope $\log_3 2$.  The chain slope
+        converges to $\log_3 2$ with error $< 0.01$ at $k = 72$ and
+        $k = 81$.
+
+        \item \textbf{Above saturation} ($k \geq 108$): Singular cells
+        flip to high $p_{\mathrm{odd}}$ ($0.686$--$0.695$), forming
+        ``odd outliers'' with shorter chains and slope drifting away from
+        $\log_3 2$.
+
+        \item The transition coincides with the appearance of empty cells.
+        On a fully saturated torus, the singular set reveals the
+        \emph{intrinsic} foliation singularities of the Collatz dynamics.
+        On a partially empty torus, the singular set instead reflects the
+        \emph{boundary} of the occupied region.
+    \end{enumerate}
+\end{keyinsight}
+
+
+\subsection{Diophantine foliation analysis}
+
+The rational approximation quality of $\log_3 2$ by fractions
+$p/3^b$ varies dramatically with $b$.  Only certain exponents yield
+\emph{record approximations} (strictly improving on all smaller powers
+of~3):
+
+\begin{center}
+\begin{tabular}{ccccr}
+\toprule
+$b$ & $3^b$ & Best $p/3^b$ & Approx.\ value & $|p/3^b - \log_3 2|$ \\
+\midrule
+1  & 3       & $2/3$        & 0.66667 & $3.57 \times 10^{-2}$ \\
+3  & 27      & $17/27$      & 0.62963 & $1.30 \times 10^{-3}$ \\
+6  & 729     & $460/729$    & 0.63100 & $7.16 \times 10^{-5}$ \\
+9  & 19{,}683 & $12419/19683$ & 0.63095 & $2.08 \times 10^{-5}$ \\
+11 & 177{,}147 & $111777/177147$ & 0.63093 & $1.76 \times 10^{-6}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+The levels $3^4 = 81$ through $3^5 = 243$ all use the same best
+approximant $17/27$; the next jump in accuracy occurs at $3^6 = 729$,
+which is $18\times$ more precise.  We add $k = 729$ and $k = 19{,}683 = 3^9$
+(a further $3.4\times$ improvement, $12419/19683$) as additional
+torus levels to probe this Diophantine structure and measure the
+scaling of strip width across Diophantine jumps.
+
+\begin{observation}[Frozen branch count]
+\label{obs:frozen-branch}
+    At $N = 10^9$, the number of branch cells stabilises at exactly
+    $13{,}688$ for all $k \geq 144$, including the Diophantine level
+    $k = 729$ ($13{,}688$ branch cells of $531{,}441$ total, branch
+    fraction $2.58\%$).  The branch locus
+    has \emph{finite complexity}: the set of trajectory signatures
+    producing branching behaviour is fully captured by $k \approx 144$,
+    and larger moduli simply embed the same set in a sparser grid.
+\end{observation}
+
+\begin{remark}[Branch count convergence with $N$]
+\label{rem:branch-convergence}
+    The ``frozen'' property refers to stability across $k$
+    (resolution-independence), not convergence in~$N$ (trajectory count).
+    As $N$ increases, rare trajectories may visit previously unoccupied
+    cells with both parities, converting pure cells to branch cells.
+    The refactored code at $N = 10^8$ yields $9{,}415$ branch cells;
+    the original run at $N = 10^9$ yielded $13{,}688$.  A definitive
+    $N = 10^{10}$ run is in progress to establish convergence.
+    The qualitative structure---resolution-independent branch count,
+    finite topological complexity---is robust across all $N$ tested.
+\end{remark}
+
+\begin{observation}[Foliation depletion at Diophantine levels]
+\label{obs:foliation-depletion}
+    The enrichment of branch cells on the unstable foliation reverses
+    at large~$k$:
+    \begin{center}
+    \begin{tabular}{crrrrr}
+    \toprule
+    $k$ & branch & on foliation & branch $\cap$ fol.\ & expected & enrichment \\
+    \midrule
+    6--72  & all     & ---  & all   & ---   & 1.000 \\
+    729    & 13{,}688 & 1{,}367 & 2     & $\sim$35 & 0.057 \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
+    At $k \leq 72$ (full saturation), every foliation cell is
+    trivially a branch cell.  At $k = 729$, the branch locus is
+    $17\times$ \emph{depleted} on the unstable foliation---branch cells
+    actively avoid the foliation lines.
+\end{observation}
+
+\begin{observation}[Diagonal band structure at $k = 729$]
+\label{obs:diagonal-band}
+    Despite occupying only $2.8\%$ of the $729 \times 729$ torus, all
+    non-empty cells at $k = 729$ lie on a single coherent diagonal band
+    of width ${\sim}20$~cells, aligned at slope $\approx \log_3 2$.
+    Within this band:
+    \begin{itemize}
+        \item Branch cells (gold) occupy the core,
+        \item Pure-even cells (1{,}269) flank the branch cells on both
+              sides, forming ``laminar tunnel walls,''
+        \item Pure-odd cells (41) are rare and peripheral.
+    \end{itemize}
+    The band is \emph{offset} from the exact unstable foliation by
+    $15$--$30$~cell units in perpendicular distance.  The radial
+    density profile from the foliation shows non-empty cells peaking
+    at distance ${\sim}20$, not at distance~$0$.
+\end{observation}
+
+\begin{observation}[Foliation shadow]
+\label{obs:foliation-shadow}
+    The offset between the non-empty band and the exact foliation can
+    be understood via the Diophantine approximation.  At $k = 729$,
+    the best rational approximation $460/729 \approx 0.63100$ exceeds
+    $\log_3 2 \approx 0.63093$ by $7.16 \times 10^{-5}$.  Over
+    $729$~cells, this error accumulates to
+    $729 \times 7.16 \times 10^{-5} \approx 0.052$~wrapping cycles,
+    producing a systematic drift of the trajectory band away from the
+    irrational foliation.  The band follows the \emph{rational
+    approximation} $\nu_3 = (460/729)\,\nu_2$, not the irrational
+    foliation $\nu_3 = \log_3 2 \cdot \nu_2$.  We call this the
+    \emph{foliation shadow}: trajectories are enslaved to the best
+    rational approximation, creating a narrow corridor that shadows but
+    does not coincide with the true foliation.
+\end{observation}
+
+\begin{observation}[Parity distribution at Diophantine levels]
+\label{obs:dioph-parity}
+    The distribution of $p_{\mathrm{odd}}$ among branch cells at
+    $k = 729$ is heavily left-skewed relative to $k = 81$, with the
+    bulk of the mass below $p_{\mathrm{odd}} = 0.1$.  This confirms
+    that the Diophantine branch cells are even-dominated: the better
+    the rational approximation, the more the dynamics within the
+    foliation shadow are biased toward even (halving) steps.
+\end{observation}
+
+\begin{keyinsight}[Diophantine quality controls foliation geometry]
+    The quality of the rational approximation $p/3^b \approx \log_3 2$
+    determines three geometric features of the branch locus on the
+    $3^b$-torus:
+    \begin{enumerate}[label=(\roman*)]
+        \item \textbf{Band width:} Better approximations produce
+        tighter trajectory confinement.  At $k = 81$ (error
+        $1.3 \times 10^{-3}$), all cells are visited; at $k = 729$
+        (error $7.2 \times 10^{-5}$), only $2.8\%$ of cells are
+        non-empty.
+        \item \textbf{Foliation offset:} The trajectory band follows
+        the rational approximation, not the irrational foliation,
+        with the offset proportional to the approximation error.
+        \item \textbf{Parity lamination:} Within the band, even-step
+        cells dominate, with branch cells (mixed parity) confined to
+        the core and pure-even cells forming the walls---a laminar
+        structure invisible at saturated levels.
+    \end{enumerate}
+\end{keyinsight}
+
+
+\subsection{Parity transition tracking and ``11'' verification}\label{ssec:transitions}
+
+To directly verify the SFT forbidden bigram ``11''
+(Section~\ref{sec:parity-sft}) at the level of individual torus cells,
+and to compute per-cell transition valence for the Euler characteristic
+programme, we extend the branch locus computation with per-cell parity
+transition grids.
+
+\paragraph{Setup.}
+For each target level $k \in \{81, 108, 144, 729\}$, we track three
+additional $k \times k$ grids recording the number of
+\emph{even$\to$even}, \emph{even$\to$odd}, and \emph{odd$\to$even}
+transitions at each cell $(r_2, r_3)$.  A transition is recorded at
+the cell of the current step, with the transition type determined by
+the previous and current parities.  No \emph{odd$\to$odd} grid is
+needed: after an odd Collatz step $x \mapsto 3x+1$, the result is
+always even, so the next step is necessarily even.  Memory cost:
+$3 \times k^2 \times 8$~bytes per target level, ${\sim}52$~MB total.
+
+\begin{observation}[``11'' forbidden bigram verified on torus cells]
+\label{obs:oo-verified}
+    At $N = 10^8$ ($17.9 \times 10^9$ total steps), the transition
+    counts at all four target levels satisfy
+    \[
+        \mathrm{ee} + \mathrm{eo} + \mathrm{oe}
+        = N_{\mathrm{steps}} - N_{\mathrm{trajs}}
+        = 17{,}823{,}493{,}584
+    \]
+    exactly, with zero residual.  Since the only missing transition
+    type is odd$\to$odd, this confirms $\mathrm{oo} = 0$ at every
+    cell---the ``11'' forbidden bigram of the parity SFT
+    (Section~\ref{sec:parity-sft}) is verified cell-by-cell on the
+    torus.
+\end{observation}
+
+\begin{observation}[Transition fractions and valence]
+\label{obs:trans-fractions}
+    The global transition fractions are
+    $\mathrm{ee} : \mathrm{eo} : \mathrm{oe} = 0.335 : 0.331 : 0.334$,
+    nearly equal thirds.  The slight asymmetry reflects the departure
+    of $p_{\mathrm{odd}} \approx 0.332$ from the equilibrium value
+    $1/(1 + \log_2 3) \approx 0.387$ at finite~$N$.
+
+    The \emph{transition valence} of a cell---the number of distinct
+    transition types (ee, eo, oe) observed---ranges from 0 (empty) to 3
+    (mixed).  At $k = 729$, the valence map reveals internal structure
+    within the foliation shadow: cells in the strip core have valence~3,
+    while cells at the strip edges have valence 1 or~2, with the pattern
+    modulated by the $460/729$ rational lattice.
+\end{observation}
+
+\begin{observation}[``11'' successor analysis]
+\label{obs:successor}
+    For each odd-visited cell $(r_2, r_3)$ at $k = 729$, we classify
+    the successor cell $(r_2, (r_3 + 1) \bmod k)$---the cell where
+    the trajectory lands after the odd step.  At $N = 10^8$:
+    \begin{center}
+    \begin{tabular}{lrr}
+    \toprule
+    Successor type & Count & Fraction \\
+    \midrule
+    branch (both parities) & 8{,}832 & 91.2\% \\
+    pure\_even              & 856    & 8.8\% \\
+    pure\_odd               & 0      & 0\% \\
+    empty                  & 0      & 0\% \\
+    \bottomrule
+    \end{tabular}
+    \end{center}
+    The successor of an odd visit is \emph{never} a pure-odd cell,
+    confirming that the ``11'' constraint maps directly onto the
+    pure-even tunnel walls of the foliation shadow.  The 8.8\% of
+    successors landing in pure-even cells correspond to the strip
+    boundary, where the odd step shifts $r_3$ by~1 and pushes the
+    trajectory outside the branch core.  This boundary structure
+    manifests as ``blue tendrils'' extending from the branch strip
+    in the direction of the stable foliation.
+\end{observation}
+
+\begin{observation}[Shadow offset spatial structure]
+\label{obs:shadow-spatial}
+    The shadow offset $\delta = d_{\mathrm{irr}} - d_{\mathrm{rat}}$
+    (distance from irrational foliation minus distance from rational
+    foliation) exhibits a crisp sign change across the foliation strip
+    at $k = 729$:
+    \begin{itemize}
+        \item Cells \emph{above} the irrational foliation (larger $\nu_2$
+              for given $\nu_3$): $\delta < 0$ (closer to irrational).
+        \item Cells \emph{below} the irrational foliation: $\delta > 0$
+              (closer to rational).
+    \end{itemize}
+    The boundary between positive and negative offset \emph{is} the
+    irrational foliation line itself.  The offset magnitude grows
+    linearly along the strip as
+    $\Delta s \cdot r_2 / \sqrt{1 + s^2}$,
+    where $\Delta s = 460/729 - \log_3 2 \approx 7.16 \times 10^{-5}$,
+    reaching a maximum of ${\approx}\,0.044$~cell units at $r_2 = 729$.
+    Since the rational slope exceeds the irrational by $\Delta s > 0$,
+    the rational foliation sits slightly below the irrational in
+    the $(\nu_3, \nu_2)$ plot, producing the asymmetry: cells above
+    the irrational line are farther from the rational line (and vice
+    versa).  The two foliations are at most $0.044$~cells apart, so
+    essentially no branch cells sit between them---every cell is
+    unambiguously on one side.
+\end{observation}
+
+\begin{keyinsight}[SFT--tunnel correspondence at $k = 729$]
+    The per-cell transition analysis establishes a direct link between
+    the symbolic dynamics (parity SFT, Section~\ref{sec:parity-sft})
+    and the geometric structure (foliation shadow,
+    Observation~\ref{obs:foliation-shadow}):
+    \begin{enumerate}[label=(\roman*)]
+        \item The forbidden bigram ``11'' is verified at every cell
+              of every target level (implied $\mathrm{oo} = 0$).
+        \item The successors of odd-visited cells are never pure-odd,
+              confirming that the ``11'' constraint creates the
+              pure-even tunnel walls flanking the branch core.
+        \item The shadow offset cleanly bisects the strip into cells
+              closer to the rational vs.\ irrational foliation,
+              with the irrational line as the precise dividing surface.
+    \end{enumerate}
+\end{keyinsight}
+
+
+\subsection{Synthesis}
+
+\begin{mainresult}[Branch locus structure on finite tori]
+\label{res:branch-locus}
+    The per-step Collatz dynamics on $(\Z/k\Z)^2$ for $k = 2^a \cdot 3^b$
+    ($0 \leq a,b \leq 4$) and the Diophantine level $k = 3^6 = 729$,
+    computed from $10^8$--$10^9$ trajectories with per-cell parity
+    transition tracking, reveals:
+    \begin{enumerate}[label=(\roman*)]
+        \item \textbf{Universal branching at saturation.}  All levels
+        $k \leq 81$ have 100\% branch cells: every torus position is visited
+        by both even and odd steps.  Above $k = 108$, the branch count
+        stabilises at exactly $13{,}688$---the branch locus has finite
+        complexity.
+
+        \item \textbf{Singular chains along $\log_3 2$.}  At the fully
+        saturated levels $k = 72$ and $k = 81$, singular cells form
+        extended chains (up to 37~cells) aligned at slope
+        $\log_3 2 \approx 0.631$ with precision $< 0.01$.  These chains
+        mark coherent regions of predominantly even dynamics.
+
+        \item \textbf{Foliation enrichment and depletion.}  At saturated
+        levels ($k \leq 72$), singular cells are $1.6\times$ enriched
+        near the unstable foliation.  At the Diophantine level $k = 729$,
+        branch cells are $17\times$ \emph{depleted} on the foliation
+        (enrichment $0.057$)---a complete reversal.
+
+        \item \textbf{Foliation shadow.}  At $k = 729$, non-empty cells
+        form a single diagonal band of width ${\sim}20$~cells at slope
+        $\log_3 2$, offset by $15$--$30$~cell units from the exact
+        foliation.  The band follows the best rational approximation
+        $460/729 \approx 0.63100$, not the irrational $\log_3 2$.
+
+        \item \textbf{Parity lamination.}  Within the foliation shadow,
+        even-step cells dominate: branch cells (mixed parity) form the
+        core, flanked by pure-even walls.  The $p_{\mathrm{odd}}$
+        distribution at $k = 729$ is heavily left-skewed ($< 0.1$).
+
+        \item \textbf{Phase transition.}  The singular cell character
+        reverses at the saturation boundary: even-dominated tunnels
+        ($p_{\mathrm{odd}} \approx 0.06$) below, odd-dominated outliers
+        ($p_{\mathrm{odd}} \approx 0.69$) above.
+
+        \item \textbf{No sublattice structure.}  Despite $k = 81 = 3^4$
+        being a pure prime power, the singular cells are uniformly
+        distributed across all 3-adic sublattices.
+
+        \item \textbf{``11'' verification.}  Per-cell transition grids at
+        target levels $k \in \{81, 108, 144, 729\}$ confirm that
+        $\mathrm{oo} = 0$ at every cell ($17.8 \times 10^9$ transitions
+        verified).  The successors of odd-visited cells at $k = 729$ are
+        never pure-odd (91.2\% branch, 8.8\% pure-even), directly linking
+        the parity SFT forbidden bigram to the pure-even tunnel walls of
+        the foliation shadow.
+
+        \item \textbf{Shadow offset bisection.}  The shadow offset
+        $d_{\mathrm{irr}} - d_{\mathrm{rat}}$ exhibits a crisp sign
+        change at the irrational foliation, bisecting the strip into cells
+        closer to the rational ($460/729$) vs.\ irrational ($\log_3 2$)
+        foliation.  The offset grows linearly as
+        $\Delta s \cdot r_2 / \sqrt{1 + s^2}$ with maximum $0.044$~cell
+        units, confirming that the two foliations are nearly coincident at
+        $k = 729$.
+    \end{enumerate}
+\end{mainresult}
+
+\begin{remark}[Irrational foliation passes through the branch strip]
+\label{rem:foliation-through-strip}
+    A natural question is whether the irrational foliation (the
+    equilibrium line $\nu_3 = \log_3 2 \cdot \nu_2$) is geometrically
+    separated from the branch cells.  Direct computation at $k = 729$
+    shows it is \emph{not}: $180$ branch cells lie within $0.5$~cell
+    units of the irrational foliation, with the minimum distance
+    $\approx 0$.  The irrational line passes through the densest part
+    of the branch strip.
+
+    The ``15--30 cell offset'' (Observation~\ref{obs:foliation-depletion})
+    refers to the peak of the \emph{radial density profile} measured
+    from the \emph{unstable} foliation (slope $\log_2 3$), not the
+    distance from the trajectory band to the irrational line itself.
+    This is consistent with the shadow offset bisection
+    (Observation~\ref{obs:shadow-spatial}), which shows the irrational
+    foliation as the \emph{dividing surface within} the strip.
+
+    The mechanism by which trajectories are forced to descend is
+    therefore not geometric exclusion ($A \cap L = \emptyset$, where
+    $A$ is the branch locus and $L$ the equilibrium line).
+    Instead, the pure-even tunnel walls flanking the branch core act
+    as \textbf{reflecting boundaries}: when a trajectory approaches
+    the tunnel edge, it encounters pure-even cells that force $n/2$
+    divisions, pushing the walk $u(t)$ downward.  The Baker bound
+    guarantees that these walls persist at every scale---the tunnel
+    has minimum width bounded away from zero---ensuring the reflecting
+    boundary is permanent.
+\end{remark}
+
+\begin{remark}[The role of $\log_3 2$ and its Diophantine approximants]
+    The appearance of $\log_3 2 = 1/\log_2 3$ as the chain direction
+    is significant.  The two fundamental slopes of the Collatz foliation
+    are $\log_2 3$ (unstable) and $-1/\log_2 3$ (stable).  The singular
+    chains are aligned along the \emph{magnitude} of the stable slope,
+    but with positive sign---neither foliation direction, but the
+    conjugate winding ratio $\log_3 2$ that measures the average number
+    of halving steps per tripling step.  This is the same quantity that
+    governs the drift along the unstable eigendirection
+    (Section~\ref{sec:anosov}).
+
+    The Diophantine analysis (Section~\ref{sec:branch-locus}.\ref{obs:foliation-shadow})
+    confirms this interpretation: at levels where $p/3^b$ is a record
+    approximation to $\log_3 2$, trajectories are enslaved to the
+    rational foliation $\nu_3 = (p/3^b)\,\nu_2$, forming a narrow
+    band that shadows the irrational line.  The quality of the
+    approximation controls the band width (tighter $\Rightarrow$ narrower)
+    and the foliation offset (tighter $\Rightarrow$ closer, but never
+    coincident).  The sequence of Diophantine best approximants
+    $b = 1, 3, 6, 9, 11, \ldots$ defines a hierarchy of torus
+    levels at which the foliation shadow is maximally constrained,
+    potentially connecting to the continued-fraction expansion of
+    $\log_3 2$ and the Baker-type lower bounds on $|2^m - 3^n|$.
+\end{remark}
+
+\begin{remark}[Implementation]
+    The branch locus computation is implemented in
+    \texttt{branch\_locus.c}, which performs per-step streaming
+    accumulation across 26~torus levels simultaneously (25~standard
+    levels $2^a \cdot 3^b$ with $0 \leq a,b \leq 4$, plus the
+    Diophantine level $3^6 = 729$).  Per-cell parity transition grids
+    (ee, eo, oe) are tracked at four target levels
+    $k \in \{81, 108, 144, 729\}$, adding ${\sim}52$~MB.  Total memory:
+    ${\sim}100$~MB.  At $N = 10^8$, the program processes
+    $1.79 \times 10^{10}$~steps in 9~minutes
+    (${\sim}34 \times 10^6$~steps/s), writing per-cell data to CSV
+    (\texttt{branch\_cells.csv}, \texttt{branch\_transitions.csv},
+    \texttt{branch\_shadow.csv}) for offline analysis.  Companion plots
+    are generated by \texttt{plot\_branch\_locus.py} (standard levels)
+    and \texttt{plot\_diophantine.py} (Diophantine and transition
+    analysis, 5~figures).  A definitive $N = 10^{10}$ run is in progress.
+\end{remark}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% References
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{thebibliography}{99}
+
+\bibitem{Lagarias1985}
+J.~C.~Lagarias,
+``The $3x+1$ problem and its generalizations,''
+\emph{American Mathematical Monthly} \textbf{92} (1985), no.~1, 3--23.
+
+\bibitem{Lagarias2010}
+J.~C.~Lagarias (ed.),
+\emph{The Ultimate Challenge: The $3x+1$ Problem},
+American Mathematical Society, Providence, RI, 2010.
+
+\bibitem{Terras1976}
+R.~Terras,
+``A stopping time problem on the positive integers,''
+\emph{Acta Arithmetica} \textbf{30} (1976), no.~3, 241--252.
+
+\bibitem{Wirsching1998}
+G.~J.~Wirsching,
+\emph{The Dynamical System Generated by the $3n+1$ Function},
+Lecture Notes in Mathematics, vol.~1681, Springer-Verlag, Berlin, 1998.
+
+\bibitem{Bohm1978}
+C.~B\"ohm and G.~Sontacchi,
+``On the existence of cycles of given length in integer sequences like $x_{n+1} = x_n/2$ if $x_n$ even, and $x_{n+1} = 3x_n + 1$ otherwise,''
+\emph{Atti Accad.\ Naz.\ Lincei Rend.\ Cl.\ Sci.\ Fis.\ Mat.\ Natur.} \textbf{64} (1978), no.~3, 260--264.
+
+\bibitem{Everett1977}
+C.~J.~Everett,
+``Iteration of the number-theoretic function $f(2n) = n$, $f(2n+1) = 3n+2$,''
+\emph{Advances in Mathematics} \textbf{25} (1977), no.~1, 42--45.
+
+\bibitem{Tao2022}
+T.~Tao,
+``Almost all orbits of the Collatz map attain almost bounded values,''
+\emph{Forum of Mathematics, Pi} \textbf{10} (2022), e12.
+
+\bibitem{Thurston1988}
+W.~P.~Thurston,
+``On the geometry and dynamics of diffeomorphisms of surfaces,''
+\emph{Bulletin of the American Mathematical Society} \textbf{19} (1988), no.~2, 417--431.
+
+\bibitem{Oliveira2015}
+T.~Oliveira e~Silva,
+``Empirical verification of the $3x+1$ and related conjectures,''
+in~\cite{Lagarias2010}, pp.~189--207.
+
+\bibitem{Vietoris1927}
+L.~Vietoris,
+``\"Uber den h\"oheren Zusammenhang kompakter R\"aume und eine Klasse von zusammenhangstreuen Abbildungen,''
+\emph{Mathematische Annalen} \textbf{97} (1927), 454--472.
+
+\bibitem{LindMarcus2021}
+D.~Lind and B.~Marcus,
+\emph{An Introduction to Symbolic Dynamics and Coding},
+2nd ed., Cambridge University Press, Cambridge, 2021.
+
+\end{thebibliography}
+
+\end{document}

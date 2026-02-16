@@ -1,0 +1,697 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{mathrsfs}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{tikz-cd}
+\usepackage{caption}
+
+\geometry{margin=1in}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+% Commands
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\T}{\mathbb{T}}
+\newcommand{\A}{\mathbb{A}}
+\newcommand{\Zhat}{\widehat{\Z}}
+\newcommand{\Zp}{\Z_p}
+\newcommand{\Qp}{\Q_p}
+\newcommand{\Sol}{\mathrm{Sol}}
+\newcommand{\Hom}{\mathrm{Hom}}
+\newcommand{\Aut}{\mathrm{Aut}}
+\newcommand{\Gal}{\mathrm{Gal}}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\Haar}{Haar}
+
+% Theorem environments
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{question}[theorem]{Question}
+\newtheorem{program}[theorem]{Program}
+
+% Custom box styles
+\tcbuselibrary{theorems}
+
+\newtcolorbox{mainresult}[1][]{
+    colback=blue!5,
+    colframe=blue!50!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{keyinsight}[1][]{
+    colback=green!5,
+    colframe=green!50!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{empirical}[1][]{
+    colback=orange!5,
+    colframe=orange!60!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+\newtcolorbox{nextstep}[1][]{
+    colback=violet!5,
+    colframe=violet!50!black,
+    fonttitle=\bfseries,
+    title=#1
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{\textbf{Next Moves: The $(2,3)$-Solenoid,\\
+Ad\`elic Winding Numbers, and the\\
+Thurston Program for Collatz Dynamics}}
+
+\author{John A.\ Janik\\
+\texttt{john.janik@gmail.com}}
+
+\date{February 2026 --- Working Notes II}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Synopsis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+These notes outline the next phase of the program initiated in \emph{Winding Numbers, Pseudo-Anosov Structure, and the $(\nu_2, \nu_3)$ Equilibrium in the Collatz Dynamical System} (Working Notes~I). The central theme is that three independently motivated constructions---the $(2,3)$-solenoid from topological dynamics, the ad\`elic formulation from arithmetic, and the Thurston classification from surface topology---converge on a single structure that gives a precise algebraic home to the empirical patterns we have observed. The purpose of this document is to identify the exact points of contact, formulate the connections as precise conjectures where possible, and lay out a concrete research program.
+
+The main observation is the following:
+
+\begin{keyinsight}[The Rosetta Stone]
+The torus residue distributions $\mu_k(a,b)$ at modular level $k$, computed empirically in Notes~I, are the \textbf{pushforwards of Haar measure} on the $(2,3)$-solenoid $\Sigma_{2,3}$ under the projection to the finite torus $(\Z/k\Z)^2$. The forbidden cells and diagonal banding are obstructions in these finite quotients, and the full system of obstructions (for all $k$ simultaneously) constitutes the profinite winding number---an element of $\Z_2 \times \Z_3$.
+\end{keyinsight}
+
+This means the empirical data we have already collected is a finite window into an object with a known, rigid algebraic structure. The question is whether the Collatz dynamics respects this structure or breaks it.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Three Constructions and Their Meeting Point}\label{sec:three}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Construction I: The $(2,3)$-Solenoid}
+
+The $2$-adic solenoid is the inverse limit of circles under the doubling map:
+\begin{equation}\label{eq:2-solenoid}
+    \Sigma_2 = \varprojlim\bigl( S^1 \xleftarrow{\;\times 2\;} S^1 \xleftarrow{\;\times 2\;} \cdots \bigr).
+\end{equation}
+It is a compact connected abelian group fitting into the exact sequence
+\begin{equation}\label{eq:solenoid-ses}
+    0 \to \Z_2 \to \Sigma_2 \to S^1 \to 0,
+\end{equation}
+where the fiber $\Z_2$ is a Cantor set. The doubling map lifts to an automorphism of $\Sigma_2$ that is invertible and chaotic.
+
+For Collatz, the relevant generalization combines both primes:
+\begin{equation}\label{eq:23-solenoid}
+    \Sigma_{2,3} \;\cong\; \bigl(\R \times \Z_2 \times \Z_3\bigr) \big/ \Z,
+\end{equation}
+where $\Z$ embeds diagonally via $m \mapsto (m, -m, -m)$. This is a compact abelian group fibering over $S^1$ with fiber $\Z_2 \times \Z_3$. It can equivalently be realized as the Pontryagin dual of $\Z[1/6]$, the ring of rationals with denominators dividing powers of~$6$.
+
+
+\subsection{Construction II: The Ad\`elic Quotient}
+
+The ring of rational ad\`eles $\A_\Q$ is the restricted product of all completions of $\Q$. Restricting to the primes $2$ and~$3$ yields the \emph{partial ad\`ele ring}
+\begin{equation}\label{eq:partial-adele}
+    \A_{\{2,3\}} := \R \times \Q_2 \times \Q_3.
+\end{equation}
+The quotient by the diagonally embedded copy of $\Z[1/6]$ gives
+\begin{equation}\label{eq:adelic-solenoid}
+    \A_{\{2,3\}} \big/ \Z[1/6] \;\cong\; \Sigma_{2,3},
+\end{equation}
+recovering the solenoid. The Collatz map, which involves division by $2$ and multiplication by $3$, extends naturally to a continuous map on $\Z_2$ (since parity is a clopen condition in the $2$-adic topology). On the full solenoid, it becomes an affine map:
+\begin{equation}\label{eq:collatz-affine}
+    T_C: \Sigma_{2,3} \to \Sigma_{2,3}, \qquad
+    T_C(x) = \begin{cases}
+        x/2 & \text{in the $\Z_2$ component if $x \equiv 0 \pmod{2}$},\\
+        (3x+1)/2 & \text{if $x \equiv 1 \pmod{2}$}.
+    \end{cases}
+\end{equation}
+The \emph{natural extension} of this non-invertible map (in the ergodic-theoretic sense) lives on a space that can be embedded in the solenoid.
+
+
+\subsection{Construction III: Thurston's Classification and the Mapping Torus}
+
+Given a surface homeomorphism $f: S \to S$, Thurston's classification~\cite{Thurston1988} asserts that $f$ is isotopic to one of:
+\begin{enumerate}[label=(\roman*)]
+    \item \textbf{Periodic}: $f^n = \mathrm{id}$ for some $n$.
+    \item \textbf{Reducible}: $f$ preserves a system of essential simple closed curves.
+    \item \textbf{Pseudo-Anosov}: $f$ preserves two transverse measured foliations $(\mathcal{F}^s, \mu^s)$ and $(\mathcal{F}^u, \mu^u)$, stretching $\mu^u$ by $\lambda > 1$ and compressing $\mu^s$ by $1/\lambda$.
+\end{enumerate}
+The mapping torus $M_f := (S \times [0,1]) / (x,0) \sim (f(x),1)$ is a $3$-manifold fibering over $S^1$. When $f$ is Anosov on $\T^2$ (the simplest pseudo-Anosov case), $M_f$ carries $\Sol$ geometry.
+
+
+\subsection{The Meeting Point}
+
+\begin{mainresult}[Convergence of the three constructions]
+The three constructions meet as follows:
+\begin{enumerate}
+    \item The $(2,3)$-solenoid $\Sigma_{2,3}$ is the \textbf{phase space} on which the Collatz map extends to a continuous dynamical system.
+
+    \item The ad\`elic quotient identifies $\Sigma_{2,3}$ with $\A_{\{2,3\}} / \Z[1/6]$, giving it the structure of a \textbf{locally compact abelian group} with Haar measure.
+
+    \item The mapping torus $M_{T_C}$ of the Collatz-induced map on $\Sigma_{2,3}$ is a \textbf{$3$-manifold} whose geometry (in Thurston's sense) encodes the dynamical type of the Collatz map.
+\end{enumerate}
+
+The winding number pair $(\nu_2, \nu_3)$ from Notes~I is the projection of the profinite trajectory data in $\Sigma_{2,3}$ onto the $\Z^2$ lattice via the homomorphism $\Sigma_{2,3} \to S^1 \to \R/\Z$, and the torus residues $\mu_k$ are the further projections to the finite quotients $(\Z/k\Z)^2$.
+\end{mainresult}
+
+\begin{center}
+\small
+\begin{tikzcd}[row sep=2.5em, column sep=1.2em]
+    & T_C \text{ on } \Sigma_{2,3} \arrow[dl, "\text{project}"'] \arrow[dr, "\text{map.\ torus}"] \arrow[d, "\text{ad\`elic}"] & \\
+    (\nu_2, \nu_3) \in \Z^2 & \text{Haar on } \A_{\{2,3\}}/\Z[\tfrac{1}{6}] & M_{T_C} \text{ carries } \Sol\text{-geometry}\\
+    \mu_k \text{ on } (\Z/k\Z)^2 \arrow[u, hook, "\text{inv.~lim.}"] & & \text{Thurston type} \arrow[u, hook]
+\end{tikzcd}
+\end{center}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{What the Empirical Data Already Tells Us}\label{sec:empirical}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The computational results from Notes~I, reinterpreted through the solenoid lens, yield the following.
+
+\subsection{The Torus Residues Are Finite Quotients of the Solenoid}
+
+The solenoid $\Sigma_{2,3}$ admits a tower of finite coverings:
+\begin{equation}\label{eq:tower}
+    \cdots \to (\Z / 6^{n+1}\Z)^2 \to (\Z / 6^n \Z)^2 \to \cdots \to (\Z/6\Z)^2.
+\end{equation}
+More generally, for any $k$, the projection $\Sigma_{2,3} \to (\Z/k\Z)^2$ factors through the quotient by the kernel of reduction mod $k$. The torus residue distribution $\mu_k$ computed in Notes~I is the pushforward of Haar measure on $\Sigma_{2,3}$ under this projection, \emph{weighted by the Collatz orbit measure} (i.e., the empirical measure induced by starting points in $[2, N]$).
+
+\begin{observation}[Compatibility of residue distributions]
+    If the residue distributions $\mu_k$ were coming from Haar measure alone, they would be uniform on $(\Z/k\Z)^2$. The \textbf{non-uniformity} we observe---forbidden cells at mod~$3$, checkerboard patterns at mod~$12$, diagonal banding at mod~$24$---is the Collatz dynamics breaking the symmetry of Haar measure.
+\end{observation}
+
+This is the key point: the solenoid provides the ``null hypothesis'' (Haar measure gives uniform residues), and the Collatz map introduces specific deformations. The pattern of deformations at each level $k$ encodes the dynamics.
+
+
+\subsection{The Forbidden Cell as a Topological Obstruction}
+
+At level $k = 3$, the cell $(\nu_2, \nu_3) \equiv (1,1) \pmod{3}$ is essentially empty. In the solenoid picture, this means the Collatz orbit measure is supported on a proper closed subset of the $(\Z/3\Z)^2$ quotient. Equivalently:
+
+\begin{proposition}[Mod~3 support constraint]\label{prop:mod3-support}
+    The image of the Collatz orbit measure under the projection $\Sigma_{2,3} \to (\Z/3\Z)^2$ is supported on at most $8$ of the $9$ cells. In particular, the map $T_C$ restricted to the $(\Z/3\Z)^2$ quotient is \textbf{not surjective}.
+\end{proposition}
+
+Non-surjectivity at a finite level is a strong constraint. It means the Collatz map, viewed on the solenoid, has a ``missing image'' that persists through the entire inverse system. This is the topological content of the mod~$3$ arithmetic we identified in Notes~I, Proposition~5.2.
+
+
+\subsection{The Profinite Winding Number}
+
+\begin{definition}[Profinite winding number]\label{def:profinite-winding}
+    For a Collatz trajectory from $n$ to $1$, the \emph{profinite winding number} is the element
+    \begin{equation}
+        \hat{w}(n) := \bigl(\nu_2(n) \bmod k,\; \nu_3(n) \bmod k\bigr)_{k \geq 1} \;\in\; \Zhat \times \Zhat,
+    \end{equation}
+    i.e., the compatible system of residues of the winding pair at all modular levels. Since only the primes $2$ and $3$ are dynamically relevant, the essential information is
+    \begin{equation}
+        \hat{w}(n)\big|_{\{2,3\}} = \bigl(\nu_2(n) \bmod 2^a 3^b,\; \nu_3(n) \bmod 2^a 3^b\bigr)_{a,b \geq 0} \;\in\; \Z_2 \times \Z_3.
+    \end{equation}
+\end{definition}
+
+\begin{remark}
+    The tower of torus residue plots we computed (at $k = 3, 5, 7, 8, 10, 12, 16, 24$) are \emph{slices} through the profinite winding number. The full profinite winding number $\hat{w}(n)$ determines all of these slices simultaneously. Two trajectories that are ``dynamically similar'' in the Collatz sense should have profinite winding numbers that are close in the $(\Z_2 \times \Z_3)$-topology.
+\end{remark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Thurston Program for Collatz}\label{sec:thurston}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Statement of the Program}
+
+The deepest structural question is:
+
+\begin{question}[Thurston type]\label{q:thurston}
+    What is the Thurston type of the Collatz-induced map $T_C$ on $\T^2$ (or on $\Sigma_{2,3}$)?
+\end{question}
+
+Our evidence from Notes~I (the eigenbasis analysis, the foliation structure on finite tori, the non-uniform hyperbolicity) strongly suggests:
+
+\begin{conjecture}[Pseudo-Anosov type]\label{conj:pa}
+    The Collatz map $T_C$, reduced to a surface homeomorphism on an appropriate finite quotient of $\Sigma_{2,3}$, is of \textbf{pseudo-Anosov type} with:
+    \begin{enumerate}
+        \item Unstable foliation $\mathcal{F}^u$ of slope $\log_2 3$ (the equilibrium direction).
+        \item Stable foliation $\mathcal{F}^s$ of slope $-1/\log_2 3$ (the transverse direction).
+        \item Stretch factor $\lambda$ related to $3/2$ (the geometric mean of the Syracuse step).
+        \item Singular points at the parity transitions (where the branch locus of $T_C$ meets the surface).
+    \end{enumerate}
+\end{conjecture}
+
+If this conjecture holds, the mapping torus $M_{T_C}$ carries $\Sol$ geometry (possibly with singularities), and the dynamics of $T_C$ is governed by the topology of $M_{T_C}$.
+
+\subsection{What Pseudo-Anosov Would Buy Us}
+
+The payoff of establishing pseudo-Anosov type would be substantial:
+
+\begin{enumerate}
+    \item \textbf{Thurston's theorem} guarantees that pseudo-Anosov maps have a unique invariant pair of measured foliations. The stretch factor $\lambda$ is a Perron number (an algebraic integer whose conjugates are all strictly smaller in modulus). For the Collatz map, this would pin down the ``Lyapunov exponent'' as an algebraic number.
+
+    \item \textbf{The mapping torus} $M_{T_C}$ would be a hyperbolic 3-manifold (with cusps at the singularities). Its volume, which is a topological invariant, would be a new numerical invariant of the Collatz dynamics.
+
+    \item \textbf{Periodic orbits} of pseudo-Anosov maps are dense, and their growth rate is controlled by $\lambda$. If $T_C$ is pseudo-Anosov, the existence (or non-existence) of periodic orbits other than the trivial cycle $\{1, 2, 4\}$ becomes a question about the geometry of $M_{T_C}$---specifically, about closed geodesics in the $\Sol$ metric.
+
+    \item \textbf{The Markov partition}, while not exact (due to the correlations we observed in Notes~I, \S7), would exist in a coarsened form. The symbolic dynamics of the pseudo-Anosov map gives a shift of finite type whose transition matrix determines the topological entropy.
+\end{enumerate}
+
+
+\subsection{The Obstruction: Piecewise Linearity}
+
+The main difficulty in applying Thurston's classification directly is that $T_C$ is \emph{not} a homeomorphism of a single surface. It is:
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{Piecewise}: two branches, depending on parity.
+    \item \textbf{Non-invertible}: the Syracuse function $S$ is $2$-to-$1$ on certain fibers.
+    \item \textbf{Defined on $\Z_2$}, not on a smooth surface.
+\end{enumerate}
+
+The strategy to overcome these obstructions is:
+
+\begin{program}[Reduction to surface dynamics]\label{prog:surface}
+\begin{enumerate}
+    \item \textbf{Pass to the natural extension}: the non-invertible map $T_C$ on $\Z_2$ extends to an invertible map on a two-sided shift space $X \subset \{0,1\}^{\Z}$, where the coordinates record the parity sequence in both the forward and backward directions.
+
+    \item \textbf{Project to a surface}: the shift space $X$ maps onto a subset of $\T^2$ (or a branched cover thereof) via the map that sends a bi-infinite parity sequence to its ``address'' in the $(2,3)$-solenoid. This projection intertwines the shift with the Collatz-induced map on the torus.
+
+    \item \textbf{Classify the induced surface map}: on the projected surface, the map is a piecewise-affine homeomorphism (with branch cuts along the curves $\nu_2 = k$ for integer $k$). Apply Thurston's theory to this piecewise map, allowing for singularities at the branch points.
+\end{enumerate}
+\end{program}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Concrete Next Steps}\label{sec:next}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Here is the ordered list of concrete research tasks, with dependencies.
+
+\subsection{Step 1: Verify Profinite Compatibility}
+
+\begin{nextstep}[Computational]
+Compute the torus residue distributions $\mu_k$ at levels $k = 2^a 3^b$ for $a, b \in \{0, 1, 2, 3, 4\}$ (i.e., $k \in \{1, 2, 3, 4, 6, 8, 9, 12, 16, 18, 24, 27, 36, 48, 72, 81, \ldots\}$). Verify that the distributions at level $k$ are the marginals (under the natural projection) of the distributions at level $k' = \lcm(k, m)$ for all $m$. This is the \textbf{compatibility condition} for the profinite winding number.
+\end{nextstep}
+
+\noindent\textbf{Why this matters:} If compatibility fails at some level, it indicates that the winding pair $(\nu_2, \nu_3)$ does not define a consistent profinite invariant---which would rule out the solenoid formulation. If it holds, we have strong evidence that the profinite picture is correct.
+
+
+\subsection{Step 2: Compute the Stretch Factor}
+
+\begin{nextstep}[Analytical + Computational]
+Determine the stretch factor $\lambda$ of the putative pseudo-Anosov structure. Two approaches:
+\begin{enumerate}[label=(\alph*)]
+    \item \textbf{From the eigenbasis drift}: the mean transverse drift $\langle \Delta u \rangle = 2 - \log_2 3$ and the variance $\mathrm{Var}(\Delta u)$ determine the Lyapunov exponent of the random walk in $u$. The stretch factor satisfies $\log \lambda = \lim_{N \to \infty} N^{-1} \sum_{i=1}^{N} \log |k_i - \log_2 3|$.
+
+    \item \textbf{From the transfer matrix}: construct the $2 \times 2$ transfer matrix of the Collatz map in the $(\nu_2, \nu_3)$ basis, averaged over the step distribution. For $k_i = k$ with probability $2^{-k}$:
+    \begin{equation}
+        M_k = \begin{pmatrix} 1 & k \\ 0 & 1 \end{pmatrix}, \qquad
+        \langle M \rangle = \begin{pmatrix} 1 & \langle k \rangle \\ 0 & 1 \end{pmatrix} = \begin{pmatrix} 1 & 2 \\ 0 & 1 \end{pmatrix}.
+    \end{equation}
+    This is \emph{parabolic}, not hyperbolic---consistent with the fact that the average map is a shear, not a stretch. The hyperbolicity emerges from the \emph{fluctuations} around the mean, which requires computing the Lyapunov exponent of the random matrix product $\prod M_{k_i}$.
+\end{enumerate}
+\end{nextstep}
+
+\begin{remark}[The parabolic subtlety]
+    The averaged transfer matrix $\langle M \rangle$ is parabolic (both eigenvalues equal to $1$), not hyperbolic. This is a crucial distinction from the cat map, whose matrix $A = \bigl(\begin{smallmatrix} 2 & 1 \\ 1 & 1 \end{smallmatrix}\bigr)$ is genuinely hyperbolic with eigenvalues $\phi$ and $1/\phi$. For the Collatz dynamics, the hyperbolicity is a \emph{random} phenomenon: it emerges from the variance of $k_i$, not from the mean. This places the system in the regime of \textbf{random matrix products} (Furstenberg's theorem), where the Lyapunov exponent is generically positive but not determined by the average matrix alone. Computing this exponent numerically from long trajectories is a well-defined computational task.
+\end{remark}
+
+
+\subsection{Step 3: Identify the Branch Locus on the Torus}
+
+\begin{nextstep}[Computational]
+On each finite torus $(\Z/k\Z)^2$, identify the \textbf{branch set}: the cells $(a,b)$ at which the Collatz map switches between the even and odd branches. This set is where the stable/unstable foliations have singularities. Compute its complement (the ``regular'' set) and check whether the foliation directions $\log_2 3$ and $-1/\log_2 3$ are visible as density gradients on the regular set.
+\end{nextstep}
+
+
+\subsection{Step 4: The Natural Extension as a Markov Shift}
+
+\begin{nextstep}[Analytical]
+Construct the natural extension of $T_C|_{\Z_2}$ as a two-sided shift on $\{0,1\}^{\Z}$. Determine:
+\begin{enumerate}[label=(\alph*)]
+    \item The set of admissible bi-infinite sequences (the subshift of finite type, if one exists).
+    \item The transition matrix $A$ of the subshift.
+    \item The topological entropy $h_{\mathrm{top}} = \log \rho(A)$, where $\rho(A)$ is the spectral radius.
+\end{enumerate}
+The step correlations from Notes~I ($C(1) \approx 0.15$, decaying by lag~$5$) suggest that a Markov approximation of order $m \leq 5$ may capture most of the dynamical complexity.
+\end{nextstep}
+
+
+\subsection{Step 5: The Mapping Torus Volume}
+
+\begin{nextstep}[Computational / Topological]
+If the pseudo-Anosov structure can be established at some finite level $k$, compute the \textbf{hyperbolic volume} of the mapping torus $M_{T_C}$ using SnapPy or similar software. This volume is a topological invariant of $T_C$ and provides a canonical numerical measure of the ``complexity'' of the Collatz dynamics.
+\end{nextstep}
+
+
+\subsection{Step 6: The Adèlic $L$-function}
+
+\begin{nextstep}[Speculative / Long-term]
+The Collatz dynamics on $\Sigma_{2,3} \cong \A_{\{2,3\}}/\Z[1/6]$ is a dynamical system on a quotient of a partial ad\`ele ring. Such systems have associated \textbf{dynamical zeta functions}:
+\begin{equation}\label{eq:dyn-zeta}
+    \zeta_{T_C}(s) := \prod_{\gamma} \bigl(1 - e^{-s \ell(\gamma)}\bigr)^{-1},
+\end{equation}
+where the product runs over periodic orbits $\gamma$ and $\ell(\gamma)$ is the orbit length. If the Collatz conjecture is true, the only periodic orbit is $\{1, 2, 4\}$ (length $3$), and the zeta function degenerates to
+\begin{equation}
+    \zeta_{T_C}(s) = \frac{1}{1 - e^{-3s}}.
+\end{equation}
+Any additional periodic orbit would contribute additional poles. The \textbf{analytic continuation} of $\zeta_{T_C}$ (if it exists) would connect the Collatz conjecture to the theory of $L$-functions---and hence to the Langlands program, via the ad\`elic structure of the phase space. This is highly speculative but structurally natural given the ad\`elic setting.
+\end{nextstep}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Risk Assessment and Feasibility}\label{sec:risk}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{p{3.8cm}lll}
+    \toprule
+    \textbf{Step} & \textbf{Type} & \textbf{Feasibility} & \textbf{Main Risk} \\
+    \midrule
+    1.\ Profinite compatibility & Comp. & High & May reveal incompatibilities \\
+    2.\ Stretch factor & Comp.+Anal. & High & Numerically standard \\
+    3.\ Branch locus & Comp. & High & May not show clean foliation \\
+    4.\ Natural extension & Analytical & Medium & Subshift may not be finite type \\
+    5.\ Mapping torus volume & Topological & Medium & Needs pA at a finite level first \\
+    6.\ Ad\`elic $L$-function & Speculative & Low & No existing framework \\
+    7.\ Explicit $F$ on $\Z_2 \times \Z_3$ & Comp.+Anal. & High & Well-posedness of domain \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+Steps 1--3 and 7 are immediately executable with the computational infrastructure from Notes~I (Python prototypes, C implementations). Steps 4--5 require more mathematical development. Step~6 is a long-term direction.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{The Explicit Map on $\Z_2 \times \Z_3$}\label{sec:explicit-F}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The solenoid formulation is sharpened considerably by the observation that the Collatz map admits an explicit algebraic lifting to $\Z_2 \times \Z_3$.
+
+\subsection{The Map $F$ and Its Domain}
+
+\begin{definition}[The $(2,3)$-adic Collatz map]\label{def:F-map}
+    Define $F: \Z_2 \times \Z_3 \dashrightarrow \Z_2 \times \Z_3$ by
+    \begin{equation}\label{eq:F-map}
+        F(x, y) = \left( \frac{x - y}{2},\; \frac{3y + 1}{2} \right),
+    \end{equation}
+    where division by $2$ in the first component is $2$-adic (requiring $x \equiv y \pmod{2}$), and division by $2$ in the second component is rational (requiring $3y + 1 \equiv 0 \pmod{2}$, i.e., $y$ odd in $\Z_3$).
+\end{definition}
+
+\begin{remark}[Well-posedness]
+    The domain of $F$ is not all of $\Z_2 \times \Z_3$. The condition $x \equiv y \pmod{2}$ is a clopen constraint: it selects a specific coset in $\Z_2 \times \Z_3$. The condition that $y$ be odd (in the ordinary sense) is automatic if $y$ represents an odd integer, but requires care in the $3$-adic setting since $\Z_3$ does not ``see'' parity directly. The correct formulation uses the diagonal embedding $\Z \hookrightarrow \Z_2 \times \Z_3$: an integer $n$ maps to $(n, n)$, and the Collatz dynamics on $n$ lifts to the iteration of $F$ starting at $(n, n)$.
+\end{remark}
+
+\begin{proposition}[Recovery of Collatz dynamics]\label{prop:F-recovery}
+    For $n \in \Z_{>0}$ odd, let $(x_0, y_0) = (n, n) \in \Z_2 \times \Z_3$. Then:
+    \begin{enumerate}[label=(\roman*)]
+        \item $F(n, n) = \bigl(\frac{n - n}{2}, \frac{3n+1}{2}\bigr) = \bigl(0, \frac{3n+1}{2}\bigr)$, which is the standard $3n+1$ step followed by one halving.
+        \item More generally, the orbit of $(n,n)$ under $F$ projects (via $(x,y) \mapsto 2x + y$ or a similar recombination) to the standard Collatz orbit of $n$.
+    \end{enumerate}
+\end{proposition}
+
+\begin{keyinsight}[The decoupling]
+    The map $F$ \textbf{decouples the $2$-adic and $3$-adic dynamics}: the $x$-component (living in $\Z_2$) absorbs the halving, while the $y$-component (living in $\Z_3$) absorbs the tripling. The ``communication'' between the two components is through the subtraction $x - y$ in the first coordinate, which is where the arithmetic complexity of the Collatz map resides.
+
+    In the eigenbasis language of Notes~I: the transverse coordinate $u = \nu_2 - (\log_2 3)\nu_3$ measures the \emph{imbalance} between the two components. The fact that $u > 0$ at termination (Corollary~2.2 of Notes~I) reflects the fact that the $\Z_2$-component must eventually ``win''---the halvings must dominate the triplings.
+\end{keyinsight}
+
+
+\subsection{Algebraic Properties of $F$}
+
+The map $F$ is affine: $F(x,y) = A \binom{x}{y} + \binom{0}{1/2}$ where
+\begin{equation}\label{eq:F-matrix}
+    A = \begin{pmatrix} 1/2 & -1/2 \\ 0 & 3/2 \end{pmatrix}.
+\end{equation}
+The eigenvalues of $A$ are $1/2$ and $3/2$, with eigenvectors $(1, 0)^T$ and $(-1, 2)^T$ respectively.
+
+\begin{observation}[Hyperbolic structure of $F$]\label{obs:F-hyperbolic}
+    The matrix $A$ has eigenvalues $\lambda_s = 1/2$ and $\lambda_u = 3/2$, with $|\lambda_s| < 1 < |\lambda_u|$. This is \textbf{genuinely hyperbolic}: the $x$-direction contracts by $1/2$ per step (halving) and the $y$-direction expands by $3/2$ per step (the Syracuse map). The product $\lambda_s \cdot \lambda_u = 3/4$, so $F$ is \emph{area-contracting} by a factor of $3/4$ per step.
+\end{observation}
+
+\begin{remark}[Comparison to the averaged transfer matrix]
+    In Notes~I, we found that the averaged transfer matrix $\langle M \rangle$ in the $(\nu_2, \nu_3)$ basis was parabolic (shear with eigenvalue~$1$). The matrix $A$ here is different: it acts on the \emph{values} $(x, y) \in \Z_2 \times \Z_3$, not on the step-count plane $(\nu_2, \nu_3)$. The hyperbolicity of $A$ is the ``cause'' of the pseudo-Anosov behavior we observe in the step-count plane, but the relationship is mediated by the nonlinearity of the map (the domain restriction $x \equiv y \pmod{2}$, which changes at each step depending on the current values).
+\end{remark}
+
+\begin{question}[Central question about $F$]\label{q:F-iterate}
+    The $N$-fold iterate of the affine map is $F^N(x,y) = A^N \binom{x}{y} + A^{N-1}\binom{0}{1/2} + \cdots + \binom{0}{1/2}$. Since $\lambda_u = 3/2 > 1$, the $y$-component grows geometrically under iteration. What prevents unbounded growth? The answer is the \emph{domain restriction}: after each step, the parity condition $x \equiv y \pmod{2}$ must be re-checked, and the Collatz dynamics adjusts accordingly. The conjecture, in this language, is that the contracting eigenvalue $\lambda_s = 1/2$ eventually dominates---that is, the orbit is eventually attracted to the stable manifold of the fixed point of $F$.
+\end{question}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Winding Numbers as Profinite Homology}\label{sec:profinite-homology}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{The Tower of Covering Spaces}
+
+The second key observation from the solenoid notes is that the winding numbers admit a natural interpretation as a coherent system of homology classes in a tower of covering spaces.
+
+Consider the tower
+\begin{equation}\label{eq:covering-tower}
+    \cdots \to C_{n+1} \xrightarrow{\;\pi_n\;} C_n \to \cdots \to C_1 \xrightarrow{\;\pi_0\;} S^1,
+\end{equation}
+where $C_k$ is a circle and $\pi_k$ has degree $d_k \in \{2, 3\}$. A point in the inverse limit $\varprojlim C_k = \Sigma_{2,3}$ is a \emph{consistent choice of lifts}: a sequence $(p_0, p_1, p_2, \ldots)$ with $\pi_k(p_{k+1}) = p_k$.
+
+A Collatz trajectory from $n$ to~$1$ determines a path in each $C_k$: at level $k$, the trajectory projects to a loop (since it starts and ends at the same basepoint, both mapping to the image of~$1$ in $C_k$). The \emph{winding number at level $k$} is the class of this loop in $H_1(C_k; \Z) \cong \Z$.
+
+\begin{proposition}[Compatibility of winding numbers]\label{prop:winding-compat}
+    The winding numbers at successive levels are related by the covering degree:
+    \begin{equation}
+        w_{k}(n) = d_k \cdot w_{k+1}(n) + r_k(n),
+    \end{equation}
+    where $r_k(n) \in \{0, 1, \ldots, d_k - 1\}$ is a remainder term determined by the trajectory's behavior at level~$k$. The sequence $(w_k(n) \bmod d_1 d_2 \cdots d_k)_{k \geq 0}$ is a compatible system of residues, hence defines an element
+    \begin{equation}
+        \hat{w}(n) \in \varprojlim \Z/d_1 \cdots d_k \Z \;\cong\; \Z_2 \times \Z_3.
+    \end{equation}
+\end{proposition}
+
+\begin{remark}
+    This is the precise sense in which the torus residue data from Notes~I are ``slices'' of a profinite object. The distributions $\mu_k$ at each level $k$ are the pushforwards of the profinite winding number $\hat{w}$ under the projection $\Z_2 \times \Z_3 \to (\Z/k\Z)^2$. The forbidden cell at $(\nu_2, \nu_3) \equiv (1,1) \pmod{3}$ found in Notes~I is an obstruction \emph{in the $\Z_3$ component} of the profinite winding number.
+\end{remark}
+
+
+\subsection{The Odometer Interpretation}
+
+The solenoid notes suggest that the Collatz dynamics can be ``linearized'' on $\Sigma_{2,3}$, where the map becomes an affine transformation and the orbit is determined by an \emph{odometer reading} in the profinite group. This connects to a classical construction:
+
+\begin{definition}[Odometer]
+    The \emph{$6$-adic odometer} is the map $\tau: \Z_6 \to \Z_6$ defined by $\tau(x) = x + 1$, where $\Z_6 \cong \Z_2 \times \Z_3$ (by the Chinese Remainder Theorem). It acts as ``adding one to the least significant digit'' in the base-$6$ expansion, with carries propagating to the left.
+\end{definition}
+
+\begin{conjecture}[Odometer conjugacy]\label{conj:odometer}
+    There exists a measurable (or possibly continuous) map $\phi: \Z_2 \times \Z_3 \to \Z_2 \times \Z_3$ that conjugates the Collatz-induced map $F$ to a skew product over the $6$-adic odometer:
+    \begin{equation}
+        \phi \circ F \circ \phi^{-1}(x, y) = (\tau(x),\; g_x(y)),
+    \end{equation}
+    where $g_x$ depends on $x$ (the ``base'' variable) and acts on $y$ (the ``fiber'' variable).
+\end{conjecture}
+
+If true, this would reduce the Collatz conjecture to a question about the fiber maps $g_x$: specifically, whether the fiber dynamics is eventually attracted to a fixed point for every starting condition. This is the content of the ``linearization on the solenoid'' idea.
+
+\begin{nextstep}[Computational test of odometer structure]
+    For trajectories starting at $n \in [2, N]$, compute the profinite winding number $\hat{w}(n) \in \Z_2 \times \Z_3$ (approximated by $(\nu_2 \bmod 2^a, \nu_3 \bmod 3^b)$ for $a, b \leq 5$). Test whether the map $n \mapsto \hat{w}(n)$ exhibits any regularity when $n$ is ordered by its $6$-adic expansion rather than its usual ordering. Specifically: do numbers that are close in the $6$-adic metric have similar profinite winding numbers?
+\end{nextstep}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Synthesis: The Three Layers}\label{sec:synthesis}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The material from all sources---Notes~I (empirical), the Thurston classification, and the solenoid and ad\`elic notes---organizes into three layers.
+
+\smallskip
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\small
+\begin{tabular}{lp{3.8cm}p{4.8cm}}
+    \toprule
+    \textbf{Layer} & \textbf{Object} & \textbf{What it captures} \\
+    \midrule
+    Empirical & $(\nu_2, \nu_3) \in \Z^2$, the eigenbasis $(u, v)$, torus residues $\mu_k$ & Stopping times, growth/decay, arithmetic constraints \\[6pt]
+    Topological & Pseudo-Anosov foliations on $\T^2$, mapping torus $M_{T_C}$ with $\Sol$ geometry & Stretch factor $\lambda$, topological entropy, 3-manifold invariants \\[6pt]
+    Arithmetic & $F$ on $\Z_2 \times \Z_3$, profinite $\hat{w}(n)$, dynamical zeta function & Eigenvalues $1/2$ and $3/2$, Galois action, $L$-functions \\
+    \bottomrule
+\end{tabular}
+\end{center}
+
+The connections between layers are:
+\begin{itemize}
+    \item \textbf{Empirical $\to$ Topological}: the winding ratio $\rho = \nu_2/\nu_3$ is the slope of the trajectory in the $(\nu_2, \nu_3)$-plane; the equilibrium slope $\log_2 3$ is the slope of the unstable foliation; the deviation $\delta = \rho - \log_2 3 > 0$ is the distance from the foliation.
+
+    \item \textbf{Topological $\to$ Arithmetic}: the stretch factor $\lambda$ of the pseudo-Anosov map is determined by the eigenvalues of $A$ (the matrix of $F$); the mapping torus volume is an arithmetic invariant of the solenoid; the Thurston geometry ($\Sol$) is determined by the eigenvalue ratio $\lambda_u / \lambda_s = 3$.
+
+    \item \textbf{Arithmetic $\to$ Empirical}: the forbidden cell at $(\nu_2, \nu_3) \equiv (1,1) \pmod{3}$ is the $\Z_3$-obstruction in the profinite winding number; the step correlations ($C(1) \approx 0.15$) arise from the domain restriction $x \equiv y \pmod{2}$ in~$F$; the $P(k) = 2^{-k}$ step distribution is the Haar measure on $\Z_2$.
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Revised Research Program}\label{sec:revised}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+In light of the above synthesis, the research program from \S\ref{sec:next} is revised and extended:
+
+\begin{enumerate}
+    \item \textbf{Profinite compatibility} (\S\ref{sec:next}, Step~1): unchanged. Compute $\mu_k$ at levels $k = 2^a 3^b$ and verify inverse limit consistency.
+
+    \item \textbf{Lyapunov exponent of $F$} (revised Step~2): compute the Lyapunov exponent not just from the random matrix product in the $(\nu_2, \nu_3)$ basis, but directly from the eigenvalues of $A = \bigl(\begin{smallmatrix} 1/2 & -1/2 \\ 0 & 3/2 \end{smallmatrix}\bigr)$. The exponents are $\log(1/2) = -\log 2$ and $\log(3/2) = \log 3 - \log 2$. Their sum $\log(3/4) < 0$ confirms area contraction. The question is whether the random domain-switching between branches alters these exponents.
+
+    \item \textbf{$6$-adic ordering experiment} (new): reorder the starting numbers $n \in [2, N]$ by their $6$-adic expansion and plot the profinite winding number $\hat{w}(n)$. Test whether the map $n \mapsto \hat{w}(n)$ is ``locally constant'' on $6$-adic balls (which would confirm the odometer structure).
+
+    \item \textbf{Explicit iteration of $F$ in $\Z_2 \times \Z_3$} (new): implement $F$ numerically using truncated $p$-adic arithmetic (working modulo $2^a$ and $3^b$ for $a, b \leq 20$). Verify that the orbits match the standard Collatz orbits when projected back to~$\Z$. Study the distribution of orbits in $(\Z/2^a\Z) \times (\Z/3^b\Z)$.
+
+    \item \textbf{Thurston type at finite level} (revised Step~5): use the explicit $F$ to define the induced map on $(\Z/k\Z)^2$ at levels $k = 6, 12, 24, 36, 72$ and compute its mapping class. Determine whether it is periodic, reducible, or pseudo-Anosov.
+
+    \item \textbf{Mapping torus and SnapPy} (unchanged Step~5): if pseudo-Anosov is established, compute the hyperbolic volume.
+
+    \item \textbf{Dynamical zeta function} (unchanged Step~6): long-term.
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Connection to the Broader Program}\label{sec:broader}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{The Absolute Galois Group}
+
+The ad\`elic structure of $\Sigma_{2,3}$ connects the Collatz problem to the absolute Galois group $\Gal(\overline{\Q}/\Q)$ via the following chain:
+
+\begin{enumerate}
+    \item The solenoid $\Sigma_{2,3} = \A_{\{2,3\}}/\Z[1/6]$ is the Pontryagin dual of $\Z[1/6]$.
+    \item The automorphisms of $\Z[1/6]$ are generated by multiplication by $2$ and $3$---exactly the operations appearing in the Collatz map.
+    \item The Galois group $\Gal(\overline{\Q}/\Q)$ acts on $\Zhat = \prod_p \Z_p$ via the cyclotomic character. Restricting to $\Z_2^\times \times \Z_3^\times$ controls the action on roots of unity of order~$2^a 3^b$.
+\end{enumerate}
+
+\begin{conjecture}[Galois-dynamical correspondence]
+    The Collatz dynamics on $\Sigma_{2,3}$, restricted to the $\Z_2 \times \Z_3$ fiber, is intertwined with the action of $\Gal(\overline{\Q}/\Q)$ on the $(2,3)$-part of the roots of unity. Concretely: the profinite winding number $\hat{w}(n) \in \Z_2 \times \Z_3$ transforms under the cyclotomic character when $n$ is replaced by a Galois conjugate of the corresponding algebraic number.
+\end{conjecture}
+
+This is speculative but would connect the Collatz problem to the deepest structures in arithmetic geometry.
+
+\subsection{Relationship to the $E_8$ Program}
+
+In the broader context of the modular spacetime framework:
+
+\begin{remark}[Why Collatz could matter]
+    The Collatz map is the simplest non-trivial dynamical system that mixes two primes ($2$ and $3$) in a non-linear way. If the winding number / solenoid perspective works here, it provides a toy model for the more general program of understanding how arithmetic structure (modular forms, Galois representations, $E_8$ lattice structure) emerges from dynamical systems on ad\`elic spaces. The specific appearance of $\Sol$ geometry in the mapping torus connects to the observation that $\Sol$ is one of Thurston's eight geometries---and the others include hyperbolic geometry (relevant to AdS/CFT) and Nil geometry (relevant to Heisenberg groups in quantum mechanics).
+\end{remark}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Immediate Actions (Prioritized)}\label{sec:summary}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{enumerate}
+    \item \textbf{Implement $F$ in truncated $p$-adic arithmetic.} Work modulo $2^{16} \times 3^{10}$. Verify orbit recovery. This is the foundation for everything else. [Comp., 1--2 days]
+
+    \item \textbf{Extend torus residues to $k = 2^a 3^b$.} Compute $\mu_k$ for all $0 \leq a, b \leq 4$. Verify profinite compatibility (marginal consistency). [Comp., 1 day]
+
+    \item \textbf{$6$-adic ordering plot.} Reorder $n \in [2, 10^6]$ by $6$-adic expansion. Plot $\hat{w}(n)$ and test for local constancy. This directly tests the odometer conjecture. [Comp., 1 day]
+
+    \item \textbf{Lyapunov exponent of $F$.} Compute the exponent of the random matrix product $\prod A_{\sigma_i}$ where $\sigma_i$ is the branch label at step $i$. Compare to $\log(3/2)$ and $\log(1/2)$. [Comp.+Anal., 1 week]
+
+    \item \textbf{Mapping class at level $k = 6$.} Write down the induced permutation on $(\Z/6\Z)^2$ explicitly. Determine its order and whether it has a pseudo-Anosov representative. [Anal., 1--2 weeks]
+
+    \item \textbf{Draft note on the dynamical zeta function.} Compute the first terms from known periodic orbit data. [Speculative, ongoing]
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% References
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{thebibliography}{99}
+
+\bibitem{Lagarias1985}
+J.~C.~Lagarias,
+``The $3x+1$ problem and its generalizations,''
+\emph{American Mathematical Monthly} \textbf{92} (1985), no.~1, 3--23.
+
+\bibitem{Lagarias2010}
+J.~C.~Lagarias (ed.),
+\emph{The Ultimate Challenge: The $3x+1$ Problem},
+American Mathematical Society, Providence, RI, 2010.
+
+\bibitem{Terras1976}
+R.~Terras,
+``A stopping time problem on the positive integers,''
+\emph{Acta Arithmetica} \textbf{30} (1976), no.~3, 241--252.
+
+\bibitem{Wirsching1998}
+G.~J.~Wirsching,
+\emph{The Dynamical System Generated by the $3n+1$ Function},
+Lecture Notes in Mathematics, vol.~1681, Springer-Verlag, Berlin, 1998.
+
+\bibitem{Tao2022}
+T.~Tao,
+``Almost all orbits of the Collatz map attain almost bounded values,''
+\emph{Forum of Mathematics, Pi} \textbf{10} (2022), e12.
+
+\bibitem{Thurston1988}
+W.~P.~Thurston,
+``On the geometry and dynamics of diffeomorphisms of surfaces,''
+\emph{Bull.\ Amer.\ Math.\ Soc.} \textbf{19} (1988), no.~2, 417--431.
+
+\bibitem{Furstenberg1963}
+H.~Furstenberg and H.~Kesten,
+``Products of random matrices,''
+\emph{Ann.\ Math.\ Statist.} \textbf{31} (1960), no.~2, 457--469.
+
+\bibitem{Viana2014}
+M.~Viana,
+\emph{Lectures on Lyapunov Exponents},
+Cambridge University Press, 2014.
+
+\bibitem{FathiLaudenbach2012}
+A.~Fathi, F.~Laudenbach, and V.~Po\'enaru,
+\emph{Thurston's Work on Surfaces},
+Mathematical Notes~48, Princeton University Press, 2012.
+
+\bibitem{BernsteinLagarias1996}
+D.~J.~Bernstein and J.~C.~Lagarias,
+``The $3x+1$ conjugacy map,''
+\emph{Canadian Journal of Mathematics} \textbf{48} (1996), no.~6, 1154--1169.
+
+\bibitem{Kontorovich2006}
+A.~V.~Kontorovich and S.~J.~Miller,
+``Benford's law, values of $L$-functions and the $3x+1$ problem,''
+\emph{Acta Arithmetica} \textbf{120} (2005), no.~3, 269--297.
+
+\bibitem{RobertZudilin2022}
+O.~Rozier,
+``The $3x+1$ problem: a quasi-cellular automaton approach,''
+\emph{Journal of Cellular Automata} \textbf{16} (2022), 323--347.
+
+\end{thebibliography}
+
+\end{document}
