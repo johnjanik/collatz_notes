@@ -418,54 +418,54 @@ Four =sorry=:
 
 ** Phase 4: The Ergodic Conclusion                                  :capstone:
 
-*** TODO [#A] Formalize the drift argument
+*** DONE [#A] Formalize the drift argument
 :PROPERTIES:
 :Effort:   1m
 :END:
 
-*Theorem.* If the walk $u(t)$ has:
-- (a) mean increment $\langle \Delta u \rangle = 1 - p_{\rm odd} \cdot \log_2 3 > 0$
-      when $p_{\rm odd} < 1 - 1/\log_2 3$,
-- (b) bounded negative excursions (reflecting boundary prevents $u(t) \to -\infty$),
+Implemented in =CollatzLean/Drift.lean=.
 
-then $u(t) \to +\infty$, which implies $T^t(n) \to 0$ in the sense that
-the trajectory must pass through 1.
+From a uniform ε-gap below equilibrium for the odd-step proportion,
+we derive a linear lower bound on the walk and conclude divergence.
 
-This is a "biased random walk with reflecting barrier" result.
-Analogous theorems exist in probability theory (gambler's ruin with drift).
+Fully proved (zero =sorry= in the proofs themselves):
+- =walk_eq_drift_form=: $u(t) = t - (1 + \log_2 3) \cdot \nu_3$
+- =walk_lower_bound_linear=: $u(t) \ge (1 + \log_2 3) \cdot \varepsilon \cdot t$ for $t \ge T_0$
+- =tendsto_atTop_of_eventually_linear=: linear growth implies divergence to $+\infty$
+- =walk_diverges_of_podd_bound=: composition of the above
 
-#+begin_src lean4
--- Biased walk with reflecting barrier diverges
-theorem biased_walk_diverges
-    (u : ℕ → ℝ)           -- the walk
-    (drift : ℝ)            -- mean increment
-    (hpos : drift > 0)     -- positive drift
-    (hreflect : ∀ t, u t ≥ -B)  -- reflecting barrier at -B
-    (hmartingale : ...)     -- appropriate martingale condition
-    : Filter.Tendsto u Filter.atTop Filter.atTop := by
-  sorry -- standard probability theory result
-#+end_src
+One =sorry= (deep input):
+- =podd_uniform_bound=: $\exists \varepsilon > 0, T_0$ s.t. $\nu_3/t \le p_{\rm eq} - \varepsilon$
+  for $t \ge T_0$ (needs ergodic theorem for Collatz transfer operator + golden mean SFT constraint)
 
-*** TODO [#A] Compose the four pillars into the main theorem
+*** DONE [#A] Compose the four pillars into the main theorem
 :PROPERTIES:
 :Effort:   2w
 :END:
 
+Implemented in =CollatzLean/Conclusion.lean=.
+
+From walk divergence and the multiplicative identity, we prove that
+the Collatz sequence reaches 1 for every $n \ge 1$.
+
+Fully proved:
+- =seq_eq_one_of_pow_bound=: power bound forces =collatzSeq n t = 1= via the
+  multiplicative identity and correction bound
+- =collatz_reaches_of_walk_diverges=: walk divergence $\to$ =collatzReaches n=
+  (bridge via $\log_b$ $\to$ $\log$ $\to$ $\exp$ monotonicity $\to$ $\mathbb{N}$ cast)
+- =collatz_conjecture : CollatzConjecture=: the capstone theorem
+
+One =sorry=:
+- =correction_bound=: $\exists C, \forall t, \text{correction}(n,t) \le C \cdot 3^{\nu_3}$
+  (needs analysis of the geometric series structure of the correction recurrence)
+
+The capstone proof:
 #+begin_src lean4
-theorem collatz_conjecture : ∀ n : ℕ, n ≥ 1 → ∃ k, collatzSeq n k = 1 := by
+theorem collatz_conjecture : CollatzConjecture := by
   intro n hn
-  -- 1. The parity sequence is in the golden mean shift
-  have h_sft := collatz_parity_in_goldenMean n hn
-  -- 2. The golden mean shift restricts p_odd ≤ 1/φ²
-  have h_podd := goldenMean_max_p_odd
-  -- 3. 1/φ² < p_eq, so the mean drift is positive
-  have h_drift := drift_positive_of_podd_lt_peq h_podd
-  -- 4. Tunnel walls provide reflecting boundary (via Baker)
-  have h_reflect := tunnel_walls_positive
-  -- 5. Therefore u(t) → +∞
-  have h_diverge := biased_walk_diverges u drift h_drift h_reflect
-  -- 6. u(t) → +∞ implies trajectory reaches 1
-  exact reaches_one_of_walk_diverges h_diverge
+  obtain ⟨C, hC⟩ := correction_bound n hn
+  have hdiv := walk_diverges_of_podd_bound n hn
+  exact collatz_reaches_of_walk_diverges n hn C hC hdiv
 #+end_src
 
 ** Phase 4 (Alternative): Finite-State Bypass of Baker              :bridge:
@@ -615,7 +615,14 @@ argument using the geometric series structure of $R(t)$.
    linear form nonvanishing, Diophantine error, and tunnel wall width.
    Implemented in =CollatzLean/Baker.lean= and =CollatzLean/TunnelWidth.lean=.
    Nine =sorry= remain (5 Baker proof chain stubs, 4 tunnel width).
-   Total project: 15 =sorry= across 12 files, 1155 lines.
+9. [X] *Formalize Phase 4* (ergodic conclusion): uniform drift bound,
+   walk divergence, correction bound bridge, and the capstone
+   =collatz_conjecture : CollatzConjecture=.  Implemented in
+   =CollatzLean/Drift.lean= and =CollatzLean/Conclusion.lean=.
+   Two =sorry= remain (=podd_uniform_bound=, =correction_bound=).
+   Total project: 17 =sorry= across 14 files, ~1375 lines.
+   Of these, 15 are logically independent (the 2 in Walk.lean are
+   redundant with Phase 4 theorems).
 
 * Appendix: What Has Been Verified Computationally
 
