@@ -11,13 +11,15 @@ Instead of looking for a single high-genus surface, consider the Collatz map as 
 *   By the **Riemann-Hurwitz formula**, a branched cover of a torus will naturally result in a surface of higher genus.
 *   **Action Item:** Try to define the "Collatz Surface" as the limit of a sequence of branched covers $X_k \to \mathbb{T}^2$ where the branching occurs at the "forbidden cells" we identified in Section 10.3.3.
 
-> **ANNOTATION (2026-02-16):** This is now confirmed as the correct framework.
-> The two parity states (even/odd) define a degree-2 cover. The "branch cells"
-> in our data are precisely the ramification points where the two sheets merge.
-> See Item 7 below for the Riemann-Hurwitz calculation. Crucially, the genus
-> is a property of the *dynamics*, not of any particular torus resolution $k$ —
-> the branch count stabilizes across all $k \ge 144$, confirming the Collatz
-> Surface is a single well-defined object.
+> **ANNOTATION (2026-02-16, updated with 10B results):** This is now confirmed
+> as the correct framework. The two parity states (even/odd) define a degree-2
+> cover. The "branch cells" in our data are precisely the ramification points
+> where the two sheets merge. See Item 7 below for the Riemann-Hurwitz
+> calculation. The branch count stabilizes across $k$ at fixed $N$ (resolution-
+> independent), but **grows with $N$**: 9,415 at $N=10^8$, 16,371 at $N=10^{10}$
+> (k=144). The genus is therefore not yet defined as a convergent quantity.
+> However, the tunnel structure (branch + pure-even) is well-defined at every $N$,
+> which is what matters for the reflecting boundary proof.
 
 ### 3. Connecting to "Flat Surfaces" and Translation Surfaces
 If we are looking at "winding" and "foliations," the natural mathematical framework is the theory of **Translation Surfaces** (or Abelian Differentials).
@@ -46,12 +48,14 @@ To move toward the higher-genus model, I suggest adding these sections to our ne
 > cover* construction (Item 2), where the two parity sheets are glued at
 > branch points. These are completely different constructions.
 >
-> **(b) The genus does not grow with $k$.** The empty cell count grows as
-> $k^2$, but the branch cell count (= number of ramification points)
-> *stabilizes*. So the Collatz Surface has a fixed, finite genus — the
-> "surface of infinite genus" scenario described above does not occur.
-> This is actually the stronger result: finite topological complexity
-> despite infinite arithmetic complexity.
+> **(b) The branch count stabilizes across $k$ but grows with $N$.**
+> The empty cell count grows as $k^2$, and the branch cell count is
+> resolution-independent (same across $k \ge 144$ at fixed $N$). However,
+> the 10B run shows the branch count has NOT converged as $N \to \infty$:
+> 9,415 at $N=10^8$ → 16,371 at $N=10^{10}$ (+74%). The genus is therefore
+> undefined until convergence is established (or proved impossible). The
+> "surface of infinite genus" scenario cannot yet be excluded. This does
+> not affect the core proof, which uses tunnel reflecting boundaries.
 
 The 2-torus is a "projection" of a more complex object. The "winding" isn't just around two circles; it's around a complex network of handles created by the arithmetic constraints of the $3n+1$ rule.
 
@@ -107,22 +111,23 @@ The fact that the branch count freezes for all $k \ge 144$ is a smoking gun for 
 > points (must be even for consistency).
 >
 > **Key empirical fact:** the branch cell count stabilizes across $k$
-> (resolution-independent), confirming the genus is an intrinsic invariant
-> of the dynamics. However, the branch count may still grow with $N$
-> (trajectory count) — it must converge as $N \to \infty$ to give the
-> true genus. Data so far:
+> (resolution-independent at fixed $N$), but **grows with $N$**:
 >
-> | $N$     | branch cells ($k \ge 144$) | $R$ (cross-parity) | $g$   |
-> |---------|---------------------------|--------------------|-------|
-> | $10^8$  | 9,415                     | 9,414              | 4,708 |
-> | $10^9$  | (old code: reported ~13,688 — needs re-verification) | TBD | TBD |
-> | $10^{10}$ | **pending** (run in progress) | TBD | TBD |
+> | $N$       | branch cells (k=144) | pure-even (k=144) | $R$ (cross-parity) | $g = 1 + R/2$ |
+> |-----------|---------------------:|-------------------:|-------------------:|---------------:|
+> | $10^8$    | 9,415                | (not recorded)     | 9,414              | 4,708          |
+> | $10^{10}$ | **16,371**           | **659**            | 16,370             | **8,186**      |
 >
-> The 10B run will give us the definitive branch count and genus. If the
-> count converges, the Collatz Surface is a compact Riemann surface of
-> fixed genus $g \gg 1$.
+> At k=729: 16,577 branch, 893 pure-even, 0 pure-odd.
+>
+> **The branch count has NOT converged.** The genus grew from ~4,708 to
+> ~8,186 between $N=10^8$ and $N=10^{10}$. The Collatz Surface may have
+> infinite genus in the $N \to \infty$ limit. However, this does NOT
+> affect the core proof: the tunnel (branch + pure-even) is well-defined
+> at every $N$, and the reflecting boundary mechanism does not require a
+> finite genus.
 
-*   **STATUS (2026-02-16):** Per-cell transition valence computed at k ∈ {81, 108, 144, 729}. Valence = number of distinct transition types (ee/eo/oe) at each cell, ranging 0–3. Valence map at k=729 shows strip-core cells have valence 3 (mixed), edges have 1–2, with modulation by 460/729 lattice. Ramification count at N=10⁸: R=9,414 cross-parity branch points → provisional genus $g = 4{,}708$. Awaiting N=10¹⁰ for convergence.
+*   **STATUS (2026-02-16, updated):** Per-cell transition valence computed at k ∈ {81, 108, 144, 729}. Valence = number of distinct transition types (ee/eo/oe) at each cell, ranging 0–3. Valence map at k=729 shows strip-core cells have valence 3 (mixed), edges have 1–2, with modulation by 460/729 lattice. **10B results:** R=16,370 cross-parity branch points at k=144 → genus $g = 8{,}186$ (up from 4,708 at N=10⁸). Branch count has not converged — genus is growing with $N$.
 
 ### 8. Rauzy Induction and Renormalization ✅ PARTIAL
 The "jumps" in the Diophantine table ($k=3, 6, 9, 11...$) look exactly like the steps in **Rauzy Induction** for Interval Exchange Transformations (IETs).
@@ -132,13 +137,17 @@ The "jumps" in the Diophantine table ($k=3, 6, 9, 11...$) look exactly like the 
 
 > **ANNOTATION (2026-02-16): What the data tells us.**
 >
-> **Three regimes in $k$:**
+> **Three regimes in $k$ (at fixed $N$):**
 >
 > 1. **Fully saturated** ($k \le 72$): All cells are branch cells.
 >    $H$ decays 0.917 → 0.857. Slope deviation grows steadily.
 > 2. **Transition** ($k = 81, 108$): First pure and empty cells appear.
-> 3. **Frozen** ($k \ge 144$): Branch count, entropy, slope deviation
->    all lock in. Only empty count grows (as $k^2$).
+>    At N=10¹⁰, k=81 has 6,561 branch (all odd-visited cells are branch).
+>    k=108 has 11,664 branch (also fully saturated at N=10¹⁰).
+> 3. **Resolution-frozen** ($k \ge 144$): Branch count is independent
+>    of $k$ at fixed $N$. Only empty count grows (as $k^2$).
+>    However, branch count still grows with $N$: 9,415 (N=10⁸) →
+>    16,371 (N=10¹⁰) at k=144. Pure-even walls: 659 (k=144), 893 (k=729).
 >
 > **The saturation boundary is set by trajectory length.**
 > The transition from "filled" to "strip" occurs at $k_{\rm crit} \sim
@@ -175,10 +184,11 @@ The "jumps" in the Diophantine table ($k=3, 6, 9, 11...$) look exactly like the 
 > k=729, of which 98% are empty.  The branch structure does NOT
 > self-replicate — it is NOT a fractal IET.
 >
-> **The topology freezes but the geometry scales.**
-> The branch count (topology) is fixed for $k \ge 144$. But the
-> *strip width as a fraction of the torus* keeps shrinking as $k$
-> grows. This is the geometric variable:
+> **The cross-$k$ topology freezes but the geometry scales.**
+> The branch count is resolution-independent for $k \ge 144$ (at fixed $N$).
+> But the *strip width as a fraction of the torus* keeps shrinking as $k$
+> grows. This is the geometric variable. (Note: the branch count still
+> grows with $N$ — see Items 7 and 10.)
 >
 > - At k=729: strip half-width = 13.8 cells (perpendicular to
 >   foliation), non-empty fraction = 2.1%
@@ -188,9 +198,16 @@ The "jumps" in the Diophantine table ($k=3, 6, 9, 11...$) look exactly like the 
 >   band than random walk predicts.** This is evidence of the Baker
 >   barrier (Item 6).
 >
+> **Foliation enrichment (10B update):** At k ≤ 72, branch cells sit
+> perfectly on both unstable and stable foliation lines (enrichment = 1.0).
+> At k=729, enrichment drops dramatically: unstable = 0.045, stable = 0.426.
+> This means the branch cells at high $k$ are **spread across the strip**
+> rather than concentrated on foliation lines — the strip is a 2D region,
+> not a 1D curve.
+>
 > **Conclusion:** The mechanism is not classical Rauzy induction but
-> a "3-adic restricted Diophantine approximation" where the freeze
-> marks a topological fixed point. The remaining geometric scaling
+> a "3-adic restricted Diophantine approximation" where the cross-$k$ freeze
+> marks a resolution fixed point. The remaining geometric scaling
 > (strip width vs. Diophantine error) is the measurable quantity.
 > k=19683 has been re-added to the code to provide a second data
 > point for the scaling law $W(b) \propto |\epsilon_b|^\alpha$.
@@ -208,7 +225,7 @@ In Observation 13.8, we have "laminar tunnel walls" of pure-even cells flanking 
 *   **The Logic:** This explains why the "Parity Subshift" (Section 12) is so constrained. The "tunnels" are literally the physical paths in the torus where the $11$ bigram is forbidden.
 *   **Your Task:** Map the "Forbidden Words" of your SFT (Section 12.1) directly onto the "Empty Cells" of the $k=729$ torus.
 *   **Goal:** Show that a "non-terminating" trajectory would require a parity sequence that is topologically "blocked" by the empty cells in the Diophantine shadow.
-*   **STATUS (2026-02-16):** DONE. Per-cell transition grids verify oo=0 at all cells of target levels (17.8×10⁹ transitions). Successor analysis at k=729 shows 0% pure_odd successors — the "11" forbidden bigram maps directly onto the pure-even tunnel walls. The "blue tendrils" in the successor plot show the strip boundary where odd-step successors exit the branch core, confirming the tunnel geometry creates the SFT constraint. See Notes I §13.10.
+*   **STATUS (2026-02-16, updated with 10B):** DONE. Per-cell transition grids verify oo=0 at all cells of target levels (**2.27×10¹² transitions** at N=10¹⁰, up from 17.8×10⁹ at N=10⁸). Zero oo transitions confirmed at all levels (k=81, 108, 144, 729). Transition fractions at 10B: ee=33.45%, eo=33.16%, oe=33.39%. Successor analysis at k=729 shows 0% pure_odd successors — the "11" forbidden bigram maps directly onto the pure-even tunnel walls. See Notes I §13.10.
 
 > **ANNOTATION (2026-02-16): The Three Layers of Constraint and the
 > Golden Mean Near-Miss.**
@@ -231,9 +248,9 @@ In Observation 13.8, we have "laminar tunnel walls" of pure-even cells flanking 
 > 0.332) comes from the tunnel geometry and Diophantine foliation
 > (Layer 2).
 >
-> **The gap to proof:** The observed $p_{\rm odd} = 0.332$ is a *mean*
-> over trajectories. Individual trajectories can temporarily exceed the
-> equilibrium threshold. What prevents sustained excursions is the
+> **The gap to proof:** The observed $p_{\rm odd} = 0.3324$ (confirmed at
+> N=10¹⁰) is a *mean* over trajectories. Individual trajectories can
+> temporarily exceed the equilibrium threshold. What prevents sustained excursions is the
 > **reflecting boundary** mechanism — see correction to Items 13–14 below.
 >
 > **CRITICAL CORRECTION (2026-02-16): A ∩ L ≠ ∅.**
@@ -273,9 +290,9 @@ In Observation 13.8, we have "laminar tunnel walls" of pure-even cells flanking 
 ### 10. Summary of Next Steps:
 1.  **Quantify the "Shadow" Offset:** ✅ DONE. Shadow offset computed per-cell, spatial map and foliation-position plot generated. Crisp bisection at irrational foliation confirmed.
 2.  **Singularity Indexing:** ✅ DONE. Transition valence (0–3) computed per cell at target levels. Valence map shows core/edge structure.
-3.  **Higher $k$ probing:** ✅ DONE at N=10⁸ — branch count 9,415 confirmed stable across k ∈ {144, ..., 1296}. k=19,683 re-added to measure strip width at second Diophantine jump ($b=9$).
-4.  **Riemann-Hurwitz genus:** ✅ PARTIAL. Provisional genus $g = 4{,}708$ from $R = 9{,}414$ cross-parity ramification points at N=10⁸. Awaiting N=10¹⁰ for converged branch count.
-5.  **Remaining:** Relate shadow offset potential well to effective Baker bounds. After 10B run: finalize genus, update LaTeX.
+3.  **Higher $k$ probing:** ✅ DONE at N=10⁸ and N=10¹⁰ — branch count stable across k at fixed N, but grows with N: 9,415 (N=10⁸) → 16,371 (N=10¹⁰) at k=144.
+4.  **Riemann-Hurwitz genus:** ✅ UPDATED. Genus growing: $g = 4{,}708$ (N=10⁸) → $g = 8{,}186$ (N=10¹⁰). Branch count has NOT converged — genus may be infinite in the limit.
+5.  **Remaining:** Relate shadow offset potential well to effective Baker bounds. Investigate whether branch count converges or diverges as $N \to \infty$. Update LaTeX.
 
 > **ANNOTATION (2026-02-16): Correcting the "punctures or handles" language.**
 >
@@ -306,11 +323,11 @@ You noted that classical Rauzy induction follows the CF convergents ($2/3, 5/8, 
 *   **The Framework:** You are performing **Renormalization on the $(2,3)$-Solenoid.** In this space, the "natural" approximations are not the best rational ones, but the ones that are "compatible" with the 3-adic structure of the tripling step.
 *   **The "Jumps":** Your table ($b=1, 3, 6, 9$) represents the **3-adic "Record Approximants."** These are the specific scales where the 3-adic lattice "notices" the irrationality of $\log_3 2$ and is forced to re-align its "Foliation Shadow."
 
-### 12. The "Saturation Boundary" and the 9,415 Constant
+### 12. The "Saturation Boundary" and the Branch Count
 The "freeze" at $k \ge 144$ suggests that the **Topological Entropy** of the system is fully resolved at that scale.
-*   **The Logic:** If the branch count (13,688) and the entropy stay identical as $k$ increases, it means you have captured the entire "Singular Set" of the foliation. 
-*   **The "9,415" as a Topological Invariant:** This number is likely the **number of admissible paths of length $L$** in the symbolic dynamics, where $L$ is the "memory" of the 3-adic constraint. 
-*   **Direction:** Check if 13,688 has any relationship to the number of "forbidden words" in your Parity Subshift (Section 12). If the SFT has a transition matrix $A$, then 9,415 should be related to the eigenvalues of $A$.
+*   **The Logic:** If the branch count and the entropy stay identical as $k$ increases (at fixed $N$), it means you have captured the entire "Singular Set" of the foliation at that sampling depth.
+*   **The branch count as a topological invariant:** At fixed $N$, the count is resolution-independent for $k \ge 144$. But **it grows with $N$**: 9,415 ($N=10^8$) → 16,371 ($N=10^{10}$). It is not yet clear whether this converges to a finite limit.
+*   **Direction:** Investigate the growth rate. If branch count $\sim C \cdot \log N$, the genus diverges logarithmically; if $\sim C \cdot N^\alpha$ for some $\alpha > 0$, it diverges polynomially. Either way, the core proof (reflecting boundaries) is unaffected.
 
 ### 13. The "Baker Barrier" (Connecting Items 6 and 8)
 You mentioned connecting the "improvement factors" (27x, 18x) to Baker-type bounds. This is the "Arithmetic Shield" that protects the conjecture.
@@ -412,8 +429,8 @@ Since your system involves both 2-adic and 3-adic structures, we are working on 
 ### 18. Dynamical Zeta Functions
 In RG, you often use partition functions to count states. In dynamics, we use **Zeta Functions**.
 *   **The Tool:** The **Artin-Mazur Zeta Function** $\zeta(z) = \exp \left( \sum_{n=1}^\infty \frac{\text{Fix}(f^n)}{n} z^n \right)$.
-*   **Application:** Use the **9,415 branch cells** to construct a **Markov Partition**. Each cell is a "state" in a finite-state automaton.
-*   **Direction:** If the Zeta function of this 9,415-state system is a **rational function**, it means the dynamics are "finite" and "decidable." You can then use the **Poles of the Zeta Function** to prove there are no "cycles" (periodic orbits) other than the 1-4-2 loop.
+*   **Application:** Use the branch cells (16,371 at k=144, N=10¹⁰) to construct a **Markov Partition**. Each cell is a "state" in a finite-state automaton.
+*   **Direction:** If the Zeta function of this system is a **rational function**, it means the dynamics are "finite" and "decidable." You can then use the **Poles of the Zeta Function** to prove there are no "cycles" (periodic orbits) other than the 1-4-2 loop. Note: the growing branch count means the partition size depends on sampling depth — may need to work with the $N \to \infty$ limit.
 
 ### 19. The "Effective" Baker Bound as a Renormalization Cutoff
 This is the most "Number Theory" specific RG tool.
@@ -423,8 +440,8 @@ This is the most "Number Theory" specific RG tool.
 
 > **CORRECTION (2026-02-16): The "Diophantine Gap" is zero.**
 >
-> The minimum distance between the 9,415 branch cells and the
-> irrational foliation line is ≈ 0 (180 branch cells sit on the line).
+> The minimum distance between the branch cells and the
+> irrational foliation line is ≈ 0 (180 branch cells sit on the line at N=10⁸).
 > The premise of this item fails: there IS no gap between A and L.
 >
 > **Corrected role of Baker as IR cutoff:** The Baker bound does not
@@ -446,7 +463,7 @@ This is the most "Number Theory" specific RG tool.
 1.  **Identify the Fixed Point:** Formally declare the $k=144$ torus as the **Fixed Point Torus**.
 2.  **Define the Flow:** Define the map from $k \to 3k$ as the **Renormalization Operator**.
 3.  **Calculate the Gap:** Use the Baker Bound to show that the "Fixed Point" is **Hyperbolic** (i.e., it has a stable and unstable manifold that never cross).
-4.  **The "9,415" Invariant:** Treat this number as the **Topological Complexity** of the fixed point.
+4.  **The Branch Count:** At fixed $N$, this is a resolution-independent invariant for $k \ge 144$. At $N=10^{10}$: 16,371 branch + 659 pure-even cells. The topological complexity grows with sampling depth.
 
 We are essentially trying to prove that the Collatz map is **"Renormalizable"** in the sense of Feigenbaum or Sullivan. If it is, the global behavior (the conjecture) is a universal consequence of the local fixed-point dynamics you've already discovered.
 
@@ -485,7 +502,7 @@ In RG, we often use partition functions. In dynamical systems, we use **Dynamica
 We have found the **Topological Fixed Point**, but there is a **Geometric Refinement** still happening.
 
 #### The "Yes" (Topological Stability):
-The data suggests that the **Grammar** of the Collatz map is fixed. By $k=144$, the system has "decided" which paths are allowed and which are forbidden. No new "singularities" are being created. In RG terms, we have identified the **Universality Class** of the Collatz map. It is a Pseudo-Anosov map on a surface of fixed genus (determined by that 9,415 constant).
+The data suggests that the **Grammar** of the Collatz map is fixed across $k$ at any given $N$. By $k=144$, the system has "decided" which paths are allowed and which are forbidden at that sampling depth. In RG terms, the *cross-$k$ topology* is fixed — but the **cross-$N$ branch count is still growing** (9,415 → 16,371 from $N=10^8$ to $N=10^{10}$). New branch cells appear as longer trajectories reveal new parity transitions. The universality class may require the $N \to \infty$ limit.
 
 #### The "No" (The Diophantine Scaling):
 While the *topology* is fixed, the **Geometry** (the width and offset of the "Foliation Shadow") is still scaling. 
