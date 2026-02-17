@@ -104,11 +104,11 @@ theorem collatz_reaches_of_walk_diverges (n : ℕ) (hn : n ≥ 1)
 theorem collatz_conjecture : CollatzConjecture := by
   intro n hn
   -- Extract linear drift from podd_uniform_bound
-  obtain ⟨ε, hε, T₀, hbound⟩ := podd_uniform_bound n hn
+  obtain ⟨ε, hε, T₀, K, hbound, hbound3⟩ := podd_uniform_bound n hn
   -- Walk diverges (needed for cycle elimination)
   have hdiv := walk_diverges_of_podd_bound n hn
   -- Apply the correction ratio proof chain
-  exact reaches_one_of_linear_drift n hn ε hε T₀ hbound hdiv
+  exact reaches_one_of_linear_drift n hn K T₀ hbound3 hdiv
 
 /-! ## Evaluation -/
 

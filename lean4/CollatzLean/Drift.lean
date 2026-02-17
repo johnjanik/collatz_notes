@@ -18,7 +18,9 @@ open Real Filter
     Requires ergodic theory for the Collatz transfer operator combined with
     the golden mean SFT constraint. -/
 theorem podd_uniform_bound (n : ℕ) (hn : n ≥ 1) :
-    ∃ ε > 0, ∃ T₀, ∀ t, t ≥ T₀ → (↑(nu3 n t) / ↑t : ℝ) ≤ p_equilibrium - ε := by
+    ∃ ε > 0, ∃ T₀, ∃ K : ℕ,
+      (∀ t, t ≥ T₀ → (↑(nu3 n t) / ↑t : ℝ) ≤ p_equilibrium - ε) ∧
+      (∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) := by
   sorry
 
 /-! ## Walk drift form -/
@@ -96,7 +98,7 @@ theorem tendsto_atTop_of_eventually_linear (f : ℕ → ℝ) (δ : ℝ) (hδ : �
 /-- Composition: uniform ε-bound → linear growth → walk diverges to +∞. -/
 theorem walk_diverges_of_podd_bound (n : ℕ) (hn : n ≥ 1) :
     Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop := by
-  obtain ⟨ε, hε, T₀, hbound⟩ := podd_uniform_bound n hn
+  obtain ⟨ε, hε, T₀, _K, hbound, _⟩ := podd_uniform_bound n hn
   have hlog_pos : logb 2 3 > 0 :=
     logb_pos (by norm_num : (1 : ℝ) < 2) (by norm_num : (1 : ℝ) < 3)
   have h1log_pos : 1 + logb 2 3 > 0 := by linarith

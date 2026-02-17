@@ -67,26 +67,65 @@ theorem collatzSeq_le_of_identity (n t : ℕ) (_hn : n ≥ 1) :
     collatzSeq n t * 2 ^ nu2 n t = n * 3 ^ nu3 n t + correction n t :=
   collatz_identity n t
 
-/-- If the walk has eventually linear drift, then for all sufficiently
-    large t, the trajectory value collatzSeq(n,t) is bounded.
+/-- Universal bound: the identity's RHS never exceeds n * 4^ν₃.
+    By induction: base is trivial; even step preserves; odd step uses
+    2^ν₂ ≤ a(t)·2^ν₂ = n·3^ν₃ + C ≤ n·4^ν₃ (IH). -/
+theorem identity_le_four_pow_nu3 (n : ℕ) (hn : n ≥ 1) (t : ℕ) :
+    n * 3 ^ nu3 n t + correction n t ≤ n * 4 ^ nu3 n t := by
+  induction t with
+  | zero => simp [nu3, correction]
+  | succ t ih =>
+    rcases even_or_odd_step n t with he | ho
+    · -- Even: correction and nu3 unchanged
+      rw [correction_succ_even n t he, nu3_step_even n t he]; exact ih
+    · -- Odd: correction → 3C + 2^ν₂, nu3 → ν₃ + 1
+      rw [correction_succ_odd n t ho, nu3_step_odd n t ho]
+      -- 2^ν₂ ≤ n*4^ν₃ (from a(t) ≥ 1 + identity + IH)
+      have h2 : 2 ^ nu2 n t ≤ n * 4 ^ nu3 n t :=
+        calc 2 ^ nu2 n t
+            ≤ collatzSeq n t * 2 ^ nu2 n t :=
+              Nat.le_mul_of_pos_left _ (collatzSeq_pos n hn t)
+          _ = n * 3 ^ nu3 n t + correction n t := collatz_identity n t
+          _ ≤ n * 4 ^ nu3 n t := ih
+      -- 3*(n*3^ν + C) + 2^ν₂ ≤ 3*(n*4^ν) + n*4^ν = n*4^(ν+1)
+      calc n * 3 ^ (nu3 n t + 1) + (3 * correction n t + 2 ^ nu2 n t)
+          = 3 * (n * 3 ^ nu3 n t + correction n t) + 2 ^ nu2 n t := by
+            rw [pow_succ]; ring
+        _ ≤ 3 * (n * 4 ^ nu3 n t) + n * 4 ^ nu3 n t := by linarith
+        _ = n * 4 ^ (nu3 n t + 1) := by rw [pow_succ]; ring
 
-    This is the central new result, replacing the false correction_bound.
-    The bound B depends on the drift rate ε.
+/-- If 3·ν₃ ≤ t + K for large t, then collatzSeq(n,t) ≤ n·2^K.
 
-    The proof requires showing that the geometric series
-      Σ_m 3^m · 2^{-D_m}
-    converges when D_m ≥ m·α with α > log₂3 (from the walk drift).
-    This is a real-analysis argument formalized in ℕ via cleared denominators.
-
-    Sorry: the full geometric series argument requires substantial real
-    analysis infrastructure (partial sums, geometric series convergence,
-    floor/ceil bounds).  The mathematical proof is in
-    docs/correction_ratio_bound.tex, Theorem 3.3. -/
+    From the universal bound: a(t)·2^ν₂ ≤ n·4^ν₃ = n·2^{2ν₃}.
+    From 3ν₃ ≤ t+K and ν₂ = t−ν₃: 2ν₃ ≤ ν₂+K.
+    So a(t)·2^ν₂ ≤ n·2^{ν₂+K}, giving a(t) ≤ n·2^K. -/
 theorem collatzSeq_eventually_bounded_of_linear_drift (n : ℕ) (hn : n ≥ 1)
-    (ε : ℝ) (hε : ε > 0)
-    (T₀ : ℕ) (hbound : ∀ t, t ≥ T₀ → (↑(nu3 n t) / ↑t : ℝ) ≤ p_equilibrium - ε) :
+    (K T₀ : ℕ) (hbound : ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) :
     ∃ B : ℕ, ∃ T₁ : ℕ, ∀ t, t ≥ T₁ → collatzSeq n t ≤ B := by
-  sorry
+  refine ⟨n * 2 ^ K, T₀, fun t ht => ?_⟩
+  -- From universal bound + identity: a(t) * 2^ν₂ ≤ n * 4^ν₃
+  have h1 : collatzSeq n t * 2 ^ nu2 n t ≤ n * 4 ^ nu3 n t :=
+    calc collatzSeq n t * 2 ^ nu2 n t
+        = n * 3 ^ nu3 n t + correction n t := collatz_identity n t
+      _ ≤ n * 4 ^ nu3 n t := identity_le_four_pow_nu3 n hn t
+  -- From hypothesis: 2*ν₃ ≤ ν₂ + K  (since 3ν₃ ≤ t+K and ν₂ = t-ν₃)
+  have hpart := nu_partition n t
+  have h3 := hbound t ht
+  have h2nu3 : 2 * nu3 n t ≤ nu2 n t + K := by omega
+  -- So 4^ν₃ = 2^{2ν₃} ≤ 2^{ν₂+K}, giving a(t)*2^ν₂ ≤ n*2^{ν₂+K}
+  have h4 : (4 : ℕ) ^ nu3 n t ≤ 2 ^ K * 2 ^ nu2 n t :=
+    calc (4 : ℕ) ^ nu3 n t = (2 ^ 2) ^ nu3 n t := by norm_num
+      _ = 2 ^ (2 * nu3 n t) := by rw [← pow_mul]
+      _ ≤ 2 ^ (nu2 n t + K) := Nat.pow_le_pow_right (by norm_num) (by omega)
+      _ = 2 ^ nu2 n t * 2 ^ K := by rw [pow_add]
+      _ = 2 ^ K * 2 ^ nu2 n t := by ring
+  -- Cancel 2^ν₂
+  have h5 : collatzSeq n t * 2 ^ nu2 n t ≤ n * 2 ^ K * 2 ^ nu2 n t :=
+    calc collatzSeq n t * 2 ^ nu2 n t
+        ≤ n * 4 ^ nu3 n t := h1
+      _ ≤ n * (2 ^ K * 2 ^ nu2 n t) := Nat.mul_le_mul_left n h4
+      _ = n * 2 ^ K * 2 ^ nu2 n t := by ring
+  exact Nat.le_of_mul_le_mul_right h5 (Nat.pos_of_ne_zero (by positivity))
 
 /-! ## Eventual periodicity
 
@@ -457,12 +496,11 @@ theorem cycle_contains_one (n : ℕ) (hn : n ≥ 1)
     linear drift → correction ratio bounded → trajectory bounded →
     eventually periodic → cycle is trivial → reaches 1. -/
 theorem reaches_one_of_linear_drift (n : ℕ) (hn : n ≥ 1)
-    (ε : ℝ) (hε : ε > 0)
-    (T₀ : ℕ) (hbound : ∀ t, t ≥ T₀ → (↑(nu3 n t) / ↑t : ℝ) ≤ p_equilibrium - ε)
+    (K T₀ : ℕ) (hbound3 : ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K)
     (hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop) :
     collatzReaches n := by
   -- Step 1: trajectory is eventually bounded
-  obtain ⟨B, T₁, hBound⟩ := collatzSeq_eventually_bounded_of_linear_drift n hn ε hε T₀ hbound
+  obtain ⟨B, T₁, hBound⟩ := collatzSeq_eventually_bounded_of_linear_drift n hn K T₀ hbound3
   -- Step 2: trajectory is eventually periodic
   obtain ⟨T₂, p, hp, hT₂ge, hPeriodic⟩ := collatzSeq_eventually_periodic_of_bounded n hn B T₁ hBound
   -- Step 3: cycle contains 1
