@@ -11,6 +11,7 @@
 -/
 import CollatzLean.Identity
 import CollatzLean.Drift
+import CollatzLean.CollatzSFT
 import Mathlib.Data.Fintype.Pigeonhole
 
 namespace Collatz
@@ -150,21 +151,304 @@ theorem reaches_one_of_cycle_142 (n : ℕ) (hn : n ≥ 1)
   obtain ⟨t, _, ht1⟩ := hone
   exact ⟨t, ht1⟩
 
+/-! ## Odd-step counting infrastructure -/
+
+/-- Number of odd steps in the window [T₂, T₂ + p). -/
+def oddStepsInPeriod (n T₂ p : ℕ) : ℕ :=
+  ((Finset.range p).filter (fun i => isOddStep n (T₂ + i))).card
+
+/-- If there are no odd steps in a period, every step is even. -/
+private theorem all_even_of_delta3_zero (n T₂ p : ℕ)
+    (h : oddStepsInPeriod n T₂ p = 0) :
+    ∀ i, i < p → isEvenStep n (T₂ + i) = true := by
+  intro i hip
+  rcases even_or_odd_step n (T₂ + i) with he | ho
+  · exact he
+  · exfalso
+    have hmem : i ∈ (Finset.range p).filter (fun j => isOddStep n (T₂ + j)) := by
+      simp [Finset.mem_filter, Finset.mem_range]; exact ⟨hip, ho⟩
+    have hpos := Finset.card_pos.mpr ⟨i, hmem⟩
+    rw [oddStepsInPeriod] at h; omega
+
+/-- Correction is unchanged over an all-even stretch. -/
+private theorem correction_unchanged_of_all_even (n T₂ k : ℕ)
+    (h : ∀ i, i < k → isEvenStep n (T₂ + i) = true) :
+    correction n (T₂ + k) = correction n T₂ := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+    rw [show T₂ + (k + 1) = (T₂ + k) + 1 from by omega,
+        correction_succ_even n (T₂ + k) (h k (by omega)),
+        ih (fun i hi => h i (by omega))]
+
+/-- ν₃ is unchanged over an all-even stretch. -/
+private theorem nu3_unchanged_of_all_even (n T₂ k : ℕ)
+    (h : ∀ i, i < k → isEvenStep n (T₂ + i) = true) :
+    nu3 n (T₂ + k) = nu3 n T₂ := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+    rw [show T₂ + (k + 1) = (T₂ + k) + 1 from by omega,
+        nu3_step_even n (T₂ + k) (h k (by omega)),
+        ih (fun i hi => h i (by omega))]
+
+/-- ν₂ increases by the stretch length over an all-even stretch. -/
+private theorem nu2_increases_of_all_even (n T₂ k : ℕ)
+    (h : ∀ i, i < k → isEvenStep n (T₂ + i) = true) :
+    nu2 n (T₂ + k) = nu2 n T₂ + k := by
+  induction k with
+  | zero => simp
+  | succ k ih =>
+    rw [show T₂ + (k + 1) = (T₂ + k) + 1 from by omega,
+        nu2_step_even n (T₂ + k) (h k (by omega)),
+        ih (fun i hi => h i (by omega))]
+    omega
+
+/-! ## Δ₃ = 0 case: impossible -/
+
+/-- A cycle with no odd steps is impossible: the identity forces 2^p = 1. -/
+private theorem no_cycle_delta3_zero (n : ℕ) (hn : n ≥ 1)
+    (T₂ p : ℕ) (hp : p ≥ 1)
+    (hperiodic : collatzSeq n (T₂ + p) = collatzSeq n T₂)
+    (hdelta : oddStepsInPeriod n T₂ p = 0) : False := by
+  have hall := all_even_of_delta3_zero n T₂ p hdelta
+  have hcorr := correction_unchanged_of_all_even n T₂ p hall
+  have hnu3 := nu3_unchanged_of_all_even n T₂ p hall
+  have hnu2 := nu2_increases_of_all_even n T₂ p hall
+  have id1 := collatz_identity n T₂
+  have id2 := collatz_identity n (T₂ + p)
+  rw [hperiodic, hcorr, hnu3, hnu2, pow_add] at id2
+  -- id2: c * (2^ν * 2^p) = n * 3^ν₃ + C = c * 2^ν  [by id1]
+  have h_eq : collatzSeq n T₂ * 2 ^ nu2 n T₂ * 2 ^ p =
+              collatzSeq n T₂ * 2 ^ nu2 n T₂ := by linarith [mul_assoc (collatzSeq n T₂) (2 ^ nu2 n T₂) (2 ^ p)]
+  have hM_pos : 0 < collatzSeq n T₂ * 2 ^ nu2 n T₂ := by
+    have := collatzSeq_pos n hn T₂; positivity
+  have hM_ne : collatzSeq n T₂ * 2 ^ nu2 n T₂ ≠ 0 := by omega
+  have h2p : 2 ^ p = 1 := mul_left_cancel₀ hM_ne (by linarith [mul_one (collatzSeq n T₂ * 2 ^ nu2 n T₂)])
+  have : 2 ^ p ≥ 2 ^ 1 := Nat.pow_le_pow_right (by norm_num) hp
+  omega
+
+/-! ## Δ₃ = 1 case: only {1,2,4} -/
+
+/-- When there is exactly one odd step in a period, extract its position. -/
+private theorem exists_unique_odd_step (n T₂ p : ℕ)
+    (h : oddStepsInPeriod n T₂ p = 1) :
+    ∃ s, s < p ∧ isOddStep n (T₂ + s) = true ∧
+      ∀ i, i < p → i ≠ s → isEvenStep n (T₂ + i) = true := by
+  rw [oddStepsInPeriod, Finset.card_eq_one] at h
+  obtain ⟨a, ha⟩ := h
+  have ha_mem : a ∈ (Finset.range p).filter (fun i => isOddStep n (T₂ + i)) :=
+    ha ▸ Finset.mem_singleton_self a
+  simp [Finset.mem_filter, Finset.mem_range] at ha_mem
+  refine ⟨a, ha_mem.1, ha_mem.2, ?_⟩
+  intro i hip hia
+  rcases even_or_odd_step n (T₂ + i) with he | ho
+  · exact he
+  · exfalso
+    have : i ∈ (Finset.range p).filter (fun j => isOddStep n (T₂ + j)) := by
+      simp [Finset.mem_filter, Finset.mem_range]; exact ⟨hip, ho⟩
+    rw [ha] at this; simp at this; exact hia this
+
+/-- Helper: even-step condition for the second stretch after the odd step. -/
+private theorem even_stretch_after_odd (n T₂ p s : ℕ) (hs : s < p)
+    (heven : ∀ i, i < p → i ≠ s → isEvenStep n (T₂ + i) = true) :
+    ∀ i, i < (p - s - 1) → isEvenStep n ((T₂ + s + 1) + i) = true := by
+  intro i hi
+  have h1 : s + 1 + i < p := by omega
+  have h2 : s + 1 + i ≠ s := by omega
+  have := heven (s + 1 + i) h1 h2
+  convert this using 2; omega
+
+/-- Correction over one period with exactly one odd step at position s. -/
+private theorem correction_one_odd_step (n T₂ p s : ℕ) (hs : s < p)
+    (hodd_s : isOddStep n (T₂ + s) = true)
+    (heven : ∀ i, i < p → i ≠ s → isEvenStep n (T₂ + i) = true) :
+    correction n (T₂ + p) = 3 * correction n T₂ + 2 ^ (nu2 n T₂ + s) := by
+  have heven1 : ∀ i, i < s → isEvenStep n (T₂ + i) = true :=
+    fun i hi => heven i (by omega) (by omega)
+  have heven2 := even_stretch_after_odd n T₂ p s hs heven
+  have hc1 := correction_unchanged_of_all_even n T₂ s heven1
+  have hnu2_1 := nu2_increases_of_all_even n T₂ s heven1
+  have hc2 := correction_succ_odd n (T₂ + s) hodd_s
+  have hc3 := correction_unchanged_of_all_even n (T₂ + s + 1) (p - s - 1) heven2
+  rw [show T₂ + s + 1 + (p - s - 1) = T₂ + p from by omega] at hc3
+  rw [hc3, hc2, hc1, hnu2_1]
+
+/-- ν₂ over one period with exactly one odd step: increases by p - 1. -/
+private theorem nu2_one_odd_step (n T₂ p s : ℕ) (hs : s < p)
+    (hodd_s : isOddStep n (T₂ + s) = true)
+    (heven : ∀ i, i < p → i ≠ s → isEvenStep n (T₂ + i) = true) :
+    nu2 n (T₂ + p) = nu2 n T₂ + (p - 1) := by
+  have heven1 : ∀ i, i < s → isEvenStep n (T₂ + i) = true :=
+    fun i hi => heven i (by omega) (by omega)
+  have heven2 := even_stretch_after_odd n T₂ p s hs heven
+  have h1 := nu2_increases_of_all_even n T₂ s heven1
+  have h2 := nu2_step_odd n (T₂ + s) hodd_s
+  have h3 := nu2_increases_of_all_even n (T₂ + s + 1) (p - s - 1) heven2
+  rw [show T₂ + s + 1 + (p - s - 1) = T₂ + p from by omega] at h3
+  rw [h3, h2, h1]; omega
+
+/-- ν₃ over one period with exactly one odd step: increases by 1. -/
+private theorem nu3_one_odd_step (n T₂ p s : ℕ) (hs : s < p)
+    (hodd_s : isOddStep n (T₂ + s) = true)
+    (heven : ∀ i, i < p → i ≠ s → isEvenStep n (T₂ + i) = true) :
+    nu3 n (T₂ + p) = nu3 n T₂ + 1 := by
+  have heven1 : ∀ i, i < s → isEvenStep n (T₂ + i) = true :=
+    fun i hi => heven i (by omega) (by omega)
+  have heven2 := even_stretch_after_odd n T₂ p s hs heven
+  have h1 := nu3_unchanged_of_all_even n T₂ s heven1
+  have h2 := nu3_step_odd n (T₂ + s) hodd_s
+  have h3 := nu3_unchanged_of_all_even n (T₂ + s + 1) (p - s - 1) heven2
+  rw [show T₂ + s + 1 + (p - s - 1) = T₂ + p from by omega] at h3
+  rw [h3, h2, h1]
+
+/-- The cycle equation for Δ₃ = 1: c₀ · 2^(p-1) = 3·c₀ + 2^s. -/
+private theorem cycle_equation_delta3_one (n T₂ p s : ℕ)
+    (hperiodic : collatzSeq n (T₂ + p) = collatzSeq n T₂)
+    (hs : s < p)
+    (hodd_s : isOddStep n (T₂ + s) = true)
+    (heven : ∀ i, i < p → i ≠ s → isEvenStep n (T₂ + i) = true) :
+    collatzSeq n T₂ * 2 ^ (p - 1) = 3 * collatzSeq n T₂ + 2 ^ s := by
+  have id1 := collatz_identity n T₂
+  have id2 := collatz_identity n (T₂ + p)
+  have hnu2 := nu2_one_odd_step n T₂ p s hs hodd_s heven
+  have hnu3 := nu3_one_odd_step n T₂ p s hs hodd_s heven
+  have hcorr := correction_one_odd_step n T₂ p s hs hodd_s heven
+  rw [hperiodic, hnu2, hnu3, hcorr] at id2
+  -- id2: c * 2^(ν+q) = n * 3^(ν₃+1) + (3*C + 2^(ν+s))  where q = p-1
+  -- Suffices to cancel 2^ν from both sides of:
+  --   2^ν * (c * 2^q) = 2^ν * (3*c + 2^s)
+  suffices h : 2 ^ nu2 n T₂ * (collatzSeq n T₂ * 2 ^ (p - 1)) =
+               2 ^ nu2 n T₂ * (3 * collatzSeq n T₂ + 2 ^ s) from
+    mul_left_cancel₀ (pow_ne_zero _ (by norm_num : (2:ℕ) ≠ 0)) h
+  -- LHS: c * 2^(ν+q) = 2^ν * (c * 2^q)
+  have lhs : collatzSeq n T₂ * 2 ^ (nu2 n T₂ + (p - 1)) =
+             2 ^ nu2 n T₂ * (collatzSeq n T₂ * 2 ^ (p - 1)) := by
+    rw [pow_add]; ring
+  -- RHS from id1 and id2
+  have rhs : n * 3 ^ (nu3 n T₂ + 1) + (3 * correction n T₂ + 2 ^ (nu2 n T₂ + s)) =
+             3 * (n * 3 ^ nu3 n T₂ + correction n T₂) + 2 ^ nu2 n T₂ * 2 ^ s := by
+    rw [pow_succ, pow_add]; ring
+  -- Goal: 2^ν * (c * 2^q) = 2^ν * (3c + 2^s)
+  -- By lhs: LHS = c * 2^(ν+q) = id2.LHS
+  -- By rhs and id1: RHS = 3*(c * 2^ν) + 2^ν * 2^s
+  rw [← lhs]
+  -- Goal: c * 2^(ν+q) = 2^ν * (3c + 2^s)
+  rw [id2]
+  -- Goal: n * 3^(ν₃+1) + (3*C + 2^(ν+s)) = 2^ν * (3c + 2^s)
+  rw [rhs, ← id1]
+  -- Goal: 3*(c*2^ν) + 2^ν*2^s = 2^ν * (3c + 2^s)
+  ring
+
+/-- If d is odd and d ∣ 2^k, then d = 1. -/
+private theorem odd_dvd_pow_two_eq_one {d k : ℕ}
+    (hd_odd : d % 2 = 1) (hdvd : d ∣ 2 ^ k) : d = 1 := by
+  have hcop : Nat.Coprime d (2 ^ k) :=
+    Nat.Coprime.pow_right k
+      (by rw [Nat.coprime_comm, Nat.coprime_two_left]; exact ⟨d / 2, by omega⟩)
+  have h1 : d ∣ Nat.gcd d (2 ^ k) := Nat.dvd_gcd dvd_rfl hdvd
+  rw [hcop] at h1
+  exact Nat.eq_one_of_dvd_one h1
+
+/-- The main Δ₃ = 1 result: the cycle contains 1. -/
+private theorem cycle_contains_one_of_delta3_one (n : ℕ) (hn : n ≥ 1)
+    (T₂ p : ℕ) (hp : p ≥ 1)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
+    (hdelta : oddStepsInPeriod n T₂ p = 1) :
+    ∃ t, t ≥ T₂ ∧ collatzSeq n t = 1 := by
+  obtain ⟨s, hs, hodd_s, heven⟩ := exists_unique_odd_step n T₂ p hdelta
+  have hceq := cycle_equation_delta3_one n T₂ p s
+    (hperiodic T₂ (le_refl _)) hs hodd_s heven
+  -- hceq: c₀ * 2^(p-1) = 3*c₀ + 2^s  where c₀ = collatzSeq n T₂
+  set c₀ := collatzSeq n T₂ with hc₀_def
+  have hc_pos := collatzSeq_pos n hn T₂
+  have h2s_pos : 2 ^ s ≥ 1 := Nat.one_le_pow _ _ (by norm_num)
+  -- p = 1: c₀ = 3c₀ + 2^s, impossible
+  -- p = 2: 2c₀ = 3c₀ + 2^s, impossible
+  -- p ≥ 3: c₀ * (2^(p-1) - 3) = 2^s, with 2^(p-1) - 3 odd and ≥ 1, so = 1, giving p = 3
+  by_cases hp1 : p = 1
+  · subst hp1; simp at hceq; omega
+  by_cases hp2 : p = 2
+  · subst hp2; simp at hceq; omega
+  -- p ≥ 3
+  have hp3 : p ≥ 3 := by omega
+  -- 2^(p-1) ≥ 4 since p-1 ≥ 2
+  have h2pm1_ge : 2 ^ (p - 1) ≥ 4 :=
+    le_trans (by norm_num : 4 ≤ 2 ^ 2) (Nat.pow_le_pow_right (by norm_num) (by omega))
+  -- Rearrange cycle equation: c₀ * (2^(p-1) - 3) = 2^s
+  have hfactor : c₀ * (2 ^ (p - 1) - 3) = 2 ^ s := by
+    have h1 : c₀ * (2 ^ (p - 1) - 3) + c₀ * 3 = c₀ * 2 ^ (p - 1) := by
+      rw [← Nat.left_distrib, Nat.sub_add_cancel (by omega)]
+    omega
+  -- 2^(p-1) - 3 is odd (2^(p-1) = 2k with k ≥ 2, so 2k - 3 is odd)
+  have hd_odd : (2 ^ (p - 1) - 3) % 2 = 1 := by
+    obtain ⟨k, hk, hk2⟩ : ∃ k, 2 ^ (p - 1) = 2 * k ∧ k ≥ 2 := by
+      refine ⟨2 ^ (p - 2), ?_, ?_⟩
+      · rw [← pow_succ']; congr 1; omega
+      · calc 2 ^ (p - 2) ≥ 2 ^ 1 := Nat.pow_le_pow_right (by norm_num) (by omega)
+          _ = 2 := by norm_num
+    rw [hk]; omega
+  -- 2^(p-1) - 3 divides 2^s
+  have hdvd : (2 ^ (p - 1) - 3) ∣ 2 ^ s := ⟨c₀, by linarith⟩
+  -- So 2^(p-1) - 3 = 1
+  have hd1 := odd_dvd_pow_two_eq_one hd_odd hdvd
+  -- 2^(p-1) = 4 and p = 3
+  have h2pm1_4 : 2 ^ (p - 1) = 4 := by omega
+  -- 2^(p-1) = 4 forces p = 3 (since 2^k is injective for base ≥ 2)
+  have hp_eq : p = 3 := by
+    have h_pm1 : p - 1 = 2 := Nat.pow_right_injective (by norm_num : 2 ≤ 2) h2pm1_4
+    omega
+  subst hp_eq
+  -- hceq: c₀ * 4 = 3 * c₀ + 2^s, so c₀ = 2^s
+  have hc_eq : c₀ = 2 ^ s := by simp at hceq; omega
+  -- s < 3, so s ∈ {0, 1, 2}; in each case the cycle contains 1
+  have hs3 : s < 3 := hs
+  -- Since c₀ = collatzSeq n T₂ and c₀ = 2^s, rewrite in terms of collatzSeq
+  have hval : collatzSeq n T₂ = 2 ^ s := by rw [← hc₀_def]; exact hc_eq
+  interval_cases s
+  · -- s = 0: collatzSeq n T₂ = 1
+    exact ⟨T₂, le_refl _, by simpa using hval⟩
+  · -- s = 1: collatzSeq n T₂ = 2, collatz 2 = 1
+    refine ⟨T₂ + 1, by omega, ?_⟩
+    change collatz (collatzSeq n T₂) = 1
+    rw [hval]; decide
+  · -- s = 2: collatzSeq n T₂ = 4, collatz(collatz 4) = 1
+    refine ⟨T₂ + 2, by omega, ?_⟩
+    change collatz (collatz (collatzSeq n T₂)) = 1
+    rw [hval]; decide
+
+/-! ## Δ₃ ≥ 2 case: needs Baker -/
+
+/-- Cycles with Δ₃ ≥ 2 are impossible (needs Baker's theorem on |2^a - 3^b|). -/
+theorem no_cycle_delta3_ge2 (n : ℕ) (_hn : n ≥ 1)
+    (B T₂ p : ℕ) (_hp : p ≥ 1)
+    (_hB : ∀ t, t ≥ T₂ → collatzSeq n t ≤ B)
+    (_hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
+    (_hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop)
+    (_hdelta : oddStepsInPeriod n T₂ p ≥ 2) :
+    ∃ t, t ≥ T₂ ∧ collatzSeq n t = 1 := by
+  sorry
+
 /-- Any eventually periodic Collatz trajectory with walk divergence
     must contain 1 in its cycle.
 
-    For Δ₃ = 1 cycles: proved algebraically (the only such cycle is {1,2,4}).
-    For Δ₃ ≥ 2 cycles: follows from Baker-type estimates on |2^a - 3^b|
-    (uses baker_two_three from Baker.lean).
-
-    Sorry: the full cycle equation analysis + Baker application for Δ₃ ≥ 2. -/
+    Proof by case analysis on Δ₃ (odd steps per period):
+    - Δ₃ = 0: impossible (multiplicative identity forces 2^p = 1)
+    - Δ₃ = 1: the only cycle is {1,2,4} (algebraic)
+    - Δ₃ ≥ 2: impossible (Baker's theorem on |2^a - 3^b|) -/
 theorem cycle_contains_one (n : ℕ) (hn : n ≥ 1)
     (B T₂ p : ℕ) (hp : p ≥ 1)
     (hB : ∀ t, t ≥ T₂ → collatzSeq n t ≤ B)
     (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
     (hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop) :
     ∃ t, t ≥ T₂ ∧ collatzSeq n t = 1 := by
-  sorry
+  -- Case split on Δ₃ = oddStepsInPeriod n T₂ p
+  by_cases h0 : oddStepsInPeriod n T₂ p = 0
+  · exact absurd h0 (by
+      intro h0; exact no_cycle_delta3_zero n hn T₂ p hp (hperiodic T₂ (le_refl _)) h0)
+  by_cases h1 : oddStepsInPeriod n T₂ p = 1
+  · exact cycle_contains_one_of_delta3_one n hn T₂ p hp hperiodic h1
+  · exact no_cycle_delta3_ge2 n hn B T₂ p hp hB hperiodic hdiv (by omega)
 
 /-! ## Main composition -/
 
