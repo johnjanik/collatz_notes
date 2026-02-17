@@ -125,20 +125,6 @@ theorem walkIncrement_at_pureEven (k : ℕ) [NeZero k] (cell : ZMod k × ZMod k)
   have he := pureEven_forces_even k cell N T hpe n t hn1 hn2 ht1 ht2 hcell
   simp [walkIncrement, he]
 
-/-! ## Conjectural theorems (sorry) -/
-
-/-- The Cesàro average of p_odd is eventually below p_equilibrium.
-    Requires ergodic theory and the measure of maximal entropy. -/
-theorem podd_lt_equilibrium_limit (n : ℕ) (hn : n ≥ 1) :
-    ∃ T₀, ∀ t, t ≥ T₀ → (↑(nu3 n t) / ↑t : ℝ) < p_equilibrium := by
-  sorry
-
-/-- The walk diverges to +∞, implying the Collatz sequence reaches 1.
-    This is the Phase 4 capstone theorem. -/
-theorem walk_diverges (n : ℕ) (hn : n ≥ 1) :
-    Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop := by
-  sorry
-
 /-! ## Evaluation -/
 
 #eval walk_approx 7 20

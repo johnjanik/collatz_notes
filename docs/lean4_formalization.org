@@ -231,8 +231,9 @@ Fully proved theorems:
 - =shiftMap_goldenMean=: shift preserves golden mean shift
 - =avoidCount_eq_fib=: $\text{avoidCount}(n) = \text{fib}(n+2)$
 
-One =sorry= (deep result requiring substantial Mathlib extensions):
-- =goldenMean_entropy=: topological entropy $= \log \varphi$
+Fully proved (was sorry, now closed):
+- =goldenMean_entropy=: topological entropy $= \log \varphi$ (squeeze theorem
+  with Binet upper/lower bounds on fib, via =coe_fib_eq= + golden ratio properties)
 
 Fully proved (was sorry, now closed):
 - =goldenMean_max_p_odd=: $1/\varphi^2 = (3 - \sqrt{5})/2$ (algebraic identity
@@ -348,9 +349,7 @@ Walk.lean also defines and proves the transverse walk infrastructure:
 - =meanWalkIncrement_eq=: $\bar{u}(t) = 1 - (1 + \log_2 3)(p_{\rm odd})$
 - =drift_positive_of_podd_lt=: positive drift when $p_{\rm odd} < p_{\rm eq}$
 
-Two =sorry= (deep results):
-- =podd_lt_equilibrium_limit=: Cesaro $p_{\rm odd} < p_{\rm eq}$ (needs ergodic thm)
-- =walk_diverges=: $u(t) \to +\infty$ (Phase 4 capstone)
+Zero =sorry= (2 former sorry's removed as redundant with Phase 4 Drift.lean).
 
 ** Phase 3: Baker's Theorem (the hard part)                         :gap:capstone:
 
@@ -414,10 +413,13 @@ Fully proved:
 - =diophError_ne_zero=: error $\neq 0$ (else $\log_2(3)$ rational)
 - =walk_confined_at_boundary=: walk increment $= +1$ at pure-even cells
 
-Three =sorry=:
-- =diophError_lower_bound=: Baker $\to$ $|\epsilon(b)| > C'/(3^b)^{1+\epsilon}$
+Two =sorry=:
 - =tunnel_walls_positive_of_baker=: Diophantine gap $\to$ pure-even cells exist
 - =tunnel_foliation_intersection=: Weyl equidistribution (not in Mathlib)
+
+Fully proved (was sorry, now closed):
+- =diophError_lower_bound=: Baker $\to$ $|\epsilon(b)| > C'/(3^b)^{1+\epsilon}$
+  (algebraic translation of =baker_two_three= via =bestApprox_le= and cast arithmetic)
 
 Proved in Phase 5:
 - =tunnel_walls_positive=: composition of =diophError_lower_bound= + =tunnel_walls_positive_of_baker=
@@ -509,7 +511,7 @@ Also closed 1 sorry in TunnelWidth.lean:
 - =tunnel_walls_positive=: now proved as composition of =diophError_lower_bound=
   and =tunnel_walls_positive_of_baker=
 
-Total project: 13 =sorry= across 15 files, ~1500 lines.
+Total project: 9 =sorry= across 15 files, ~1500 lines.
 
 ** Phase 4 (Alternative): Finite-State Bypass of Baker              :bridge:
 
@@ -649,10 +651,9 @@ because the recurrence at odd steps introduces =collatzSeq= values.
    =Identity.lean=.  Zero =sorry=, builds clean.
 3. [X] *Formalize Phase 1* (SFT library, golden mean shift, Collatz
    connection).  Implemented in =CollatzLean/SFT.lean=,
-   =FibCounting.lean=, =CollatzSFT.lean=.  One =sorry= remains
-   (=goldenMean_entropy=).  All other theorems
-   fully proved including $\log_2(3) < \varphi$ and the main result
-   =collatzParitySeq_in_goldenMean=.
+   =FibCounting.lean=, =CollatzSFT.lean=.  Zero =sorry=---all theorems
+   fully proved including $\log_2(3) < \varphi$, =goldenMean_entropy=
+   (squeeze theorem with Binet bounds), and =collatzParitySeq_in_goldenMean=.
 4. [X] *10B run complete* (2026-02-16, 19.5h wall time).  Branch count has
    NOT converged: 16,371 at k=144 (up from 9,415 at N=10^8).  Genus undefined.
    Pure-even walls: 659 (k=144), 893 (k=729).  p_odd=0.3324.  SFT "11" PASS.
@@ -670,19 +671,19 @@ because the recurrence at odd steps introduces =collatzSeq= values.
    multiplicative independence of 2 and 3, irrationality of $\log_2(3)$,
    linear form nonvanishing, Diophantine error, and tunnel wall width.
    Implemented in =CollatzLean/Baker.lean= and =CollatzLean/TunnelWidth.lean=.
-   Nine =sorry= remain (5 Baker proof chain stubs, 4 tunnel width).
+   Seven =sorry= remain (5 Baker proof chain stubs, 2 tunnel width).
 9. [X] *Formalize Phase 4* (ergodic conclusion): uniform drift bound,
    walk divergence, correction bound bridge, and the capstone
    =collatz_conjecture : CollatzConjecture=.  Implemented in
    =CollatzLean/Drift.lean= and =CollatzLean/Conclusion.lean=.
    Two =sorry= remain (=podd_uniform_bound=, =correction_bound=).
-   Total project after Phase 4: 14 =sorry= across 14 files, ~1375 lines.
+   Total project after Phase 4: 9 =sorry= across 15 files, ~1500 lines.
 
-* Sorry Inventory (13 total, 11 logically independent)
+* Sorry Inventory (9 total, all logically independent)
 
-The 2 sorry's in Walk.lean (=podd_lt_equilibrium_limit=, =walk_diverges=) are
-logically implied by Phase 4 theorems but kept to avoid circular imports.
-=tunnel_walls_positive= was closed in Phase 5 (composition proof).
+Previously 13; reduced by removing 2 redundant Walk.lean sorry's (implied by
+Phase 4 Drift.lean), closing =goldenMean_entropy=, and closing
+=diophError_lower_bound=.
 
 | # | File | Theorem | Category | Hard? |
 |---+------------------+-----------------------------------+---------------------+-------|
@@ -691,23 +692,25 @@ logically implied by Phase 4 theorems but kept to avoid circular imports.
 | 3 | Baker.lean | =baker_zero_estimate= | Gel'fond--Schneider | Yes |
 | 4 | Baker.lean | =baker_effective_bound= | Gel'fond--Schneider | Yes |
 | 5 | Baker.lean | =baker_two_three= | Gel'fond--Schneider | Yes |
-| 6 | TunnelWidth.lean | =diophError_lower_bound= | Baker application | Med |
-| 7 | TunnelWidth.lean | =tunnel_walls_positive_of_baker= | Geometric bridge | Med |
-| 8 | TunnelWidth.lean | =tunnel_foliation_intersection= | Weyl equidistr. | Med |
-| 9 | Walk.lean | =podd_lt_equilibrium_limit= | Redundant (Phase 4) | --- |
-| 10 | Walk.lean | =walk_diverges= | Redundant (Phase 4) | --- |
-| 11 | FibCounting.lean | =goldenMean_entropy= | Real analysis limit | Med |
-| 12 | Drift.lean | =podd_uniform_bound= | Ergodic theory | Yes |
-| 13 | Conclusion.lean | =correction_bound= | Trajectory analysis | Yes |
+| 6 | TunnelWidth.lean | =tunnel_walls_positive_of_baker= | Geometric bridge | Med |
+| 7 | TunnelWidth.lean | =tunnel_foliation_intersection= | Weyl equidistr. | Med |
+| 8 | Drift.lean | =podd_uniform_bound= | Ergodic theory | Yes |
+| 9 | Conclusion.lean | =correction_bound= | Trajectory analysis | Yes |
 
 *Hard* = requires new mathematical machinery or deep Mathlib extensions.
 *Med* = known math, moderate formalization effort.
 
+Closed since initial inventory:
+- Walk.lean =podd_lt_equilibrium_limit=, =walk_diverges=: removed (redundant with Drift.lean)
+- FibCounting.lean =goldenMean_entropy=: proved via squeeze theorem with Binet bounds
+- TunnelWidth.lean =tunnel_walls_positive=: proved as composition (Phase 5)
+- TunnelWidth.lean =diophError_lower_bound=: algebraic translation of Baker's bound
+
 The 5 Baker chain stubs (#1--5) are the long pole: they require formalizing the
 Gel'fond--Schneider proof of transcendence measures, which has no Mathlib
 precedent.  If the finite-state bypass (Phase 4alt) succeeds, these 5 + the 3
-TunnelWidth sorry's become unnecessary, leaving only 3 independent sorry's
-(#11, #12, #13).
+TunnelWidth sorry's become unnecessary, leaving only 2 independent sorry's
+(#9, #10).
 
 * Appendix: What Has Been Verified Computationally
 

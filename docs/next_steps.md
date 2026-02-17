@@ -1,3 +1,12 @@
+To check on the 100 Billion run progress:
+>>  tail -c 200 saved_output/run_100B.log                                                                                                                         
+                                                                                                                                                              
+  The log file is the persistent one — the /tmp/claude-1000/... task output files are ephemeral and only exist for the Claude session. Since we used nohup with 
+  output redirected to saved_output/run_100B.log, that's the one to watch.                                                                                      
+                                                                                                                                                                
+ For checkpoints:                                                                                                                                              
+>>  tail -1 c_scripts/branch_checkpoints.csv  
+
 ### 1. Why Genus $g \ge 2$ makes sense
 In Section 3.3, we compare Collatz to Arnold's Cat Map. However, the Cat Map is a **linear** Anosov diffeomorphism. The Collatz map is **piecewise linear** and non-uniform.
 
