@@ -3,9 +3,16 @@
   Phase 4b: The ergodic conclusion.
   From walk divergence and the multiplicative identity, we prove that
   the Collatz sequence reaches 1 for every n ≥ 1.
+
+  The proof chain:
+    podd_uniform_bound (sorry, ergodic) →
+    linear walk drift →
+    correction ratio bounded (CorrectionRatio.lean) →
+    trajectory bounded → eventually periodic →
+    cycle is trivial (Δ₃=1 proved, Δ₃≥2 via Baker) →
+    collatzReaches
 -/
-import CollatzLean.Drift
-import CollatzLean.Identity
+import CollatzLean.CorrectionRatio
 import CollatzLean.CollatzSFT
 import Mathlib.Analysis.SpecialFunctions.Log.Base
 
@@ -15,34 +22,15 @@ namespace Collatz
 
 open Real
 
-/-! ## Walk divergence implies Collatz reaches 1
-
-The original approach tried to bound the correction term uniformly as
-`correction n t ≤ C * 3 ^ nu3 n t` for some constant C. This is **false**:
-once the sequence enters the 1→4→2→1 cycle, each cycle contributes 2 even +
-1 odd step, and the correction recurrence `3 * correction + 2^nu2` causes
-`correction / 3^nu3` to grow as `(4/3)^m` per cycle — unbounded.
-
-The correct bridge from walk divergence to `collatzReaches` requires a more
-refined analysis that accounts for the trajectory-dependent growth of the
-correction term, not a uniform bound. -/
-
-/-- Walk divergence implies the Collatz sequence reaches 1.
-    The bridge requires showing that walk(n,t) → +∞ forces
-    collatzSeq(n,t) = 1 for some t. This needs a refined analysis
-    of the correction recurrence that accounts for trajectory-dependent
-    growth, not a uniform bound. -/
-theorem reaches_one_of_walk_diverges (n : ℕ) (hn : n ≥ 1)
-    (hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop) :
-    collatzReaches n := by
-  sorry
-
 /-! ## From power bound to seq = 1
 
 The following two lemmas are **correct** given their hypotheses. They document
-the proof strategy: if one could bound the correction term, walk divergence
-would imply convergence. The difficulty is that no uniform correction bound
-`correction n t ≤ C * 3^(nu3 n t)` exists — see the comment above. -/
+the original proof strategy: if one could bound the correction term uniformly,
+walk divergence would imply convergence. The difficulty is that no uniform
+correction bound `correction n t ≤ C * 3^(nu3 n t)` exists.
+
+These are retained for documentation; the actual proof chain now goes through
+CorrectionRatio.lean instead. -/
 
 /-- If (n + C) · 3^ν₃ < 2 · 2^ν₂, then collatzSeq n t = 1. -/
 theorem seq_eq_one_of_pow_bound (n t C : ℕ) (hn : n ≥ 1)
@@ -115,7 +103,12 @@ theorem collatz_reaches_of_walk_diverges (n : ℕ) (hn : n ≥ 1)
 /-- The Collatz conjecture: every positive natural number eventually reaches 1. -/
 theorem collatz_conjecture : CollatzConjecture := by
   intro n hn
-  exact reaches_one_of_walk_diverges n hn (walk_diverges_of_podd_bound n hn)
+  -- Extract linear drift from podd_uniform_bound
+  obtain ⟨ε, hε, T₀, hbound⟩ := podd_uniform_bound n hn
+  -- Walk diverges (needed for cycle elimination)
+  have hdiv := walk_diverges_of_podd_bound n hn
+  -- Apply the correction ratio proof chain
+  exact reaches_one_of_linear_drift n hn ε hε T₀ hbound hdiv
 
 /-! ## Evaluation -/
 

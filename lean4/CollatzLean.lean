@@ -11,5 +11,6 @@ import CollatzLean.Walk
 import CollatzLean.Baker
 import CollatzLean.TunnelWidth
 import CollatzLean.Drift
+import CollatzLean.CorrectionRatio
 import CollatzLean.Conclusion
 import CollatzLean.WallPersistence
