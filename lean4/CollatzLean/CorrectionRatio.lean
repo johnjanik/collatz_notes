@@ -101,8 +101,8 @@ theorem identity_le_four_pow_nu3 (n : ℕ) (hn : n ≥ 1) (t : ℕ) :
     So a(t)·2^ν₂ ≤ n·2^{ν₂+K}, giving a(t) ≤ n·2^K. -/
 theorem collatzSeq_eventually_bounded_of_linear_drift (n : ℕ) (hn : n ≥ 1)
     (K T₀ : ℕ) (hbound : ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) :
-    ∃ B : ℕ, ∃ T₁ : ℕ, ∀ t, t ≥ T₁ → collatzSeq n t ≤ B := by
-  refine ⟨n * 2 ^ K, T₀, fun t ht => ?_⟩
+    ∃ B : ℕ, ∃ T₁ : ℕ, T₁ ≥ T₀ ∧ ∀ t, t ≥ T₁ → collatzSeq n t ≤ B := by
+  refine ⟨n * 2 ^ K, T₀, le_refl _, fun t ht => ?_⟩
   -- From universal bound + identity: a(t) * 2^ν₂ ≤ n * 4^ν₃
   have h1 : collatzSeq n t * 2 ^ nu2 n t ≤ n * 4 ^ nu3 n t :=
     calc collatzSeq n t * 2 ^ nu2 n t
@@ -195,6 +195,93 @@ theorem reaches_one_of_cycle_142 (n : ℕ) (hn : n ≥ 1)
 /-- Number of odd steps in the window [T₂, T₂ + p). -/
 def oddStepsInPeriod (n T₂ p : ℕ) : ℕ :=
   ((Finset.range p).filter (fun i => isOddStep n (T₂ + i))).card
+
+/-! ## Periodicity infrastructure for nu3/nu2 over cycles -/
+
+/-- isOddStep is periodic when the trajectory is periodic. -/
+private theorem isOddStep_periodic (n T₂ p : ℕ)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
+    (t : ℕ) (ht : t ≥ T₂) : isOddStep n (t + p) = isOddStep n t := by
+  simp only [isOddStep, hperiodic t ht]
+
+/-- oddStepsInPeriod satisfies the expected recurrence at the successor. -/
+private theorem oddStepsInPeriod_succ (n T₂ p : ℕ) :
+    oddStepsInPeriod n T₂ (p + 1) = oddStepsInPeriod n T₂ p +
+      if isOddStep n (T₂ + p) then 1 else 0 := by
+  simp only [oddStepsInPeriod, Finset.range_add_one, Finset.filter_insert]
+  have hmem : p ∉ (Finset.range p).filter (fun i => isOddStep n (T₂ + i)) := by
+    simp [Finset.mem_filter, Finset.mem_range]
+  by_cases ho : (isOddStep n (T₂ + p) : Prop)
+  · simp only [if_pos ho, Finset.card_insert_of_notMem hmem, ite_true]
+  · simp only [if_neg ho, ite_false, Nat.add_zero]
+
+/-- ν₃ increases by oddStepsInPeriod over a window of length p. -/
+private theorem nu3_add_period (n T₂ p : ℕ) :
+    nu3 n (T₂ + p) = nu3 n T₂ + oddStepsInPeriod n T₂ p := by
+  induction p with
+  | zero => simp [oddStepsInPeriod, Finset.filter_empty]
+  | succ p ih =>
+    rw [show T₂ + (p + 1) = (T₂ + p) + 1 from by omega]
+    have hsucc := oddStepsInPeriod_succ n T₂ p
+    rcases even_or_odd_step n (T₂ + p) with he | ho
+    · rw [nu3_step_even n (T₂ + p) he, ih]
+      have : ¬(isOddStep n (T₂ + p) : Prop) := by
+        simp only [isEvenStep, isOddStep, decide_eq_true_eq] at he ⊢; omega
+      simp [this] at hsucc; omega
+    · rw [nu3_step_odd n (T₂ + p) ho, ih]
+      have : (isOddStep n (T₂ + p) : Prop) := by
+        simp only [isOddStep, decide_eq_true_eq] at ho ⊢; exact ho
+      simp [this] at hsucc; omega
+
+/-- oddStepsInPeriod is invariant under shifting T₂ by p (periodicity). -/
+private theorem oddStepsInPeriod_shift (n T₂ p : ℕ)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t) :
+    oddStepsInPeriod n (T₂ + p) p = oddStepsInPeriod n T₂ p := by
+  simp only [oddStepsInPeriod]
+  congr 1; ext i
+  simp only [Finset.mem_filter]
+  constructor
+  · intro ⟨hi, hodd⟩
+    refine ⟨hi, ?_⟩
+    rwa [show T₂ + p + i = (T₂ + i) + p from by omega,
+         isOddStep_periodic n T₂ p hperiodic (T₂ + i) (by omega)] at hodd
+  · intro ⟨hi, hodd⟩
+    refine ⟨hi, ?_⟩
+    rwa [show T₂ + p + i = (T₂ + i) + p from by omega,
+         isOddStep_periodic n T₂ p hperiodic (T₂ + i) (by omega)]
+
+/-- ν₃ after k full periods: ν₃(T₂ + k·p) = ν₃(T₂) + k · Δ₃. -/
+private theorem nu3_add_kperiods (n T₂ p k : ℕ)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t) :
+    nu3 n (T₂ + k * p) = nu3 n T₂ + k * oddStepsInPeriod n T₂ p := by
+  induction k with
+  | zero => simp
+  | succ k ih =>
+    rw [show (k + 1) * p = k * p + p from by ring,
+        show T₂ + (k * p + p) = (T₂ + k * p) + p from by omega,
+        nu3_add_period n (T₂ + k * p) p]
+    -- oddStepsInPeriod at T₂+k*p equals oddStepsInPeriod at T₂
+    suffices oddStepsInPeriod n (T₂ + k * p) p = oddStepsInPeriod n T₂ p by
+      rw [ih, this]; ring
+    -- By induction: shift by p, k times
+    clear ih
+    induction k with
+    | zero => simp
+    | succ k ihk =>
+      rw [show (k + 1) * p = k * p + p from by ring,
+          show T₂ + (k * p + p) = (T₂ + k * p) + p from by omega,
+          oddStepsInPeriod_shift n (T₂ + k * p) p
+            (fun t ht => hperiodic t (by omega)),
+          ihk]
+
+/-- ν₂ after k full periods (additive form): ν₂(T₂+k·p) + k·Δ₃ = ν₂(T₂) + k·p. -/
+private theorem nu2_add_kperiods (n T₂ p k : ℕ)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t) :
+    nu2 n (T₂ + k * p) + k * oddStepsInPeriod n T₂ p = nu2 n T₂ + k * p := by
+  have h3 := nu3_add_kperiods n T₂ p k hperiodic
+  have hpart1 := nu_partition n (T₂ + k * p)
+  have hpart2 := nu_partition n T₂
+  omega
 
 /-- If there are no odd steps in a period, every step is even. -/
 private theorem all_even_of_delta3_zero (n T₂ p : ℕ)
@@ -456,38 +543,184 @@ private theorem cycle_contains_one_of_delta3_one (n : ℕ) (hn : n ≥ 1)
     change collatz (collatz (collatzSeq n T₂)) = 1
     rw [hval]; decide
 
-/-! ## Δ₃ ≥ 2 case: needs Baker -/
+/-! ## Δ₃ ≥ 2 case: decomposition into strict and equality sub-cases -/
 
-/-- Cycles with Δ₃ ≥ 2 are impossible (needs Baker's theorem on |2^a - 3^b|). -/
-theorem no_cycle_delta3_ge2 (n : ℕ) (_hn : n ≥ 1)
-    (B T₂ p : ℕ) (_hp : p ≥ 1)
-    (_hB : ∀ t, t ≥ T₂ → collatzSeq n t ≤ B)
+/-- Trajectory value is periodic: collatzSeq n (T₂ + k*p) = collatzSeq n T₂. -/
+private theorem collatzSeq_kperiods (n T₂ p : ℕ) (k : ℕ)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t) :
+    collatzSeq n (T₂ + k * p) = collatzSeq n T₂ := by
+  induction k with
+  | zero => simp
+  | succ k ih =>
+    rw [show (k + 1) * p = k * p + p from by ring,
+        show T₂ + (k * p + p) = (T₂ + k * p) + p from by omega,
+        hperiodic (T₂ + k * p) (by omega), ih]
+
+/-- From the drift bound 3·ν₃ ≤ t + K and periodicity, derive 3·Δ₃ ≤ p.
+    At t = T₂ + k·p: 3·(ν₃(T₂) + k·Δ₃) ≤ T₂ + k·p + K for all k.
+    If 3·Δ₃ > p then LHS grows faster than RHS, contradiction for large k. -/
+private theorem three_delta3_le_p (n T₂ p : ℕ) (K T₀ : ℕ) (hT₂ : T₂ ≥ T₀)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
+    (hbound3 : ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) :
+    3 * oddStepsInPeriod n T₂ p ≤ p := by
+  by_contra h
+  push_neg at h
+  -- 3*Δ₃ ≥ p + 1
+  set Δ₃ := oddStepsInPeriod n T₂ p with hΔ₃_def
+  -- Choose k so that k*(3Δ₃ - p) > T₂ + K. Since 3Δ₃ - p ≥ 1, k = T₂+K+1 works.
+  set k := T₂ + K + 1
+  have hnu3k := nu3_add_kperiods n T₂ p k hperiodic
+  have hk_bound := hbound3 (T₂ + k * p) (by omega)
+  rw [hnu3k] at hk_bound
+  -- hk_bound: 3*(ν₃(T₂) + k*Δ₃) ≤ T₂ + k*p + K
+  -- From 3*Δ₃ ≥ p+1: k*(p+1) ≤ k*(3*Δ₃), so k*p + k ≤ 3*(k*Δ₃)
+  have hkp : k * p + k ≤ 3 * (k * Δ₃) := by
+    have : k * (p + 1) ≤ k * (3 * Δ₃) := Nat.mul_le_mul_left k (by omega)
+    have : k * p + k = k * (p + 1) := by ring
+    have : 3 * (k * Δ₃) = k * (3 * Δ₃) := by ring
+    omega
+  -- Chain: cancel nonlinear terms by explicit calc
+  have hchain : 3 * nu3 n T₂ + k * p + k ≤ T₂ + k * p + K :=
+    calc 3 * nu3 n T₂ + k * p + k
+        ≤ 3 * nu3 n T₂ + 3 * (k * Δ₃) := by linarith
+      _ = 3 * (nu3 n T₂ + k * Δ₃) := by ring
+      _ ≤ T₂ + k * p + K := hk_bound
+  omega
+
+/-- The strict inequality case (2Δ₃ < Δ₂, i.e. 3Δ₃ < p): the universal bound
+    a(t)·2^ν₂ ≤ n·4^ν₃ at t = T₂+k·p forces a(T₂) < 1 for large k,
+    contradicting a(T₂) ≥ 1. -/
+private theorem no_cycle_strict_inequality (n : ℕ) (hn : n ≥ 1)
+    (T₂ p : ℕ) (_hp : p ≥ 1)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
+    (hstrict : 3 * oddStepsInPeriod n T₂ p + 1 ≤ p) : False := by
+  set Δ₃ := oddStepsInPeriod n T₂ p with hΔ₃_def
+  -- Choose k so that ν₂(T₂+k*p) > 2*ν₃(T₂+k*p) + n
+  -- Sufficient: k ≥ 2*ν₃(T₂) + n + 1 (see calculation below)
+  set k := 2 * nu3 n T₂ + n + 1
+  set t := T₂ + k * p with ht_def
+  -- Universal bound at t
+  have hub : collatzSeq n t * 2 ^ nu2 n t ≤ n * 4 ^ nu3 n t :=
+    calc collatzSeq n t * 2 ^ nu2 n t
+        = n * 3 ^ nu3 n t + correction n t := collatz_identity n t
+      _ ≤ n * 4 ^ nu3 n t := identity_le_four_pow_nu3 n hn t
+  -- ν₃ at t
+  have hnu3 := nu3_add_kperiods n T₂ p k hperiodic
+  -- Trajectory value at t = collatzSeq n T₂ (periodicity)
+  have hseq := collatzSeq_kperiods n T₂ p k hperiodic
+  rw [hseq] at hub
+  -- collatzSeq n T₂ ≥ 1
+  have hc_pos := collatzSeq_pos n hn T₂
+  -- Partition at t and at T₂
+  have hpart_t := nu_partition n t
+  have hpart_T₂ := nu_partition n T₂
+  -- Key inequality: 2*ν₃(t) + (n+1) ≤ ν₂(t)
+  -- ν₃(t) = ν₃(T₂) + k*Δ₃
+  -- ν₂(t) = T₂ + k*p - ν₃(T₂) - k*Δ₃  (from partition)
+  -- Need: 2*(ν₃(T₂) + k*Δ₃) + (n+1) ≤ T₂ + k*p - ν₃(T₂) - k*Δ₃
+  -- i.e. 3*ν₃(T₂) + 3*k*Δ₃ + n + 1 ≤ T₂ + k*p
+  -- Since p ≥ 3*Δ₃+1: k*p ≥ 3*k*Δ₃ + k
+  -- So RHS ≥ T₂ + 3*k*Δ₃ + k, need: 3*ν₃(T₂) + n + 1 ≤ T₂ + k
+  -- k = 2*ν₃(T₂) + n + 1, T₂ ≥ ν₃(T₂) (partition), so T₂ + k ≥ 3*ν₃(T₂) + n + 1 ✓
+  have hexp : 2 * nu3 n t + (n + 1) ≤ nu2 n t := by
+    -- Suffices: 3*nu3(t) + (n+1) ≤ t (then omega closes using partition)
+    have hpart := nu_partition n t
+    suffices h : 3 * nu3 n t + (n + 1) ≤ T₂ + k * p by omega
+    -- nu3(t) = nu3(T₂) + k*Δ₃
+    rw [hnu3]
+    -- Goal: 3*(ν₃(T₂) + k*Δ₃) + (n+1) ≤ T₂ + k*p
+    -- From hstrict: k*(3*Δ₃+1) ≤ k*p, so 3*(k*Δ₃) + k ≤ k*p
+    have hkp : 3 * (k * Δ₃) + k ≤ k * p := by
+      have h1 : k * (3 * Δ₃ + 1) ≤ k * p := Nat.mul_le_mul_left k hstrict
+      have : 3 * (k * Δ₃) + k = k * (3 * Δ₃ + 1) := by ring
+      omega
+    -- From partition: ν₃(T₂) ≤ T₂
+    have hnu3_le : nu3 n T₂ ≤ T₂ := by have := nu_partition n T₂; omega
+    -- Chain: 3*(ν₃(T₂)+k*Δ₃) + (n+1) ≤ T₂ + k + 3*(k*Δ₃) ≤ T₂ + k*p
+    calc 3 * (nu3 n T₂ + k * Δ₃) + (n + 1)
+        = 3 * nu3 n T₂ + 3 * (k * Δ₃) + (n + 1) := by ring
+      _ ≤ T₂ + k + 3 * (k * Δ₃) := by omega
+      _ ≤ T₂ + k * p := by linarith
+  -- From hexp: 2^(n+1) * 4^ν₃(t) ≤ 2^ν₂(t)
+  have hpow : 2 ^ (n + 1) * 4 ^ nu3 n t ≤ 2 ^ nu2 n t :=
+    calc 2 ^ (n + 1) * 4 ^ nu3 n t
+        = 2 ^ (n + 1) * (2 ^ 2) ^ nu3 n t := by norm_num
+      _ = 2 ^ (n + 1) * 2 ^ (2 * nu3 n t) := by rw [← pow_mul]
+      _ = 2 ^ (n + 1 + 2 * nu3 n t) := by rw [← pow_add]
+      _ ≤ 2 ^ nu2 n t :=
+          Nat.pow_le_pow_right (by norm_num) (by omega)
+  -- From hub and hc_pos: 2^ν₂(t) ≤ n * 4^ν₃(t)
+  have h2 : 2 ^ nu2 n t ≤ n * 4 ^ nu3 n t :=
+    calc 2 ^ nu2 n t
+        = 1 * 2 ^ nu2 n t := by ring
+      _ ≤ collatzSeq n T₂ * 2 ^ nu2 n t :=
+          Nat.mul_le_mul_right _ hc_pos
+      _ ≤ n * 4 ^ nu3 n t := hub
+  -- Combined: 2^(n+1) * 4^ν₃(t) ≤ n * 4^ν₃(t)
+  -- Cancel 4^ν₃(t): 2^(n+1) ≤ n
+  have h4pos : 0 < 4 ^ nu3 n t := by positivity
+  have habsurd : 2 ^ (n + 1) ≤ n :=
+    Nat.le_of_mul_le_mul_right (le_trans hpow h2) h4pos
+  -- But n < 2^(n+1) for all n, contradiction
+  have : n < 2 ^ (n + 1) :=
+    lt_of_lt_of_le (Nat.lt_pow_self (by norm_num : 1 < 2))
+      (Nat.pow_le_pow_right (by norm_num) (by omega))
+  omega
+
+/-- The equality case (2Δ₃ = Δ₂, i.e. p = 3Δ₃): needs Baker's theorem.
+    When p = 3·Δ₃, the cycle equation gives c₀ = S/(4^Δ₃ - 3^Δ₃) where
+    S ~ 3^Δ₃ grows, so c₀ doesn't shrink to zero. Ruling out integer
+    solutions requires Baker's theorem on linear forms in logarithms
+    (specifically, lower bounds on |2^a - 3^b|) combined with
+    computational verification for small Δ₃. -/
+private theorem no_cycle_equality_case (n : ℕ) (_hn : n ≥ 1)
+    (T₂ p : ℕ) (_hp : p ≥ 1)
     (_hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
-    (_hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop)
+    (_hpeq : p = 3 * oddStepsInPeriod n T₂ p)
     (_hdelta : oddStepsInPeriod n T₂ p ≥ 2) :
     ∃ t, t ≥ T₂ ∧ collatzSeq n t = 1 := by
   sorry
 
-/-- Any eventually periodic Collatz trajectory with walk divergence
+/-- Cycles with Δ₃ ≥ 2 are impossible.
+    Case split: if 3Δ₃ < p (strict), the universal bound gives a contradiction.
+    If 3Δ₃ = p (equality), needs Baker — left as a focused sorry. -/
+theorem no_cycle_delta3_ge2 (n : ℕ) (hn : n ≥ 1)
+    (B T₂ p : ℕ) (hp : p ≥ 1) (K T₀ : ℕ) (hT₂ : T₂ ≥ T₀)
+    (_hB : ∀ t, t ≥ T₂ → collatzSeq n t ≤ B)
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
+    (hbound3 : ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K)
+    (hdelta : oddStepsInPeriod n T₂ p ≥ 2) :
+    ∃ t, t ≥ T₂ ∧ collatzSeq n t = 1 := by
+  have h3d := three_delta3_le_p n T₂ p K T₀ hT₂ hperiodic hbound3
+  -- Case split: 3*Δ₃ < p or 3*Δ₃ = p
+  by_cases heq : p = 3 * oddStepsInPeriod n T₂ p
+  · exact no_cycle_equality_case n hn T₂ p hp hperiodic heq hdelta
+  · exact absurd
+      (no_cycle_strict_inequality n hn T₂ p hp hperiodic (by omega))
+      (not_false)
+
+/-- Any eventually periodic Collatz trajectory with linear drift bound
     must contain 1 in its cycle.
 
     Proof by case analysis on Δ₃ (odd steps per period):
     - Δ₃ = 0: impossible (multiplicative identity forces 2^p = 1)
     - Δ₃ = 1: the only cycle is {1,2,4} (algebraic)
-    - Δ₃ ≥ 2: impossible (Baker's theorem on |2^a - 3^b|) -/
+    - Δ₃ ≥ 2: impossible (strict case proved; equality case needs Baker) -/
 theorem cycle_contains_one (n : ℕ) (hn : n ≥ 1)
-    (B T₂ p : ℕ) (hp : p ≥ 1)
+    (B T₂ p : ℕ) (hp : p ≥ 1) (K T₀ : ℕ) (hT₂ : T₂ ≥ T₀)
     (hB : ∀ t, t ≥ T₂ → collatzSeq n t ≤ B)
     (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
-    (hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop) :
+    (hbound3 : ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) :
     ∃ t, t ≥ T₂ ∧ collatzSeq n t = 1 := by
   -- Case split on Δ₃ = oddStepsInPeriod n T₂ p
   by_cases h0 : oddStepsInPeriod n T₂ p = 0
   · exact absurd h0 (by
-      intro h0; exact no_cycle_delta3_zero n hn T₂ p hp (hperiodic T₂ (le_refl _)) h0)
+      intro h0; exact no_cycle_delta3_zero n hn T₂ p hp
+        (hperiodic T₂ (le_refl _)) h0)
   by_cases h1 : oddStepsInPeriod n T₂ p = 1
   · exact cycle_contains_one_of_delta3_one n hn T₂ p hp hperiodic h1
-  · exact no_cycle_delta3_ge2 n hn B T₂ p hp hB hperiodic hdiv (by omega)
+  · exact no_cycle_delta3_ge2 n hn B T₂ p hp K T₀ hT₂ hB hperiodic
+      hbound3 (by omega)
 
 /-! ## Main composition -/
 
@@ -500,12 +733,14 @@ theorem reaches_one_of_linear_drift (n : ℕ) (hn : n ≥ 1)
     (hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop) :
     collatzReaches n := by
   -- Step 1: trajectory is eventually bounded
-  obtain ⟨B, T₁, hBound⟩ := collatzSeq_eventually_bounded_of_linear_drift n hn K T₀ hbound3
+  obtain ⟨B, T₁, hT₁ge, hBound⟩ :=
+    collatzSeq_eventually_bounded_of_linear_drift n hn K T₀ hbound3
   -- Step 2: trajectory is eventually periodic
-  obtain ⟨T₂, p, hp, hT₂ge, hPeriodic⟩ := collatzSeq_eventually_periodic_of_bounded n hn B T₁ hBound
-  -- Step 3: cycle contains 1
-  have hCycle := cycle_contains_one n hn B T₂ p hp
-    (fun t ht => hBound t (by omega)) hPeriodic hdiv
+  obtain ⟨T₂, p, hp, hT₂ge, hPeriodic⟩ :=
+    collatzSeq_eventually_periodic_of_bounded n hn B T₁ hBound
+  -- Step 3: cycle contains 1 (pass K, T₀, hbound3 for Δ₃≥2 case)
+  have hCycle := cycle_contains_one n hn B T₂ p hp K T₀ (by omega)
+    (fun t ht => hBound t (by omega)) hPeriodic hbound3
   -- Step 4: extract collatzReaches
   obtain ⟨t, _, ht1⟩ := hCycle
   exact ⟨t, ht1⟩
