@@ -15,17 +15,34 @@ namespace Collatz
 
 open Real
 
-/-! ## Correction bound -/
+/-! ## Walk divergence implies Collatz reaches 1
 
-/-- The correction term grows at most as C · 3^(ν₃(n,t)).
-    This is genuinely hard: the correction recurrence at odd steps introduces
-    terms involving collatzSeq values, so simple induction fails. Requires
-    global trajectory analysis or a priori bounds on intermediate values. -/
-theorem correction_bound (n : ℕ) (_hn : n ≥ 1) :
-    ∃ C : ℕ, ∀ t, correction n t ≤ C * 3 ^ nu3 n t := by
+The original approach tried to bound the correction term uniformly as
+`correction n t ≤ C * 3 ^ nu3 n t` for some constant C. This is **false**:
+once the sequence enters the 1→4→2→1 cycle, each cycle contributes 2 even +
+1 odd step, and the correction recurrence `3 * correction + 2^nu2` causes
+`correction / 3^nu3` to grow as `(4/3)^m` per cycle — unbounded.
+
+The correct bridge from walk divergence to `collatzReaches` requires a more
+refined analysis that accounts for the trajectory-dependent growth of the
+correction term, not a uniform bound. -/
+
+/-- Walk divergence implies the Collatz sequence reaches 1.
+    The bridge requires showing that walk(n,t) → +∞ forces
+    collatzSeq(n,t) = 1 for some t. This needs a refined analysis
+    of the correction recurrence that accounts for trajectory-dependent
+    growth, not a uniform bound. -/
+theorem reaches_one_of_walk_diverges (n : ℕ) (hn : n ≥ 1)
+    (hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop) :
+    collatzReaches n := by
   sorry
 
-/-! ## From power bound to seq = 1 -/
+/-! ## From power bound to seq = 1
+
+The following two lemmas are **correct** given their hypotheses. They document
+the proof strategy: if one could bound the correction term, walk divergence
+would imply convergence. The difficulty is that no uniform correction bound
+`correction n t ≤ C * 3^(nu3 n t)` exists — see the comment above. -/
 
 /-- If (n + C) · 3^ν₃ < 2 · 2^ν₂, then collatzSeq n t = 1. -/
 theorem seq_eq_one_of_pow_bound (n t C : ℕ) (hn : n ≥ 1)
@@ -47,9 +64,9 @@ theorem seq_eq_one_of_pow_bound (n t C : ℕ) (hn : n ≥ 1)
   have hpos := collatzSeq_pos n hn t
   omega
 
-/-! ## Reaches 1 from walk divergence -/
-
-/-- If the walk diverges, then the Collatz sequence reaches 1. -/
+/-- If the walk diverges and a correction bound holds, then the Collatz
+    sequence reaches 1. This is correct but requires a correction bound
+    hypothesis that cannot be satisfied uniformly. -/
 theorem collatz_reaches_of_walk_diverges (n : ℕ) (hn : n ≥ 1)
     (C : ℕ) (hC : ∀ t, correction n t ≤ C * 3 ^ nu3 n t)
     (hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop) :
@@ -98,14 +115,17 @@ theorem collatz_reaches_of_walk_diverges (n : ℕ) (hn : n ≥ 1)
 /-- The Collatz conjecture: every positive natural number eventually reaches 1. -/
 theorem collatz_conjecture : CollatzConjecture := by
   intro n hn
-  obtain ⟨C, hC⟩ := correction_bound n hn
-  have hdiv := walk_diverges_of_podd_bound n hn
-  exact collatz_reaches_of_walk_diverges n hn C hC hdiv
+  exact reaches_one_of_walk_diverges n hn (walk_diverges_of_podd_bound n hn)
 
 /-! ## Evaluation -/
 
--- Verify correction bound holds for small examples
-#eval (List.range 20).all fun t => correction 7 t ≤ 7 * 3 ^ nu3 7 t
-#eval (List.range 112).all fun t => correction 27 t ≤ 27 * 3 ^ nu3 27 t
+-- Demonstrate that correction / 3^nu3 grows unboundedly (no uniform constant C works).
+-- For n=7: the sequence reaches 1 at t=16, then cycles 1→4→2→1.
+-- Each cycle adds 1 odd step where correction recurrence is 3*correction + 2^nu2,
+-- so correction/3^nu3 grows as (4/3)^m per cycle.
+#eval (List.range 30).map fun t =>
+  let c := correction 7 t
+  let pow3 := 3 ^ nu3 7 t
+  (t, c, if pow3 > 0 then c / pow3 else 0)
 
 end Collatz

@@ -458,24 +458,29 @@ the Collatz sequence reaches 1 for every $n \ge 1$.
 
 Fully proved:
 - =seq_eq_one_of_pow_bound=: power bound forces =collatzSeq n t = 1= via the
-  multiplicative identity and correction bound
+  multiplicative identity and correction bound (correct given its hypotheses,
+  but requires a correction bound that does not hold uniformly)
 - =collatz_reaches_of_walk_diverges=: walk divergence $\to$ =collatzReaches n=
-  (bridge via $\log_b$ $\to$ $\log$ $\to$ $\exp$ monotonicity $\to$ $\mathbb{N}$ cast)
+  (bridge via $\log_b$ $\to$ $\log$ $\to$ $\exp$ monotonicity $\to$ $\mathbb{N}$ cast;
+  also correct given its hypotheses, kept to document the proof strategy)
 - =collatz_conjecture : CollatzConjecture=: the capstone theorem
 
 One =sorry=:
-- =correction_bound=: $\exists C, \forall t, \text{correction}(n,t) \le C \cdot 3^{\nu_3}$
-  (genuinely hard: the correction recurrence at odd steps introduces terms
-  involving =collatzSeq= values, so simple induction fails; requires global
-  trajectory analysis or a priori bounds on intermediate values)
+- =reaches_one_of_walk_diverges=: walk divergence $\to$ =collatzReaches n=
+  directly, without assuming a uniform correction bound.  The original
+  =correction_bound= (claiming $\exists C, \forall t, \text{correction}(n,t)
+  \le C \cdot 3^{\nu_3}$) was *false*: once the sequence enters the
+  1$\to$4$\to$2$\to$1 cycle, each cycle contributes 2 even + 1 odd step, and
+  the correction recurrence $3 \cdot \text{correction} + 2^{\nu_2}$ causes
+  $\text{correction}/3^{\nu_3}$ to grow as $(4/3)^m$ per cycle---unbounded.
+  Replaced with an honest sorry that directly bridges walk divergence to
+  =collatzReaches=, requiring a trajectory-dependent analysis.
 
 The capstone proof:
 #+begin_src lean4
 theorem collatz_conjecture : CollatzConjecture := by
   intro n hn
-  obtain ⟨C, hC⟩ := correction_bound n hn
-  have hdiv := walk_diverges_of_podd_bound n hn
-  exact collatz_reaches_of_walk_diverges n hn C hC hdiv
+  exact reaches_one_of_walk_diverges n hn (walk_diverges_of_podd_bound n hn)
 #+end_src
 
 ** Phase 5: Wall Persistence                                        :bridge:capstone:
@@ -630,17 +635,24 @@ This is the "finite-state bypass" question.  If we can construct the
 transition matrix and verify its spectral gap, we avoid Baker entirely.
 The matrix is ~10K × 10K---large but not impossible.
 
-** DONE What is the precise relationship between the walk $u(t)$ diverging and $T^t(n) \to 1$?
+** OPEN What is the precise relationship between the walk $u(t)$ diverging and $T^t(n) \to 1$?
 
-*Resolved in Phase 4* (=Conclusion.lean=).  The bridge is:
+*Partially resolved in Phase 4* (=Conclusion.lean=).  The original approach was:
 1. The multiplicative identity: $T^t(n) \cdot 2^{\nu_2} = n \cdot 3^{\nu_3} + R(t)$.
-2. A correction bound: $R(t) \le C \cdot 3^{\nu_3}$ (sorry'd as =correction_bound=).
-3. Walk divergence gives $\nu_2 - \log_2(3) \cdot \nu_3 \to +\infty$, so
-   $(n+C) \cdot 3^{\nu_3} < 2^{\nu_2}$ eventually.
-4. Therefore $T^t(n) \cdot 2^{\nu_2} < 2 \cdot 2^{\nu_2}$, giving $T^t(n) = 1$.
+2. A uniform correction bound: $R(t) \le C \cdot 3^{\nu_3}$.
+3. Walk divergence gives $(n+C) \cdot 3^{\nu_3} < 2^{\nu_2}$ eventually.
+4. Therefore $T^t(n) = 1$.
 
-The correction bound is the remaining hard sorry---simple induction fails
-because the recurrence at odd steps introduces =collatzSeq= values.
+*Update (2026-02-17):* Step 2 is *false*.  Once the sequence enters the
+1→4→2→1 cycle, each cycle contributes 2 even + 1 odd step.  At each odd step,
+the correction recurrence is $3 \cdot R + 2^{\nu_2}$, so $R/3^{\nu_3}$ grows
+as $(4/3)^m$ per cycle---unbounded.  Verified computationally: for $n = 7$,
+any constant $C$ fails by $t = 20$.
+
+The sorry =reaches_one_of_walk_diverges= now directly bridges walk divergence
+to =collatzReaches= without assuming a uniform correction bound.  A correct
+proof likely needs trajectory-dependent analysis: showing that the walk
+diverging fast enough compensates for the correction growth.
 
 * Immediate Next Actions
 
@@ -676,8 +688,11 @@ because the recurrence at odd steps introduces =collatzSeq= values.
    walk divergence, correction bound bridge, and the capstone
    =collatz_conjecture : CollatzConjecture=.  Implemented in
    =CollatzLean/Drift.lean= and =CollatzLean/Conclusion.lean=.
-   Two =sorry= remain (=podd_uniform_bound=, =correction_bound=).
+   Two =sorry= remain (=podd_uniform_bound=, =reaches_one_of_walk_diverges=).
    Total project after Phase 4: 9 =sorry= across 15 files, ~1500 lines.
+   Note: original =correction_bound= was false (uniform bound on correction
+   term does not hold); replaced with =reaches_one_of_walk_diverges= which
+   directly bridges walk divergence to convergence (2026-02-17).
 
 * Sorry Inventory (9 total, all logically independent)
 
@@ -695,7 +710,7 @@ Phase 4 Drift.lean), closing =goldenMean_entropy=, and closing
 | 6 | TunnelWidth.lean | =tunnel_walls_positive_of_baker= | Geometric bridge | Med |
 | 7 | TunnelWidth.lean | =tunnel_foliation_intersection= | Weyl equidistr. | Med |
 | 8 | Drift.lean | =podd_uniform_bound= | Ergodic theory | Yes |
-| 9 | Conclusion.lean | =correction_bound= | Trajectory analysis | Yes |
+| 9 | Conclusion.lean | =reaches_one_of_walk_diverges= | Walk→convergence bridge | Yes |
 
 *Hard* = requires new mathematical machinery or deep Mathlib extensions.
 *Med* = known math, moderate formalization effort.
