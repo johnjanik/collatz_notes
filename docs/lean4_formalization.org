@@ -443,8 +443,9 @@ Fully proved (zero =sorry= in the proofs themselves):
 - =walk_diverges_of_podd_bound=: composition of the above
 
 One =sorry= (deep input):
-- =podd_uniform_bound=: $\exists \varepsilon > 0, T_0$ s.t. $\nu_3/t \le p_{\rm eq} - \varepsilon$
-  for $t \ge T_0$ (needs ergodic theorem for Collatz transfer operator + golden mean SFT constraint)
+- =podd_uniform_bound=: $\exists \varepsilon > 0, T_0, K$ s.t. $\nu_3/t \le p_{\rm eq} - \varepsilon$
+  and $3\nu_3 \le t + K$ for $t \ge T_0$ (needs ergodic theorem for Collatz transfer operator
+  + golden mean SFT constraint)
 
 *** DONE [#A] Compose the four pillars into the main theorem
 :PROPERTIES:
@@ -469,13 +470,14 @@ Also implemented in =CollatzLean/CorrectionRatio.lean=, which provides
 the correction ratio proof chain:
 - =correction_ratio_even=, =correction_ratio_odd=: recurrence lemmas (proved)
 - =collatzSeq_le_of_identity=: identity wrapper (proved)
-- =reaches_one_of_linear_drift=: main composition (proved, calls 3 sorry's below)
+- =identity_le_four_pow_nu3=: universal bound $n \cdot 3^{\nu_3} + C(t) \le n \cdot 4^{\nu_3}$
+  by induction (proved)
+- =collatzSeq_eventually_bounded_of_linear_drift=: if $3\nu_3 \le t + K$ for large $t$,
+  then $a(t) \le n \cdot 2^K$ (proved, via universal bound + cancellation)
+- =reaches_one_of_linear_drift=: main composition (proved, calls 1 sorry below)
 
-Three =sorry= (decomposed from the former =reaches_one_of_walk_diverges=):
-- =collatzSeq_eventually_bounded_of_linear_drift=: geometric series bound
-  on the correction ratio $C(t)/2^{\nu_2}$ (see =correction_ratio_bound.tex=)
-- =collatzSeq_eventually_periodic_of_bounded=: pigeonhole on bounded trajectory
-- =cycle_contains_one=: cycle equation analysis + Baker for $\Delta_3 \ge 2$
+One =sorry= (decomposed from the former =reaches_one_of_walk_diverges=):
+- =no_cycle_delta3_ge2=: cycle elimination for $\Delta_3 \ge 2$ (Baker application)
 
 The original =correction_bound= (claiming $\exists C, \forall t,
 \text{correction}(n,t) \le C \cdot 3^{\nu_3}$) was *false*: once the sequence
@@ -487,9 +489,9 @@ The capstone proof:
 #+begin_src lean4
 theorem collatz_conjecture : CollatzConjecture := by
   intro n hn
-  obtain ⟨ε, hε, T₀, hbound⟩ := podd_uniform_bound n hn
+  obtain ⟨ε, hε, T₀, K, hbound, hbound3⟩ := podd_uniform_bound n hn
   have hdiv := walk_diverges_of_podd_bound n hn
-  exact reaches_one_of_linear_drift n hn ε hε T₀ hbound hdiv
+  exact reaches_one_of_linear_drift n hn K T₀ hbound3 hdiv
 #+end_src
 
 ** Phase 5: Wall Persistence                                        :bridge:capstone:
@@ -525,7 +527,7 @@ Also closed 1 sorry in TunnelWidth.lean:
 - =tunnel_walls_positive=: now proved as composition of =diophError_lower_bound=
   and =tunnel_walls_positive_of_baker=
 
-Total project: 9 =sorry= across 15 files, ~1500 lines.
+Total project: 9 =sorry= across 16 files, ~1600 lines.
 
 ** Phase 4 (Alternative): Finite-State Bypass of Baker              :bridge:
 
@@ -658,12 +660,14 @@ the correction recurrence is $3 \cdot R + 2^{\nu_2}$, so $R/3^{\nu_3}$ grows
 as $(4/3)^m$ per cycle---unbounded.  Verified computationally: for $n = 7$,
 any constant $C$ fails by $t = 20$.
 
-The correction ratio approach (=CorrectionRatio.lean=) resolves this gap by
-working with $r(t) = C(t)/2^{\nu_2}$ instead of $C(t)/3^{\nu_3}$.  When the
-walk has linear drift, a geometric series argument bounds $r(t)$, giving
-trajectory boundedness.  See =correction_ratio_bound.tex= for the full proof.
-Three sorry's remain: the geometric series bound, pigeonhole periodicity,
-and cycle elimination.
+The correction ratio approach (=CorrectionRatio.lean=) resolves this gap.
+A universal inductive bound $n \cdot 3^{\nu_3} + C(t) \le n \cdot 4^{\nu_3}$
+(=identity_le_four_pow_nu3=) combined with the hypothesis $3\nu_3 \le t + K$
+gives $a(t) \le n \cdot 2^K$ directly---no geometric series needed.  The
+=podd_uniform_bound= sorry was strengthened to provide both the density bound
+$\nu_3/t \le p_{\rm eq} - \varepsilon$ and the linear bound $3\nu_3 \le t + K$.
+One sorry remains: =no_cycle_delta3_ge2= (Baker application for cycles with
+$\Delta_3 \ge 2$).
 
 * Immediate Next Actions
 
@@ -700,20 +704,24 @@ and cycle elimination.
    =collatz_conjecture : CollatzConjecture=.  Implemented in
    =CollatzLean/Drift.lean=, =CollatzLean/CorrectionRatio.lean=, and
    =CollatzLean/Conclusion.lean=.
-   Four =sorry= remain: =podd_uniform_bound= (Drift.lean),
-   =collatzSeq_eventually_bounded_of_linear_drift=,
-   =collatzSeq_eventually_periodic_of_bounded=,
-   =cycle_contains_one= (all CorrectionRatio.lean).
-   Total project after Phase 4: 11 =sorry= across 16 files, ~1600 lines.
-   Note: original =correction_bound= was false; decomposed into 3 honest
-   sorry's via the correction ratio $C(t)/2^{\nu_2}$ approach (2026-02-17).
+   Two =sorry= remain: =podd_uniform_bound= (Drift.lean, strengthened to
+   also provide $3\nu_3 \le t + K$), =no_cycle_delta3_ge2= (CorrectionRatio.lean).
+   =collatzSeq_eventually_bounded_of_linear_drift= proved via universal
+   inductive bound $n \cdot 3^{\nu_3} + C(t) \le n \cdot 4^{\nu_3}$ (2026-02-17).
+   =collatzSeq_eventually_periodic_of_bounded= proved via pigeonhole.
+   =cycle_contains_one= proved via $\Delta_3$ case analysis.
+   Total project after Phase 4: 9 =sorry= across 16 files, ~1600 lines.
 
-* Sorry Inventory (10 total, all logically independent)
+* Sorry Inventory (9 total, all logically independent)
 
 Previously 13; reduced by removing 2 redundant Walk.lean sorry's (implied by
 Phase 4 Drift.lean), closing =goldenMean_entropy=, and closing
 =diophError_lower_bound=.  Then decomposed =reaches_one_of_walk_diverges=
-into 3 specific sorry's in =CorrectionRatio.lean= (net +2).
+into 3 specific sorry's in =CorrectionRatio.lean= (net +2).  Closed
+=collatzSeq_eventually_periodic_of_bounded= (pigeonhole), decomposed
+=cycle_contains_one= ($\Delta_3$ case analysis, closing $\Delta_3 = 0,1$),
+and closed =collatzSeq_eventually_bounded_of_linear_drift= (universal
+inductive bound).
 
 | # | File | Theorem | Category | Hard? |
 |---+--------------------+----------------------------------------------+---------------------+-------|
@@ -725,13 +733,10 @@ into 3 specific sorry's in =CorrectionRatio.lean= (net +2).
 | 6 | TunnelWidth.lean | =tunnel_walls_positive_of_baker= | Geometric bridge | Med |
 | 7 | TunnelWidth.lean | =tunnel_foliation_intersection= | Weyl equidistr. | Med |
 | 8 | Drift.lean | =podd_uniform_bound= | Ergodic theory | Yes |
-| 9 | CorrectionRatio.lean | =collatzSeq_eventually_bounded_of_linear_drift= | Geometric series | Med |
-| -- | CorrectionRatio.lean | =collatzSeq_eventually_periodic_of_bounded= | Pigeonhole | DONE |
-| 10 | CorrectionRatio.lean | =cycle_contains_one= | Cycle elimination | Med |
+| 9 | CorrectionRatio.lean | =no_cycle_delta3_ge2= | Baker for cycles | Med |
 
 *Hard* = requires new mathematical machinery or deep Mathlib extensions.
 *Med* = known math, moderate formalization effort.
-*DONE* = closed (pigeonhole via =Fintype.exists_ne_map_eq_of_card_lt=).
 
 Closed since initial inventory:
 - Walk.lean =podd_lt_equilibrium_limit=, =walk_diverges=: removed (redundant with Drift.lean)
@@ -739,12 +744,17 @@ Closed since initial inventory:
 - TunnelWidth.lean =tunnel_walls_positive=: proved as composition (Phase 5)
 - TunnelWidth.lean =diophError_lower_bound=: algebraic translation of Baker's bound
 - CorrectionRatio.lean =collatzSeq_eventually_periodic_of_bounded=: pigeonhole + shift propagation
+- CorrectionRatio.lean =cycle_contains_one=: decomposed via $\Delta_3$ case analysis;
+  $\Delta_3 = 0$ (identity contradiction) and $\Delta_3 = 1$ ({1,2,4} algebraic) proved
+- CorrectionRatio.lean =collatzSeq_eventually_bounded_of_linear_drift=: proved via universal
+  inductive bound $n \cdot 3^{\nu_3} + C(t) \le n \cdot 4^{\nu_3}$, then $3\nu_3 \le t+K$
+  gives $a(t) \le n \cdot 2^K$
 
 The 5 Baker chain stubs (#1--5) are the long pole: they require formalizing the
 Gel'fond--Schneider proof of transcendence measures, which has no Mathlib
-precedent.  If the finite-state bypass (Phase 4alt) succeeds, these 5 + the 3
+precedent.  If the finite-state bypass (Phase 4alt) succeeds, these 5 + the 2
 TunnelWidth sorry's become unnecessary, leaving only 2 independent sorry's
-(#9, #10).
+(#8, #9).
 
 * Appendix: What Has Been Verified Computationally
 
