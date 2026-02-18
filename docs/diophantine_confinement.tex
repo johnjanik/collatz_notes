@@ -975,17 +975,31 @@ cell, not on which trajectories happen to visit it.
 A cell $(a, b) \in (\Z/3^k\Z)^2$ is \emph{structurally pure-even} if
 every $n \ge 1$ that visits $(a, b)$---i.e., for which
 $(\nu_2(n, t) \bmod 3^k,\; \nu_3(n, t) \bmod 3^k) = (a, b)$
-at some step $t$---has $v_2(3 a_t + 1) \ge 2$, where $a_t$ is the
-iterate at step~$t$.  Equivalently, the trajectory is forced to
-undergo at least two consecutive halvings at every visit.
+at some step $t$---has \emph{even} iterate $a_t$ at that step.
+In other words, every visit to the cell occurs at an even step
+(so the walk increment is $+1$), and no trajectory can take an
+odd step while occupying this cell.
+\end{definition}
+
+\begin{definition}[Forces double halving]\label{def:forces-dh}
+A cell $(a, b) \in (\Z/3^k\Z)^2$ \emph{forces double halving} if
+every visit with an odd iterate $a_t$ satisfies
+$v_2(3 a_t + 1) \ge 2$, so that at least two consecutive halvings
+follow the odd step.  Since structural pure-even cells have no odd
+visits, they force double halving vacuously.
 \end{definition}
 
 The condition $v_2(3m + 1) \ge 2$ is equivalent to $m \equiv 1 \pmod{4}$:
 one checks $3 \cdot 1 + 1 = 4$, and in general $3m + 1 \equiv 4
-\pmod{8}$ when $m \equiv 1 \pmod{4}$.  So after an odd step at such
-an iterate, the trajectory divides by at least~$4$ before the next
-odd step can occur, producing two even steps where only one was
-guaranteed by the golden mean shift.
+\pmod{8}$ when $m \equiv 1 \pmod{4}$.  This characterizes cells
+that \emph{force double halving} (Definition~\ref{def:forces-dh}):
+after an odd step at such an iterate, the trajectory divides by
+at least~$4$ before the next odd step, producing two even steps
+where only one was guaranteed.
+Structural pure-even cells (Definition~\ref{def:structural-pe})
+are a distinct, stronger property: the iterate is forced to be
+\emph{even} by the torus arithmetic, so the step is even and no
+odd-step analysis applies.
 
 \medskip\noindent
 \emph{Hensel lifting of the $3n+1$ map.}\enspace
@@ -1002,9 +1016,11 @@ constrains $n \bmod 3^k$ and $n \bmod 2^m$ simultaneously.  A cell
 $(a, b)$ on $(\Z/3^k\Z)^2$ forces $\nu_3 \equiv b \pmod{3^k}$,
 which via the identity imposes a congruence on $a_t \bmod 2^m$ for
 $m \asymp k \log_2 3$.  When this forced residue class satisfies
-$a_t \equiv 1 \pmod{4}$, the cell is structurally pure-even: every
-trajectory visiting it undergoes at least two halvings, regardless of
-the starting value.
+$a_t \equiv 0 \pmod{2}$, the cell is structurally pure-even: every
+trajectory visiting it takes an even step, regardless of the
+starting value.  When the forced class satisfies
+$a_t \equiv 1 \pmod{4}$ (necessarily an odd iterate), the cell
+forces double halving (Definition~\ref{def:forces-dh}).
 
 \medskip\noindent
 \emph{The sieve.}\enspace
@@ -1013,8 +1029,8 @@ subset $\mathcal{S}_k \subset (\Z/3^k\Z)^2$.  As $k$ increases,
 the Chinese Remainder Theorem interleaves the $2$-adic and $3$-adic
 constraints, and the fraction $|\mathcal{S}_k| / 3^{2k}$ stabilizes
 at a positive value.  The cells in $\mathcal{S}_k$ act as a sieve:
-any trajectory entering one is forced to take extra even steps,
-pushing $\nu_3/t$ below $p_{\mathrm{eq}}$.
+any trajectory entering one is forced to take an even step
+(walk increment $+1$).
 
 \begin{lemma}[Forced even descent]\label{lem:forced-descent}
 For each $k \ge 1$, let $\mathcal{S}_k$ denote the set of
@@ -1024,8 +1040,8 @@ structurally pure-even cells in $(\Z/3^k\Z)^2$
 \item[\textup{(i)}] $\mathcal{S}_k \neq \emptyset$ for all $k \ge 1$.
 \item[\textup{(ii)}] For any $n \ge 1$ and any step $t$ such that
   $(\nu_2(n,t) \bmod 3^k, \; \nu_3(n,t) \bmod 3^k) \in \mathcal{S}_k$,
-  the iterate $a_t$ satisfies $v_2(3 a_t + 1) \ge 2$, so the
-  trajectory undergoes at least two consecutive halvings.
+  the iterate $a_t$ is even, so the step is an even step and the
+  walk increment is $+1$.
 \item[\textup{(iii)}] $|\mathcal{S}_k| / 3^{2k} \ge c > 0$ for a
   constant $c$ independent of~$k$.
 \end{enumerate}
@@ -1056,40 +1072,56 @@ $\gg (3^k)^{-\delta}$ from every rational grid point
 $(p, q)$ with $0 \le p, q < 3^k$.  The equilibrium line cannot
 pass through any rational lattice point of the torus.
 
-\item \emph{Structural pure-even cells occupy the Baker gap.}\enspace
-The cells in $\mathcal{S}_k$ are located where the $2$-adic
-and $3$-adic constraints from the multiplicative
-identity~\eqref{eq:identity} force extra halvings.  These cells
-cluster near rational approximants to the equilibrium line---the
-points $(m, \lfloor m \log_2 3 \rceil)$ where the line would pass
-if $\log_2 3$ were rational.  Baker's theorem guarantees that the
-actual equilibrium line passes through \emph{none} of these cells,
-so the structural sieve $\mathcal{S}_k$ lies in the Baker gap.
+\item \emph{Sieve cells and the Baker gap.}\enspace
+The structural pure-even cells $\mathcal{S}_k$ are located where
+the multiplicative identity~\eqref{eq:identity} constrains the
+iterate to be even.  Baker's theorem ensures these cells cluster
+near the equilibrium line but never on it, creating a ``sieve belt''
+of forced even steps around the irrational slope $\log_2 3$.
 
 \item \emph{The trajectory cannot ride the equilibrium.}\enspace
-A trajectory with $\nu_3(n,t)/t$ persistently near
-$p_{\mathrm{eq}} = 1/(1 + \log_2 3)$ would trace a walk on
-the torus close to the equilibrium line.  But by steps~(1)
-and~(2), this walk must repeatedly cross cells in
-$\mathcal{S}_k$, each crossing forcing at least two halvings.
-Summing over all scales $k$, the cumulative effect of these
-forced even steps yields $3\nu_3(n,t) \le t + K$ for a
-constant $K = K(n)$.
+Under equidistribution of the winding-number path on the torus,
+the trajectory visits $\mathcal{S}_k$-cells with positive
+frequency $\delta > 0$.  Each such visit forces an even step
+(walk increment $+1$).  Combined with the heuristic that the
+average $2$-adic valuation $v_2(3a_t+1)$ per odd step is
+$E[v_2] = 2 > \log_2 3 \approx 1.585$ (from near-uniform
+distribution of $a_t \bmod 2^m$), the walk has positive drift rate.
+The correction ratio bound (Theorem~\ref{thm:r-bound}) then gives
+eventual boundedness, periodicity, and the K-bound via cycle
+elimination.
+
+The rigorous version requires proving that the average $v_2$ per
+odd step exceeds $\log_2 3$ for every trajectory---not just under
+the random model.
 \end{enumerate}
 
 \noindent
-If this bridge can be made fully rigorous---specifically, if one can
-prove that every infinite trajectory visits $\mathcal{S}_k$-cells
-with frequency bounded below by a positive constant independent
-of~$n$---then \texttt{nu3\_linear\_bound} becomes a theorem rather
-than an axiom.  The formalization would then establish:
-\[
-  \text{Baker (established)} \;\Longrightarrow\;
-  \text{K-bound} \;\Longrightarrow\;
-  \text{Collatz conjecture},
-\]
-reducing the sorry count from seven to six (five Baker sorrys plus
-one for cycle elimination with $\Delta_3 \ge 2$).
+Specifically, the following would suffice to close the gap:
+\begin{enumerate}
+\item \emph{Average halving bound}: For every $n \ge 1$, the average
+  $2$-adic valuation per odd step satisfies
+  $\liminf_{k \to \infty} v_2(\tau_k) / k > \log_2 3$,
+  where $\tau_1 < \tau_2 < \cdots$ are the odd-step times.  Equivalently,
+  $\nu_3(t)/t < p_{\mathrm{eq}}$ eventually.  Under the random model,
+  $E[v_2(3a+1)] = 2$ for odd~$a$ uniformly distributed, giving margin
+  $2 - \log_2 3 \approx 0.415$.
+\item \emph{Equidistribution}: A uniform distribution result for
+  $a_t \bmod 2^m$ (conditional on $a_t$ being odd) at a fixed depth
+  $m \ge 2$.  Even $m = 2$ suffices: if $a_t \bmod 4$ is uniformly
+  distributed among $\{1, 3\}$ at odd steps, then half have $v_2 = 1$
+  and half have $v_2 \ge 2$, giving $E[v_2] \ge 3/2$.  Combined with
+  the contribution from $v_2 \ge 3$ cases, this exceeds $\log_2 3$.
+\end{enumerate}
+Tao's result that almost all orbits attain almost bounded values provides
+partial evidence, though his methods are probabilistic and do not yield
+the uniform bound needed here.
+
+By the K-bound equivalence (\texttt{nu3\_linear\_bound\_iff\_reaches}
+in \texttt{Conclusion.lean}), the K-bound is formally equivalent to the
+Collatz conjecture for each~$n$, so any route to the K-bound---whether
+through the Baker--Feldman bridge or otherwise---would resolve the
+conjecture.
 
 \begin{remark}[Computational results are not proofs]
 \label{rem:not-proof}

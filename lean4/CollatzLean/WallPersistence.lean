@@ -16,6 +16,7 @@
 -/
 import CollatzLean.TunnelWidth
 import CollatzLean.Drift
+import CollatzLean.StructuralPureEven
 
 set_option linter.style.nativeDecide false
 
@@ -107,6 +108,44 @@ theorem wall_boost (b n T : ℕ) (hT : 0 < T)
     wallEncounterFreq b n T * T > 0 :=
   mul_pos hfreq (Nat.cast_pos.mpr hT)
 
+/-! ## Walk boost at double-halving steps -/
+
+private lemma logb_two_three_lt_two : logb 2 3 < 2 := by
+  have hlog2 : (0 : ℝ) < log 2 := log_pos (by norm_num)
+  rw [logb, div_lt_iff₀ hlog2]
+  calc log 3 < log 4 := log_lt_log (by positivity) (by norm_num)
+    _ = log (2 ^ 2) := by norm_num
+    _ = 2 * log 2 := by rw [log_pow]; ring
+
+/-- The double-halving walk boost 2 - log₂3 is positive. -/
+theorem walk_boost_pos : (2 : ℝ) - logb 2 3 > 0 := by
+  linarith [logb_two_three_lt_two]
+
+/-- At a double-halving odd step (a_t ≡ 1 (mod 4)), the walk gains
+    exactly 2 - log₂3 > 0 over the next 3 steps (1 odd + 2 even).
+    Step t: odd, walk -= log₂3.  Steps t+1, t+2: even, walk += 1 each.
+    Net: -log₂3 + 1 + 1 = 2 - log₂3. -/
+theorem walk_boost_double_halving (n t : ℕ)
+    (hodd : isOddStep n t = true)
+    (hmod4 : collatzSeq n t % 4 = 1) :
+    walk n (t + 3) = walk n t + (2 - logb 2 3) := by
+  -- Extract conditions for double_halving_two_even_steps
+  have hodd_nat : collatzSeq n t % 2 = 1 := by
+    simp only [isOddStep, decide_eq_true_eq] at hodd; exact hodd
+  have hnonzero : collatzSeq n t ≠ 0 := by omega
+  -- Get the two forced even steps
+  obtain ⟨he1, he2⟩ := double_halving_two_even_steps n t hnonzero hodd_nat hmod4
+  -- Chain the walk steps
+  have h1 : walk n (t + 1) = walk n t - logb 2 3 :=
+    walk_step_odd n t hodd
+  have h2 : walk n (t + 2) = walk n (t + 1) + 1 := by
+    rw [show t + 2 = (t + 1) + 1 from by omega]
+    exact walk_step_even n (t + 1) he1
+  have h3 : walk n (t + 3) = walk n (t + 2) + 1 := by
+    rw [show t + 3 = (t + 2) + 1 from by omega]
+    exact walk_step_even n (t + 2) he2
+  linarith
+
 /-! ## Summary of the proof chain -/
 
 /-
@@ -124,19 +163,24 @@ theorem wall_boost (b n T : ℕ) (hT : 0 < T)
   4. Walk confinement (wall_pushes_walk_up):
      At pure-even cells, walkIncrement = +1
 
-  5. Uniform p_odd bound (podd_uniform_bound):
-     ∃ ε > 0, T₀, ∀ t ≥ T₀, nu3(n,t)/t ≤ p_eq - ε
+  5. Walk boost (walk_boost_double_halving):
+     At double-halving odd steps (a_t ≡ 1 mod 4), the walk gains
+     2 - log₂3 > 0 over 3 steps (proved, 0 sorrys)
 
-  6. Walk divergence (walk_diverges_of_podd_bound):
-     walk(n,t) → +∞
+  6. K-bound (nu3_linear_bound):
+     ∃ K, ∃ T₀, ∀ t ≥ T₀, 3·ν₃(n,t) ≤ t + K  [SORRY — critical path]
 
   7. Collatz conjecture (collatz_conjecture):
      ∀ n ≥ 1, ∃ T, collatzSeq n T = 1
 
-  Steps 1→2→3 are the "wall persistence" chain.
-  Steps 4+5→6→7 are the "drift to divergence" chain (Phase 4).
-  The bridge: walls provide the geometric mechanism that FORCES step 5
-  (the SFT "11" constraint prevents p_odd from reaching equilibrium).
+  The Baker-Feldman bridge (Section 8.3):
+  Steps 1→2→3 establish wall persistence.
+  Step 4 shows walls force even steps (walk +1).
+  Step 5 shows double-halving cells give walk gain 2 - log₂3 > 0.
+  The GAP: step 6 (K-bound) requires an equidistribution result showing
+  the average v₂ per odd step exceeds log₂3 for every trajectory.
+  By nu3_linear_bound_iff_reaches (Conclusion.lean), the K-bound is
+  formally equivalent to the Collatz conjecture for each n.
 -/
 
 /-! ## Evaluation -/
