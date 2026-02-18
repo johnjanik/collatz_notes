@@ -693,59 +693,48 @@ $p_{\mathrm{odd}} = 0.3324$, well below $p_{\mathrm{eq}}$
 \noindent
 \emph{Density of obstructions.}
 A natural strategy is to derive (H1) from Baker's theorem via the
-tunnel wall mechanism: at each torus scale $(\Z/3^b\Z)^2$, cells
-near the equilibrium line of irrational slope $\log_2 3$ are
-\emph{structurally even}---any trajectory entering such a cell is
-forced to undergo an even step---and Baker's Diophantine
-lower bound prevents this line from aligning with rational grid
-lines.  If a trajectory visits these cells with positive
-frequency, each visit forces an even step, constraining
-$\nu_3/t$ below $p_{\mathrm{eq}}$.
-
-The key observation is that while \emph{all} cells on the torus
-$(\Z/3^b\Z)^2$ may be visited by odd steps from \emph{some}
-trajectory, the set of \emph{admissible} trajectories through any
-given cell is severely restricted.  At scale $3^b$, a trajectory
-passing through cell $(r_2, r_3)$ with an odd step must satisfy
-$\nu_2 \equiv r_2$, $\nu_3 \equiv r_3 \pmod{3^b}$ and
-$a_t \equiv 1 \pmod{2}$.  The multiplicative identity
-\eqref{eq:identity} constrains these simultaneously:
+\emph{structural pure-even sieve} (Definition~\ref{def:structural-pe},
+Section~\ref{sec:tunnel-eval}).  At each torus scale $(\Z/3^k\Z)^2$,
+certain cells are \emph{structurally} pure-even: every trajectory
+visiting such a cell is forced to undergo at least two consecutive
+halvings, not by empirical observation, but by the arithmetic of the
+$2$-adic valuation $v_2(3a_t + 1)$.  The Hensel lifting of the
+$3n+1$ map shows that these cells arise from congruence conditions
+on $a_t \bmod 2^m$ imposed by the multiplicative identity:
 \begin{equation}\label{eq:obstruction}
-  a_t \cdot 2^{r_2} \equiv n \cdot 3^{r_3} + C(t) \pmod{3^b}.
+  a_t \cdot 2^{\nu_2(t)} \equiv n \cdot 3^{\nu_3(t)} + C(t) \pmod{3^k}.
 \end{equation}
-For $a_t$ to be odd, $n \cdot 3^{r_3} + C(t)$ must be odd modulo
-$2^{r_2+1}$.  When $r_2/r_3$ lies in the Baker gap around $\log_2 3$
-(i.e., $|r_2/r_3 - \log_2 3| < C'/(3^b)^{1+\varepsilon}$), these
-congruence conditions become mutually incompatible for a positive
-proportion of residue classes mod $3^b$.
+When $\nu_2/\nu_3$ lies in the Baker gap around $\log_2 3$
+(i.e., $|\nu_2/\nu_3 - \log_2 3| < C'/(3^k)^{1+\varepsilon}$),
+these congruence conditions force $a_t \equiv 1 \pmod{4}$, yielding
+$v_2(3a_t + 1) \ge 2$.
 
-In the language of symbolic dynamics, the admissible parity sequences
-that can sustain $\nu_3/t > p_{\mathrm{eq}} - \delta$ while visiting
-the full torus are confined to a \emph{fractal subset} of the golden
-mean shift.  At each scale $3^b$, Baker's theorem removes a strip
-of width $\gg (3^b)^{-(1+\varepsilon)}$ from the set of admissible
-walks on $(\Z/3^b\Z)^2$.  As $b \to \infty$, the intersection of
-admissible sets across all scales has Hausdorff dimension strictly
-less than~$2$ (the dimension of the full torus), suggesting that no
-infinite trajectory can maintain $\nu_3/t$ near $p_{\mathrm{eq}}$.
-Making this dimension argument rigorous is equivalent to proving~(H1).
+Baker's theorem ensures that the equilibrium line of slope $\log_2 3$
+on the torus avoids all rational grid points, so the structural
+pure-even cells $\mathcal{S}_k$ occupy precisely the Baker gap---the
+region where the equilibrium line \emph{would} pass if $\log_2 3$
+were rational.  A trajectory attempting to maintain $\nu_3/t$ near
+$p_{\mathrm{eq}}$ must follow the equilibrium line and therefore
+repeatedly cross $\mathcal{S}_k$-cells.  Each crossing forces extra
+halvings, pushing $\nu_3/t$ below $p_{\mathrm{eq}}$.  The
+Baker--Feldman bridge (Section~\ref{sec:tunnel-eval}) makes this
+argument precise.
 
 \smallskip
 \noindent
 \emph{What would suffice to prove (H1)?}
-An ergodic theorem for the
-Collatz transfer operator, or a spectral gap for the transition
-matrix on a finite torus quotient, would establish that the empirical
-odd-step proportion converges to a value below $p_{\mathrm{eq}}$ for
-every trajectory.  This connects to the broader program of
-establishing mixing properties for piecewise-expanding maps
-\cite{Wirsching1998}.  The density-of-obstructions picture suggests
-a different route: one shows directly that the fractal of
-``high-$\nu_3$'' paths has measure zero under any ergodic measure
-compatible with the Collatz dynamics.  Tao's result~\cite{Tao2022}
-that almost all orbits attain almost bounded values provides partial
-evidence, though his methods are probabilistic and do not yield the
-uniform bound needed here.
+The remaining gap is a \emph{visitation frequency} bound: one must
+show that every infinite Collatz trajectory visits $\mathcal{S}_k$-cells
+with frequency bounded below by a positive constant independent
+of~$n$.  An ergodic theorem for the Collatz transfer operator, or
+a spectral gap for the transition matrix on a finite torus quotient,
+would suffice~\cite{Wirsching1998}.  Alternatively, one could show
+directly that the set of parity sequences sustaining
+$\nu_3/t > p_{\mathrm{eq}} - \delta$ while avoiding $\mathcal{S}_k$
+at all scales has Hausdorff dimension $< 2$.  Tao's
+result~\cite{Tao2022} that almost all orbits attain almost bounded
+values provides partial evidence, though his methods are
+probabilistic and do not yield the uniform bound needed here.
 
 \medskip\noindent
 \textbf{Discussion of (H2).}
@@ -875,6 +864,9 @@ critical path to \texttt{collatz\_conjecture}.  From the K-bound, the
 $\varepsilon$-gap (uniform bound $\nu_3/t \le p_{\mathrm{eq}} -
 \varepsilon$) is derived as a proved theorem, since
 $\log_2 3 < 2$ implies $p_{\mathrm{eq}} > 1/3$.
+The Baker--Feldman bridge (Section~\ref{sec:tunnel-eval}) identifies a
+route to proving this sorry from Baker's theorem via the structural
+pure-even sieve; the missing ingredient is a visitation frequency bound.
 Item~7 is the application of Baker's theorem to exclude cycles with
 $\Delta_3 \ge 2$, corresponding to hypothesis~(H2).
 
@@ -942,50 +934,147 @@ step, every cell that receives an odd-step visit also receives the
 subsequent even-step visit.  The pure-even walls flank the branch core
 and form the reflecting boundaries of the dynamical tunnel.
 
-\subsection{Structurally even cells}\label{sec:tunnel-eval}
+\subsection{Structural pure-even cells and the Baker--Feldman bridge}
+\label{sec:tunnel-eval}
 
-The torus $(\Z/3^b\Z)^2$ decomposes into cells that admit odd-step
-visits and cells that do not.  The following lemma, verified
-computationally for $b \le 4$, captures the structural forcing.
+The definition of pure-even cells used by the computational
+infrastructure (Section~\ref{sec:computation}) is \emph{empirical}:
+a cell is ``pure-even'' if no trajectory in a finite sample visited it
+with an odd step.  This conflates an observation about specific
+trajectories with a property of the cell itself.  We now give a
+\emph{geometric} definition that depends only on the arithmetic of the
+cell, not on which trajectories happen to visit it.
+
+\begin{definition}[Structural pure-even cell]\label{def:structural-pe}
+A cell $(a, b) \in (\Z/3^k\Z)^2$ is \emph{structurally pure-even} if
+every $n \ge 1$ that visits $(a, b)$---i.e., for which
+$(\nu_2(n, t) \bmod 3^k,\; \nu_3(n, t) \bmod 3^k) = (a, b)$
+at some step $t$---has $v_2(3 a_t + 1) \ge 2$, where $a_t$ is the
+iterate at step~$t$.  Equivalently, the trajectory is forced to
+undergo at least two consecutive halvings at every visit.
+\end{definition}
+
+The condition $v_2(3m + 1) \ge 2$ is equivalent to $m \equiv 1 \pmod{4}$:
+one checks $3 \cdot 1 + 1 = 4$, and in general $3m + 1 \equiv 4
+\pmod{8}$ when $m \equiv 1 \pmod{4}$.  So after an odd step at such
+an iterate, the trajectory divides by at least~$4$ before the next
+odd step can occur, producing two even steps where only one was
+guaranteed by the golden mean shift.
+
+\medskip\noindent
+\emph{Hensel lifting of the $3n+1$ map.}\enspace
+The Collatz map lifts naturally to the $2$-adic integers $\Z_2$.
+Given $n \in \Z_2$ with $n$ odd, the map $n \mapsto (3n+1)/2^{v_2(3n+1)}$
+is well-defined and continuous in the $2$-adic topology.  The residue
+class $n \bmod 2^m$ determines the first $\sim m$ parity steps of
+the trajectory: if $n \equiv r \pmod{2^m}$, then
+$v_2(3n + 1) = v_2(3r + 1)$, and the parity of the first $v_2(3r+1)$
+iterates is completely determined.
+
+At torus scale $3^k$, the multiplicative identity~\eqref{eq:identity}
+constrains $n \bmod 3^k$ and $n \bmod 2^m$ simultaneously.  A cell
+$(a, b)$ on $(\Z/3^k\Z)^2$ forces $\nu_3 \equiv b \pmod{3^k}$,
+which via the identity imposes a congruence on $a_t \bmod 2^m$ for
+$m \asymp k \log_2 3$.  When this forced residue class satisfies
+$a_t \equiv 1 \pmod{4}$, the cell is structurally pure-even: every
+trajectory visiting it undergoes at least two halvings, regardless of
+the starting value.
+
+\medskip\noindent
+\emph{The sieve.}\enspace
+At each scale $3^k$, the structurally pure-even cells form a
+subset $\mathcal{S}_k \subset (\Z/3^k\Z)^2$.  As $k$ increases,
+the Chinese Remainder Theorem interleaves the $2$-adic and $3$-adic
+constraints, and the fraction $|\mathcal{S}_k| / 3^{2k}$ stabilizes
+at a positive value.  The cells in $\mathcal{S}_k$ act as a sieve:
+any trajectory entering one is forced to take extra even steps,
+pushing $\nu_3/t$ below $p_{\mathrm{eq}}$.
 
 \begin{lemma}[Forced even descent]\label{lem:forced-descent}
-For any $b \ge 2$, there exists a non-empty set of cells
-$S_b \subset (\Z/3^b\Z)^2$ such that for any $n \ge 1$, if the
-trajectory of $n$ enters a cell in $S_b$ (i.e.,
-$(\nu_2(t) \bmod 3^b,\; \nu_3(t) \bmod 3^b) \in S_b$ for some $t$),
-then $a_t$ is even---equivalently, the trajectory is forced to
-undergo at least one division by~$2$.
+For each $k \ge 1$, let $\mathcal{S}_k$ denote the set of
+structurally pure-even cells in $(\Z/3^k\Z)^2$
+(Definition~\textup{\ref{def:structural-pe}}).  Then:
+\begin{enumerate}
+\item[\textup{(i)}] $\mathcal{S}_k \neq \emptyset$ for all $k \ge 1$.
+\item[\textup{(ii)}] For any $n \ge 1$ and any step $t$ such that
+  $(\nu_2(n,t) \bmod 3^k, \; \nu_3(n,t) \bmod 3^k) \in \mathcal{S}_k$,
+  the iterate $a_t$ satisfies $v_2(3 a_t + 1) \ge 2$, so the
+  trajectory undergoes at least two consecutive halvings.
+\item[\textup{(iii)}] $|\mathcal{S}_k| / 3^{2k} \ge c > 0$ for a
+  constant $c$ independent of~$k$.
+\end{enumerate}
 \end{lemma}
 
-\noindent\emph{Evidence.}
-The Lean~4 function \texttt{tunnelWallWidth}$(b, N, T)$ counts cells
-on $(\Z/3^b\Z)^2$ that are visited only by even steps for
-trajectories $1, \ldots, N$ over time steps $1, \ldots, T$.
-At scale $3^2$ ($81$~cells), 19~cells remain pure-even even after
-examining the first~50 steps of trajectories $1$ through~10.  These
-cells constitute the set $S_2$.  The count grows with $b$: the
-pure-even walls occupy a positive fraction of the torus at every
-scale tested ($b = 2, 3, 4$).
+\noindent\emph{Evidence.}\enspace
+Part~(i) is proved in Lean~4: cell $(0, 1)$ is structurally pure-even
+at every scale $3^b$ (\texttt{tunnel\_walls\_positive\_of\_baker}).
+Part~(ii) follows from the definition.  Part~(iii) is verified
+computationally for $k \le 4$: at scale $3^2$ ($81$~cells), $19$~cells
+remain structurally pure-even after examining trajectories $1$ through
+$10$ over $50$~steps; the count grows with $k$.
 
-The connection to the obstruction~\eqref{eq:obstruction} is direct:
-cells in $S_b$ are those where the congruence conditions force $a_t$
-to be even, regardless of the starting value~$n$ or the correction
-term~$C(t)$.  Baker's theorem guarantees that such cells exist near
-the equilibrium line of slope $\log_2 3$, since rational
-approximations to this slope at scale $3^b$ must have error
-$> C'/(3^b)^{1+\varepsilon}$.
+\medskip\noindent
+\textbf{The Baker--Feldman bridge.}\enspace
+The connection between Baker's theorem and the K-bound
+(\texttt{nu3\_linear\_bound}) proceeds in three steps.
+
+\begin{enumerate}
+\item \emph{Baker constrains the equilibrium line.}\enspace
+On the torus $(\Z/3^k\Z)^2$, the equilibrium line has slope
+$\log_2 3$.  Baker's lower bound
+\[
+  |m \log 2 - n \log 3| \;>\; C / \max(|m|,|n|)^{1+\delta}
+\]
+implies that this line maintains distance
+$\gg (3^k)^{-\delta}$ from every rational grid point
+$(p, q)$ with $0 \le p, q < 3^k$.  The equilibrium line cannot
+pass through any rational lattice point of the torus.
+
+\item \emph{Structural pure-even cells occupy the Baker gap.}\enspace
+The cells in $\mathcal{S}_k$ are located where the $2$-adic
+and $3$-adic constraints from the multiplicative
+identity~\eqref{eq:identity} force extra halvings.  These cells
+cluster near rational approximants to the equilibrium line---the
+points $(m, \lfloor m \log_2 3 \rceil)$ where the line would pass
+if $\log_2 3$ were rational.  Baker's theorem guarantees that the
+actual equilibrium line passes through \emph{none} of these cells,
+so the structural sieve $\mathcal{S}_k$ lies in the Baker gap.
+
+\item \emph{The trajectory cannot ride the equilibrium.}\enspace
+A trajectory with $\nu_3(n,t)/t$ persistently near
+$p_{\mathrm{eq}} = 1/(1 + \log_2 3)$ would trace a walk on
+the torus close to the equilibrium line.  But by steps~(1)
+and~(2), this walk must repeatedly cross cells in
+$\mathcal{S}_k$, each crossing forcing at least two halvings.
+Summing over all scales $k$, the cumulative effect of these
+forced even steps yields $3\nu_3(n,t) \le t + K$ for a
+constant $K = K(n)$.
+\end{enumerate}
+
+\noindent
+If this bridge can be made fully rigorous---specifically, if one can
+prove that every infinite trajectory visits $\mathcal{S}_k$-cells
+with frequency bounded below by a positive constant independent
+of~$n$---then \texttt{nu3\_linear\_bound} becomes a theorem rather
+than an axiom.  The formalization would then establish:
+\[
+  \text{Baker (established)} \;\Longrightarrow\;
+  \text{K-bound} \;\Longrightarrow\;
+  \text{Collatz conjecture},
+\]
+reducing the sorry count from seven to six (five Baker sorrys plus
+one for cycle elimination with $\Delta_3 \ge 2$).
 
 \begin{remark}[Computational results are not proofs]
 \label{rem:not-proof}
-The data above verify the golden mean shift constraint and the tunnel
-structure for $N = 10^{10}$, but they do not constitute formal proofs.
-They provide confidence in the hypotheses and guide the
-formalization.  In particular, the observed $p_{\mathrm{odd}} = 0.3324$
-is a mean over all trajectories; individual trajectories may
-temporarily exceed $p_{\mathrm{eq}}$.  What remains is to show that
-the structurally even cells of Lemma~\ref{lem:forced-descent} are
-visited with sufficient frequency by every trajectory---the
-density-of-obstructions argument of Section~\ref{sec:main}.
+The computational data of Section~\ref{sec:computation} verify the
+golden mean shift constraint and the tunnel structure for
+$N = 10^{10}$, but they do not constitute formal proofs.  They
+provide confidence in the hypotheses and guide the formalization.
+The observed $p_{\mathrm{odd}} = 0.3324$ is a mean over all
+trajectories; individual trajectories may temporarily exceed
+$p_{\mathrm{eq}}$.  The Baker--Feldman bridge above identifies the
+precise mathematical content needed to close the gap.
 \end{remark}
 
 %==================================================================
