@@ -1,16 +1,16 @@
 /-
   CollatzLean/Conclusion.lean
-  Phase 4b: The ergodic conclusion.
-  From walk divergence and the multiplicative identity, we prove that
-  the Collatz sequence reaches 1 for every n ≥ 1.
+  The Collatz conjecture: every n ≥ 1 eventually reaches 1.
 
-  The proof chain:
-    podd_uniform_bound (sorry, ergodic) →
-    linear walk drift →
-    correction ratio bounded (CorrectionRatio.lean) →
-    trajectory bounded → eventually periodic →
-    cycle is trivial (Δ₃=1 proved, Δ₃≥2 via Baker) →
-    collatzReaches
+  Critical path (only sorry: nu3_linear_bound):
+    nu3_linear_bound (sorry: ∃ K T₀, ∀ t ≥ T₀, 3·ν₃ ≤ t + K) →
+    reaches_one_of_linear_drift (CorrectionRatio.lean) →
+      trajectory bounded → eventually periodic →
+      cycle is trivial (Δ₃=0,1 proved; Δ₃≥2 equality case via Baker) →
+    collatz_conjecture
+
+  Off critical path: the ε-drift and walk divergence machinery in Drift.lean
+  is proved but unused — the K-bound alone drives the proof.
 -/
 import CollatzLean.CorrectionRatio
 import CollatzLean.CollatzSFT
@@ -100,15 +100,15 @@ theorem collatz_reaches_of_walk_diverges (n : ℕ) (hn : n ≥ 1)
 
 /-! ## The Collatz conjecture -/
 
-/-- The Collatz conjecture: every positive natural number eventually reaches 1. -/
+/-- The Collatz conjecture: every positive natural number eventually reaches 1.
+    Critical path: nu3_linear_bound (sorry) → reaches_one_of_linear_drift → here.
+    The walk divergence and ε-drift machinery (Drift.lean) is off the critical path. -/
 theorem collatz_conjecture : CollatzConjecture := by
   intro n hn
-  -- Extract linear drift from podd_uniform_bound
-  obtain ⟨ε, hε, T₀, K, hbound, hbound3⟩ := podd_uniform_bound n hn
-  -- Walk diverges (needed for cycle elimination)
-  have hdiv := walk_diverges_of_podd_bound n hn
+  -- Extract the K-bound from nu3_linear_bound (the sole sorry on the critical path)
+  obtain ⟨K, T₀, hbound3⟩ := nu3_linear_bound n hn
   -- Apply the correction ratio proof chain
-  exact reaches_one_of_linear_drift n hn K T₀ hbound3 hdiv
+  exact reaches_one_of_linear_drift n hn K T₀ hbound3
 
 /-! ## Evaluation -/
 

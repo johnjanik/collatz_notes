@@ -433,19 +433,25 @@ Proved in Phase 5:
 
 Implemented in =CollatzLean/Drift.lean=.
 
-From a uniform ε-gap below equilibrium for the odd-step proportion,
-we derive a linear lower bound on the walk and conclude divergence.
+The K-bound is the sole sorry on the critical path.  From it, the
+ε-gap is derived (since $\log_2 3 < 2$ gives $p_{\rm eq} > 1/3$),
+and the walk divergence infrastructure is fully proved.
 
-Fully proved (zero =sorry= in the proofs themselves):
+One =sorry= (critical path):
+- =nu3_linear_bound=: $\exists K, T_0$ s.t. $3\nu_3 \le t + K$ for $t \ge T_0$
+  (the K-bound; equivalent to Collatz for $n$)
+
+Fully proved (derived from =nu3_linear_bound=):
+- =logb_two_three_lt_two=: $\log_2 3 < 2$ (from $3 < 4$)
+- =p_equilibrium_gt_one_third=: $p_{\rm eq} > 1/3$ (from $\log_2 3 < 2$)
+- =podd_uniform_bound=: $\exists \varepsilon > 0, T_0, K$ s.t. $\nu_3/t \le p_{\rm eq} - \varepsilon$
+  and $3\nu_3 \le t + K$ for $t \ge T_0$ (derived from K-bound + $p_{\rm eq} > 1/3$)
+
+Fully proved (walk infrastructure, off critical path):
 - =walk_eq_drift_form=: $u(t) = t - (1 + \log_2 3) \cdot \nu_3$
 - =walk_lower_bound_linear=: $u(t) \ge (1 + \log_2 3) \cdot \varepsilon \cdot t$ for $t \ge T_0$
 - =tendsto_atTop_of_eventually_linear=: linear growth implies divergence to $+\infty$
 - =walk_diverges_of_podd_bound=: composition of the above
-
-One =sorry= (deep input):
-- =podd_uniform_bound=: $\exists \varepsilon > 0, T_0, K$ s.t. $\nu_3/t \le p_{\rm eq} - \varepsilon$
-  and $3\nu_3 \le t + K$ for $t \ge T_0$ (needs ergodic theorem for Collatz transfer operator
-  + golden mean SFT constraint)
 
 *** DONE [#A] Compose the four pillars into the main theorem
 :PROPERTIES:
@@ -474,7 +480,8 @@ the correction ratio proof chain:
   by induction (proved)
 - =collatzSeq_eventually_bounded_of_linear_drift=: if $3\nu_3 \le t + K$ for large $t$,
   then $a(t) \le n \cdot 2^K$ (proved, via universal bound + cancellation)
-- =reaches_one_of_linear_drift=: main composition (proved, calls 1 sorry below)
+- =reaches_one_of_linear_drift=: main composition taking only ~(K, T₀, hbound3)~---
+  walk divergence removed as dead code (proved, calls 1 sorry below)
 
 One =sorry= (decomposed from the former =reaches_one_of_walk_diverges=):
 - =no_cycle_equality_case=: cycle elimination for $p = 3\Delta_3$ equality case (Baker application)
@@ -485,13 +492,13 @@ enters the 1$\to$4$\to$2$\to$1 cycle, $\text{correction}/3^{\nu_3}$ grows as
 $(4/3)^m$ per cycle.  The correct ratio to bound is $C(t)/2^{\nu_2}$, which
 converges by a geometric series when the walk has linear drift.
 
-The capstone proof:
+The capstone proof (critical path: =nu3_linear_bound= $\to$
+=reaches_one_of_linear_drift= $\to$ =collatz_conjecture=):
 #+begin_src lean4
 theorem collatz_conjecture : CollatzConjecture := by
   intro n hn
-  obtain ⟨ε, hε, T₀, K, hbound, hbound3⟩ := podd_uniform_bound n hn
-  have hdiv := walk_diverges_of_podd_bound n hn
-  exact reaches_one_of_linear_drift n hn K T₀ hbound3 hdiv
+  obtain ⟨K, T₀, hbound3⟩ := nu3_linear_bound n hn
+  exact reaches_one_of_linear_drift n hn K T₀ hbound3
 #+end_src
 
 ** Phase 5: Wall Persistence                                        :bridge:capstone:
@@ -663,9 +670,16 @@ any constant $C$ fails by $t = 20$.
 The correction ratio approach (=CorrectionRatio.lean=) resolves this gap.
 A universal inductive bound $n \cdot 3^{\nu_3} + C(t) \le n \cdot 4^{\nu_3}$
 (=identity_le_four_pow_nu3=) combined with the hypothesis $3\nu_3 \le t + K$
-gives $a(t) \le n \cdot 2^K$ directly---no geometric series needed.  The
-=podd_uniform_bound= sorry was strengthened to provide both the density bound
-$\nu_3/t \le p_{\rm eq} - \varepsilon$ and the linear bound $3\nu_3 \le t + K$.
+gives $a(t) \le n \cdot 2^K$ directly---no geometric series needed.
+
+*Update (2026-02-18):* Sorry direction flipped.  =nu3_linear_bound= (the
+K-bound: $\exists K, T_0, \forall t \ge T_0, 3\nu_3 \le t + K$) is now the
+sole critical-path sorry.  =podd_uniform_bound= is derived from it (proved
+that $\log_2 3 < 2 \Rightarrow p_{\rm eq} > 1/3$, then set
+$\varepsilon = (p_{\rm eq} - 1/3)/2$).  Walk divergence (=hdiv=) removed as
+dead code from =reaches_one_of_linear_drift=.  Critical path:
+=nu3_linear_bound= (sorry) $\to$ =reaches_one_of_linear_drift= $\to$
+=collatz_conjecture=.
 One sorry remains: =no_cycle_equality_case= (Baker application for cycles with
 $\Delta_3 \ge 2$).
 
@@ -704,8 +718,11 @@ $\Delta_3 \ge 2$).
    =collatz_conjecture : CollatzConjecture=.  Implemented in
    =CollatzLean/Drift.lean=, =CollatzLean/CorrectionRatio.lean=, and
    =CollatzLean/Conclusion.lean=.
-   Two =sorry= remain: =podd_uniform_bound= (Drift.lean, strengthened to
-   also provide $3\nu_3 \le t + K$), =no_cycle_equality_case= (CorrectionRatio.lean).
+   Two =sorry= remain: =nu3_linear_bound= (Drift.lean, the K-bound;
+   =podd_uniform_bound= is now proved from it), =no_cycle_equality_case=
+   (CorrectionRatio.lean).  =reaches_one_of_linear_drift= simplified:
+   =hdiv= (walk divergence) removed as dead code---K-bound alone drives
+   the proof.
    =collatzSeq_eventually_bounded_of_linear_drift= proved via universal
    inductive bound $n \cdot 3^{\nu_3} + C(t) \le n \cdot 4^{\nu_3}$ (2026-02-17).
    =collatzSeq_eventually_periodic_of_bounded= proved via pigeonhole.
@@ -721,7 +738,9 @@ into 3 specific sorry's in =CorrectionRatio.lean= (net +2).  Closed
 =collatzSeq_eventually_periodic_of_bounded= (pigeonhole), decomposed
 =cycle_contains_one= ($\Delta_3$ case analysis, closing $\Delta_3 = 0,1$),
 and closed =collatzSeq_eventually_bounded_of_linear_drift= (universal
-inductive bound).
+inductive bound).  Flipped sorry direction: =nu3_linear_bound= (K-bound)
+is now the sole critical-path sorry; =podd_uniform_bound= (ε-gap) is
+derived from it.  Removed =hdiv= dead code from =reaches_one_of_linear_drift=.
 
 | # | File | Theorem | Category | Hard? |
 |---+--------------------+----------------------------------------------+---------------------+-------|
@@ -732,7 +751,7 @@ inductive bound).
 | 5 | Baker.lean | =baker_two_three= | Gel'fond--Schneider | Yes |
 | 6 | TunnelWidth.lean | =tunnel_walls_positive_of_baker= | Geometric bridge | Med |
 | 7 | TunnelWidth.lean | =tunnel_foliation_intersection= | Weyl equidistr. | Med |
-| 8 | Drift.lean | =podd_uniform_bound= | Ergodic theory | Yes |
+| 8 | Drift.lean | =nu3_linear_bound= | K-bound (critical path) | Yes |
 | 9 | CorrectionRatio.lean | =no_cycle_equality_case= | Baker for p=3Δ₃ | Med |
 
 *Hard* = requires new mathematical machinery or deep Mathlib extensions.
@@ -752,6 +771,11 @@ Closed since initial inventory:
 - CorrectionRatio.lean =no_cycle_delta3_ge2= strict case ($3\Delta_3 < p$): proved via
   universal bound at $T_2 + kp$ forcing $2^{n+1} \le n$ contradiction. Equality case
   ($p = 3\Delta_3$) remains as =no_cycle_equality_case= (needs Baker)
+- Drift.lean =podd_uniform_bound=: was sorry, now proved from =nu3_linear_bound=
+  (the K-bound). Derivation uses $\log_2 3 < 2 \Rightarrow p_{\rm eq} > 1/3$,
+  then $\varepsilon = (p_{\rm eq} - 1/3)/2$ with $T_1 = \lceil 2K/(3 \cdot \text{gap}) \rceil + 1$.
+- CorrectionRatio.lean =reaches_one_of_linear_drift=: =hdiv= parameter (walk divergence)
+  removed as dead code---K-bound alone drives: bounded $\to$ periodic $\to$ trivial cycle
 
 The 5 Baker chain stubs (#1--5) are the long pole: they require formalizing the
 Gel'fond--Schneider proof of transcendence measures, which has no Mathlib

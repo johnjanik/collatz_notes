@@ -724,13 +724,12 @@ theorem cycle_contains_one (n : ℕ) (hn : n ≥ 1)
 
 /-! ## Main composition -/
 
-/-- Walk divergence with linear drift implies collatzReaches.
-    This replaces the false correction_bound sorry with an honest proof chain:
-    linear drift → correction ratio bounded → trajectory bounded →
-    eventually periodic → cycle is trivial → reaches 1. -/
+/-- Linear drift implies collatzReaches.
+    From the K-bound 3·ν₃ ≤ t + K alone:
+    trajectory bounded → eventually periodic → cycle is trivial → reaches 1.
+    Walk divergence (hdiv) was previously a parameter but is unused. -/
 theorem reaches_one_of_linear_drift (n : ℕ) (hn : n ≥ 1)
-    (K T₀ : ℕ) (hbound3 : ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K)
-    (hdiv : Filter.Tendsto (fun t => walk n t) Filter.atTop Filter.atTop) :
+    (K T₀ : ℕ) (hbound3 : ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) :
     collatzReaches n := by
   -- Step 1: trajectory is eventually bounded
   obtain ⟨B, T₁, hT₁ge, hBound⟩ :=

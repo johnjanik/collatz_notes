@@ -1,8 +1,14 @@
 /-
   CollatzLean/Drift.lean
-  Phase 4a: Uniform drift bound and walk divergence.
-  From a uniform ε-gap below equilibrium for the odd-step proportion,
-  we derive a linear lower bound on the walk and conclude divergence.
+  The K-bound (nu3_linear_bound) and walk divergence infrastructure.
+
+  Critical path sorry: nu3_linear_bound — the sole hypothesis needed by
+  reaches_one_of_linear_drift and hence collatz_conjecture.
+
+  Off critical path: podd_uniform_bound (now proved from nu3_linear_bound),
+  walk_lower_bound_linear, walk_diverges_of_podd_bound — proved infrastructure
+  for the ε-drift and walk divergence narrative, retained but not used by
+  the main theorem.
 -/
 import CollatzLean.Walk
 import Mathlib.Topology.Order.Basic
@@ -12,16 +18,73 @@ namespace Collatz
 
 open Real Filter
 
-/-! ## Uniform bound on odd-step proportion -/
+/-! ## The linear bound on odd-step count (critical path) -/
 
-/-- Uniform ε-gap: ∃ ε > 0 and T₀ such that ν₃(n,t)/t ≤ p_eq - ε for all t ≥ T₀.
-    Requires ergodic theory for the Collatz transfer operator combined with
-    the golden mean SFT constraint. -/
+/-- The K-bound: the sole sorry on the critical path to collatz_conjecture.
+    Equivalent to the Collatz conjecture for n: implies trajectory bounded
+    (a(t) ≤ n·2^K), hence eventually periodic, hence cycle = {1,2,4}. -/
+theorem nu3_linear_bound (n : ℕ) (hn : n ≥ 1) :
+    ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K := by
+  sorry
+
+/-! ## Deriving the ε-bound from the K-bound -/
+
+private lemma logb_two_three_lt_two : logb 2 3 < 2 := by
+  have hlog2 : (0 : ℝ) < log 2 := log_pos (by norm_num)
+  rw [logb, div_lt_iff₀ hlog2]
+  calc log 3 < log 4 := log_lt_log (by positivity) (by norm_num)
+    _ = log (2 ^ 2) := by norm_num
+    _ = 2 * log 2 := by rw [log_pow]; ring
+
+private lemma one_plus_logb23_pos : (0 : ℝ) < 1 + logb 2 3 := by
+  linarith [logb_pos (by norm_num : (1 : ℝ) < 2) (by norm_num : (1 : ℝ) < 3)]
+
+private lemma p_equilibrium_gt_one_third : p_equilibrium > 1 / 3 := by
+  show 1 / 3 < p_equilibrium
+  unfold p_equilibrium
+  exact div_lt_div_of_pos_left one_pos one_plus_logb23_pos (by linarith [logb_two_three_lt_two])
+
+/-- Uniform ε-gap derived from nu3_linear_bound.
+    Since 3·ν₃ ≤ t + K gives ν₃/t ≤ 1/3 + K/(3t), and p_equilibrium > 1/3
+    (because log₂3 < 2, i.e. 3 < 4), for large enough t the ε-bound holds. -/
 theorem podd_uniform_bound (n : ℕ) (hn : n ≥ 1) :
     ∃ ε > 0, ∃ T₀, ∃ K : ℕ,
       (∀ t, t ≥ T₀ → (↑(nu3 n t) / ↑t : ℝ) ≤ p_equilibrium - ε) ∧
       (∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) := by
-  sorry
+  obtain ⟨K, T₀, hbound3⟩ := nu3_linear_bound n hn
+  have hpeq := p_equilibrium_gt_one_third
+  set gap := p_equilibrium - 1 / 3 with hgap_def
+  have hgap_pos : gap > 0 := by linarith
+  -- ε = gap/2, T₁ = ⌈2K/(3·gap)⌉₊ + 1 ensures K/(3t) < gap/2 for t ≥ T₁
+  refine ⟨gap / 2, by linarith, max T₀ (⌈2 * (↑K : ℝ) / (3 * gap)⌉₊ + 1), K, ?_,
+         fun t ht => hbound3 t (le_trans (le_max_left ..) ht)⟩
+  intro t ht
+  have ht0 : t ≥ T₀ := le_trans (le_max_left ..) ht
+  have htN : t ≥ ⌈2 * (↑K : ℝ) / (3 * gap)⌉₊ + 1 := le_trans (le_max_right ..) ht
+  have ht_pos : (0 : ℝ) < ↑t := Nat.cast_pos.mpr (by omega)
+  -- ν₃ ≤ (t + K) / 3 in ℝ
+  have hnu3_le : (↑(nu3 n t) : ℝ) ≤ (↑t + ↑K) / 3 := by
+    have : (3 : ℝ) * ↑(nu3 n t) ≤ ↑t + ↑K := by exact_mod_cast hbound3 t ht0
+    linarith
+  -- t > 2K/(3·gap)
+  have ht_gt : (↑t : ℝ) > 2 * ↑K / (3 * gap) := by
+    have hceil : 2 * (↑K : ℝ) / (3 * gap) ≤ ↑(⌈2 * (↑K : ℝ) / (3 * gap)⌉₊) :=
+      Nat.le_ceil _
+    have : (↑t : ℝ) ≥ ↑(⌈2 * (↑K : ℝ) / (3 * gap)⌉₊) + 1 := by exact_mod_cast htN
+    linarith
+  -- Cross-multiply: 2K < 3·gap·t
+  have h_key : 2 * (↑K : ℝ) < 3 * gap * ↑t := by
+    have h3g_pos : (0 : ℝ) < 3 * gap := by positivity
+    calc 2 * (↑K : ℝ) = 3 * gap * (2 * ↑K / (3 * gap)) := by field_simp
+      _ < 3 * gap * ↑t := by nlinarith
+  -- Goal: ν₃/t ≤ p_eq - gap/2. Rewrite as ν₃ ≤ (p_eq - gap/2) * t.
+  rw [div_le_iff₀ ht_pos]
+  -- p_eq - gap/2 = 1/3 + gap/2, so suffices ν₃ ≤ (1/3 + gap/2) * t
+  suffices (↑(nu3 n t) : ℝ) ≤ (1 / 3 + gap / 2) * ↑t by
+    have : p_equilibrium - gap / 2 = 1 / 3 + gap / 2 := by simp only [hgap_def]; ring
+    nlinarith
+  -- From ν₃ ≤ (t+K)/3 and 2K < 3·gap·t → K/3 < gap·t/2
+  nlinarith [hnu3_le, h_key]
 
 /-! ## Walk drift form -/
 

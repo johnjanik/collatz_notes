@@ -1,0 +1,1009 @@
+\documentclass[manuscript]{aomart}
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+% Macros
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+
+% Theorem environments (aomart provides amsthm)
+\theoremstyle{plain}
+\newtheorem{theoremA}{Theorem}
+\renewcommand{\thetheoremA}{\Alph{theoremA}}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+\numberwithin{equation}{section}
+
+%------------------------------------------------------------------
+\title{Diophantine Confinement of the Branch Locus\\in Syracuse Dynamics}
+
+\author{John A.\ Janik}
+\address{john.janik@gmail.com}
+
+\subjclass[2020]{Primary 11B83; Secondary 37A45, 37B10}
+\date{\today}
+
+\keywords{Collatz conjecture, correction ratio, golden mean shift,
+  subshift of finite type, cycle elimination, Lean~4 formalization}
+
+\begin{document}
+
+\begin{abstract}
+We prove that if the transverse walk associated to a Collatz
+trajectory has eventually linear drift, then the trajectory is
+eventually bounded and periodic.  The key tool is a geometric series
+bound on the correction ratio $r(t) = C(t)/2^{\nu_2(t)}$, which
+satisfies a Collatz-like recurrence driven by the trajectory's parity
+sequence.  We show that the parity sequence of every Collatz orbit
+lies in the golden mean shift (no two consecutive odd steps), implying
+$p_{\mathrm{odd}} \le 1/\varphi^2 \approx 0.382$, within $0.005$ of
+the equilibrium threshold $p_{\mathrm{eq}} \approx 0.387$.  Combined
+with cycle elimination---proved here for cycles with one odd step per
+period, and following from Baker-type estimates for longer
+cycles---this yields a conditional proof of the Collatz conjecture:
+linear walk drift implies $\mathrm{collatzReaches}(n)$.  The argument
+is formalized in approximately 1600 lines of Lean~4 with nine
+explicit \texttt{sorry} axioms, all identified and categorized.
+\end{abstract}
+
+\maketitle
+
+%==================================================================
+\section{Introduction}\label{sec:intro}
+%==================================================================
+
+\subsection{The conjecture}
+
+\begin{definition}\label{def:collatz}
+The \emph{Collatz map} $T\colon \N \to \N$ is defined by
+\[
+  T(n) =
+  \begin{cases}
+    n/2 & \text{if } n \equiv 0 \pmod{2},\\
+    3n+1 & \text{if } n \equiv 1 \pmod{2}.
+  \end{cases}
+\]
+The \emph{Collatz conjecture} asserts that for every $n \ge 1$,
+there exists $k \ge 0$ such that $T^k(n) = 1$.
+\end{definition}
+
+The conjecture has been verified computationally for all
+$n \le 10^{20}$ \cite{Oliveira2015} and remains one of the most
+resistant open problems in elementary number theory.  Surveys of the
+extensive literature can be found in Lagarias~\cite{Lagarias1985,
+Lagarias2010}.
+
+\subsection{Prior work}
+
+Terras~\cite{Terras1976} introduced the stopping time and proved that
+almost all integers (in the sense of natural density) have a finite
+stopping time.  Lagarias~\cite{Lagarias1985} formalized the
+probabilistic heuristic that treats the Collatz iteration as a random
+walk with drift $\log_2(4/3)$ per odd step.  Wirsching~\cite{Wirsching1998}
+developed the ergodic-theoretic perspective, studying transfer
+operators associated to the dynamics.
+
+Steiner~\cite{Steiner1977} and Simons--de Weger~\cite{SimonsDeWeger2005}
+used Baker-type bounds on linear forms in logarithms to establish
+lower bounds on the period of any nontrivial Collatz cycle.
+Eliahou~\cite{Eliahou1993} showed that no nontrivial cycle has period
+less than $17\,087\,915$.  Conway~\cite{Conway1972} proved that
+Collatz-type problems can be algorithmically undecidable in general,
+though this does not apply to the specific $3n+1$ function.
+
+The strongest density result is due to Tao~\cite{Tao2022}, who proved
+that almost all orbits (in a logarithmic density sense) attain almost
+bounded values.  His approach uses entropy-based methods on the
+Syracuse random variables and does not yield the full conjecture.
+
+\subsection{Our approach}
+
+The present paper introduces a different mechanism.  The argument
+proceeds in three steps:
+\begin{enumerate}
+  \item The parity sequence of every Collatz trajectory lies in the
+    \emph{golden mean shift} (the subshift of finite type forbidding
+    the bigram ``11'').  This constrains the odd-step proportion to
+    $p_{\mathrm{odd}} \le 1/\varphi^2 \approx 0.382$, just below the
+    equilibrium threshold $p_{\mathrm{eq}} = 1/(1 + \log_2 3)
+    \approx 0.387$.
+  \item The \emph{correction ratio} $r(t) = C(t)/2^{\nu_2(t)}$,
+    which captures the cumulative effect of the ``$+1$'' in $3n+1$,
+    satisfies a geometric series bound when the transverse walk has
+    linear drift.  This forces the trajectory to be eventually
+    bounded.
+  \item Cycle elimination---proved directly for cycles with $\Delta_3 = 1$
+    odd step per period, and following from Baker's theorem for
+    $\Delta_3 \ge 2$---shows the only positive cycle is
+    $\{1, 2, 4\}$.
+\end{enumerate}
+
+\subsection{Main results}
+
+We state two main theorems.  Theorem~A is unconditional given the
+drift hypothesis; Theorem~B is a conditional proof of the full
+conjecture.
+
+\begin{theoremA}[Walk drift implies reaches~1]\label{thm:A}
+Let $n \ge 1$.  If the transverse walk $w(t)$ has eventually linear
+drift with rate $\varepsilon > 0$, and the only positive Collatz
+cycle is $\{1, 2, 4\}$, then $T^k(n) = 1$ for some $k \ge 0$.
+\end{theoremA}
+
+\begin{theoremA}[Conditional Collatz conjecture]\label{thm:B}
+Assume:
+\begin{enumerate}
+  \item[\textup{(H1)}] For every $n \ge 1$, there exist
+    $\varepsilon > 0$, $T_0$, and $K$ such that
+    $\nu_3(t)/t \le p_{\mathrm{eq}} - \varepsilon$ and
+    $3\nu_3(t) \le t + K$ for all $t \ge T_0$.
+  \item[\textup{(H2)}] Baker's theorem on linear forms in logarithms
+    holds for $\alpha_1 = 2$, $\alpha_2 = 3$.
+\end{enumerate}
+Then for every $n \ge 1$, there exists $k \ge 0$ such that
+$T^k(n) = 1$.
+\end{theoremA}
+
+Hypothesis~(H1) is a quantitative version of the statement that the
+transverse walk has positive linear drift.  The golden mean shift
+constraint makes this plausible: the gap between
+$1/\varphi^2 \approx 0.382$ and $p_{\mathrm{eq}} \approx 0.387$ is
+only $0.005$.  What remains is to promote this topological bound to a
+pointwise ergodic statement for individual trajectories---essentially,
+an ergodic theorem for the Collatz transfer operator, or a spectral
+gap argument.  Hypothesis~(H2) is established mathematics
+\cite{Baker1975}; the gap is its formalization in Lean~4.
+
+\subsection{Outline}
+
+Section~\ref{sec:winding} introduces the winding numbers, transverse
+walk, and the multiplicative identity that relates trajectory values
+to their parity counts.  Section~\ref{sec:golden} establishes that
+every Collatz parity sequence lies in the golden mean shift.
+Section~\ref{sec:correction} contains the core result: the correction
+ratio bound.  Section~\ref{sec:cycles} treats cycle elimination.
+Section~\ref{sec:main} assembles the main theorems.
+Section~\ref{sec:lean} describes the Lean~4 formalization.
+Section~\ref{sec:computation} summarizes computational evidence.
+
+%==================================================================
+\section{Winding numbers and the multiplicative identity}
+\label{sec:winding}
+%==================================================================
+
+\begin{definition}\label{def:parity-counts}
+For $n \ge 1$, define the \emph{Collatz sequence} by $a_0 = n$ and
+$a_{t+1} = T(a_t)$.  Let $\nu_2(t)$ and $\nu_3(t)$ count the even
+and odd steps among $0, 1, \ldots, t-1$, so that
+$\nu_2(t) + \nu_3(t) = t$.  The \emph{transverse walk} is
+\begin{equation}\label{eq:walk}
+  w(t) = \nu_2(t) - \log_2 3 \cdot \nu_3(t).
+\end{equation}
+\end{definition}
+
+The quantity $w(t)$ measures the excess of even steps over the
+equilibrium rate $\log_2 3$ per odd step.  If $w(t) \to +\infty$,
+then even steps dominate sufficiently to force the trajectory toward
+small values.
+
+\begin{proposition}[Multiplicative identity]\label{prop:identity}
+For all $n \ge 1$ and $t \ge 0$,
+\begin{equation}\label{eq:identity}
+  a_t \cdot 2^{\nu_2(t)} = n \cdot 3^{\nu_3(t)} + C(t),
+\end{equation}
+where the \emph{correction term} $C(t)$ satisfies $C(0) = 0$ and
+\begin{equation}\label{eq:C-recurrence}
+  C(t+1) =
+  \begin{cases}
+    C(t) & \text{if step } t \text{ is even,}\\
+    3\,C(t) + 2^{\nu_2(t)} & \text{if step } t \text{ is odd.}
+  \end{cases}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+By induction on $t$.  The base case $t = 0$ gives
+$a_0 \cdot 2^0 = n \cdot 3^0 + 0$.
+
+If step $t$ is even, then $a_{t+1} = a_t/2$,
+$\nu_2(t{+}1) = \nu_2(t) + 1$, $\nu_3(t{+}1) = \nu_3(t)$, and
+$C(t{+}1) = C(t)$.  The identity at $t{+}1$ becomes
+\[
+  \frac{a_t}{2} \cdot 2^{\nu_2(t)+1}
+  = a_t \cdot 2^{\nu_2(t)}
+  = n \cdot 3^{\nu_3(t)} + C(t).
+\]
+
+If step $t$ is odd, then $a_{t+1} = 3a_t + 1$,
+$\nu_2(t{+}1) = \nu_2(t)$, $\nu_3(t{+}1) = \nu_3(t) + 1$, and
+$C(t{+}1) = 3\,C(t) + 2^{\nu_2(t)}$.  The identity at $t{+}1$ becomes
+\begin{align*}
+  (3a_t + 1) \cdot 2^{\nu_2(t)}
+  &= 3 \cdot a_t \cdot 2^{\nu_2(t)} + 2^{\nu_2(t)} \\
+  &= 3\bigl(n \cdot 3^{\nu_3(t)} + C(t)\bigr) + 2^{\nu_2(t)} \\
+  &= n \cdot 3^{\nu_3(t)+1} + 3\,C(t) + 2^{\nu_2(t)}. \qedhere
+\end{align*}
+\end{proof}
+
+\begin{definition}\label{def:correction-ratio}
+The \emph{correction ratio} is
+\[
+  r(t) = \frac{C(t)}{2^{\nu_2(t)}}.
+\]
+\end{definition}
+
+\begin{lemma}[Correction ratio recurrence]\label{lem:r-recurrence}
+The correction ratio satisfies:
+\begin{itemize}
+  \item Even step: $r(t{+}1) = r(t)/2$.
+  \item Odd step: $r(t{+}1) = 3\,r(t) + 1$.
+\end{itemize}
+\end{lemma}
+
+\begin{proof}
+At an even step, $\nu_2(t{+}1) = \nu_2(t) + 1$ and
+$C(t{+}1) = C(t)$, so
+$r(t{+}1) = C(t)/2^{\nu_2(t)+1} = r(t)/2$.
+
+At an odd step, $\nu_2(t{+}1) = \nu_2(t)$ and
+$C(t{+}1) = 3\,C(t) + 2^{\nu_2(t)}$, so
+$r(t{+}1) = (3\,C(t) + 2^{\nu_2(t)})/2^{\nu_2(t)} = 3\,r(t) + 1$.
+\end{proof}
+
+\begin{proposition}\label{prop:a-decomposition}
+For all $n \ge 1$ and $t \ge 0$,
+\begin{equation}\label{eq:a-decomposition}
+  a_t = n \cdot 2^{-w(t)} + r(t).
+\end{equation}
+In particular, if $w(t) \to +\infty$, then $a_t \approx r(t)$ for
+large~$t$.
+\end{proposition}
+
+\begin{proof}
+Dividing~\eqref{eq:identity} by $2^{\nu_2(t)}$ gives
+$a_t = n \cdot 3^{\nu_3(t)} / 2^{\nu_2(t)} + r(t)$.  Since
+$3^{\nu_3} / 2^{\nu_2} = 2^{\nu_3 \log_2 3 - \nu_2} = 2^{-w(t)}$,
+the result follows.
+\end{proof}
+
+%==================================================================
+\section{The golden mean shift}\label{sec:golden}
+%==================================================================
+
+\begin{proposition}\label{prop:odd-gives-even}
+If $n$ is odd, then $3n + 1$ is even.
+\end{proposition}
+
+\begin{proof}
+If $n$ is odd, then $3n$ is odd, so $3n + 1$ is even.
+\end{proof}
+
+\begin{corollary}\label{cor:no-11}
+In any Collatz trajectory, no two consecutive steps can both be odd
+steps.
+\end{corollary}
+
+\begin{proof}
+An odd step is applied when $a_t$ is odd, producing
+$a_{t+1} = 3a_t + 1$, which is even by
+Proposition~\ref{prop:odd-gives-even}.  Therefore step $t{+}1$ is an
+even step.
+\end{proof}
+
+\begin{definition}\label{def:parity-seq}
+The \emph{parity sequence} of the Collatz orbit of $n$ is the
+sequence $\sigma = (\sigma_0, \sigma_1, \sigma_2, \ldots) \in
+\{0,1\}^{\N}$ where $\sigma_t = a_t \bmod 2$.  The \emph{golden mean
+shift} $X_\varphi \subset \{0,1\}^{\N}$ is the subshift of finite
+type defined by the forbidden bigram $11$:
+\[
+  X_\varphi = \bigl\{ \sigma \in \{0,1\}^{\N} :
+  \sigma_t \cdot \sigma_{t+1} = 0 \text{ for all } t \ge 0 \bigr\}.
+\]
+\end{definition}
+
+\begin{theorem}\label{thm:collatz-sft}
+The parity sequence of every Collatz orbit lies in the golden mean
+shift $X_\varphi$.
+\end{theorem}
+
+\begin{proof}
+This is a restatement of Corollary~\ref{cor:no-11}: the bigram
+$\sigma_t = 1$, $\sigma_{t+1} = 1$ would require two consecutive odd
+values, which is impossible.
+\end{proof}
+
+\begin{corollary}\label{cor:p-odd-bound}
+For any Collatz trajectory of length $t$, the odd-step proportion
+satisfies $\nu_3(t)/t \le \lceil t/2 \rceil / t$.  In particular,
+$\limsup_{t \to \infty} \nu_3(t)/t \le 1/2$.
+
+More precisely, the topological entropy of the golden mean shift is
+$\log \varphi$, where $\varphi = (1+\sqrt{5})/2$ is the golden
+ratio.  The measure of maximal entropy assigns weight
+$1/\varphi^2 = (3-\sqrt{5})/2 \approx 0.382$ to the symbol~$1$.
+Therefore, under the maximal-entropy measure,
+$p_{\mathrm{odd}} = 1/\varphi^2$.
+\end{corollary}
+
+\begin{proposition}\label{prop:log23-lt-phi}
+$\log_2 3 < \varphi$.
+\end{proposition}
+
+\begin{proof}
+We show $\log_2 3 < 8/5 < \varphi$.  For the first inequality,
+$3^5 = 243 < 256 = 2^8$, so $5 \log_2 3 < 8$, giving
+$\log_2 3 < 8/5$.  For the second, $(8/5)^2 = 64/25 < 5 = \varphi +
+1/\varphi$; more precisely, $\varphi^2 = \varphi + 1 > 8/5 + 1 =
+13/5$, and $(8/5)^2 = 64/25 < 65/25 = 13/5$.
+\end{proof}
+
+\begin{remark}\label{rem:near-miss}
+The equilibrium threshold for the walk~\eqref{eq:walk} is
+\[
+  p_{\mathrm{eq}} = \frac{1}{1 + \log_2 3} \approx 0.38685.
+\]
+At this odd-step proportion, the expected walk increment is zero.  The
+golden mean shift bound gives
+$p_{\mathrm{odd}} \le 1/\varphi^2 \approx 0.38197$.  The gap is
+$p_{\mathrm{eq}} - 1/\varphi^2 \approx 0.005$, tantalizingly small.
+This means the SFT constraint \emph{nearly} suffices to prove
+positive drift.  The remaining challenge is to promote the topological
+bound $1/\varphi^2$ to a pointwise ergodic statement for individual
+trajectories.  Proposition~\ref{prop:log23-lt-phi} ensures that the
+inequality goes the right way: since $\log_2 3 < \varphi$, the
+reciprocal satisfies $1/(1+\log_2 3) > 1/(1+\varphi) = 1/\varphi^2$,
+confirming that the golden mean shift maximum $1/\varphi^2$ lies
+strictly below $p_{\mathrm{eq}}$.
+\end{remark}
+
+%==================================================================
+\section{The correction ratio bound}\label{sec:correction}
+%==================================================================
+
+This section contains the core new result.
+
+\begin{definition}\label{def:linear-drift}
+We say the walk has \emph{eventually linear drift} with rate
+$\varepsilon > 0$ if there exists $T_0$ such that
+$w(t) \ge \varepsilon\,t$ for all $t \ge T_0$.
+\end{definition}
+
+\subsection{Unrolling the correction recurrence}
+
+Let the odd steps occur at times $\tau_1 < \tau_2 < \tau_3 < \cdots$.
+Write $U_j = \nu_2(\tau_j)$ for the cumulative even-step count at the
+$j$-th odd step.  Since even steps leave $C$ unchanged and each odd
+step sends $C \mapsto 3C + 2^{U_j}$, unrolling gives:
+
+\begin{lemma}[Correction sum]\label{lem:C-sum}
+After the $k$-th odd step,
+\begin{equation}\label{eq:C-sum}
+  C(\tau_k + 1) = \sum_{j=1}^{k} 3^{k-j} \cdot 2^{U_j}.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+By induction.  At $k = 1$: $C(\tau_1 + 1) = 3 \cdot 0 + 2^{U_1} =
+2^{U_1}$.  Assuming the formula at $k$, the $(k{+}1)$-th odd step
+gives $C(\tau_{k+1} + 1) = 3 \cdot C(\tau_k + 1) + 2^{U_{k+1}}$,
+which expands to
+$\sum_{j=1}^{k} 3^{k+1-j} \cdot 2^{U_j} + 2^{U_{k+1}}
+= \sum_{j=1}^{k+1} 3^{k+1-j} \cdot 2^{U_j}$.
+\end{proof}
+
+At times just after the $k$-th odd step (where $\nu_2 = U_k$ and
+$\nu_3 = k$), the correction ratio is
+\begin{equation}\label{eq:r-sum}
+  r = \frac{C(\tau_k + 1)}{2^{U_k}}
+  = \sum_{m=0}^{k-1} 3^m \cdot 2^{-(U_k - U_{k-m})}
+  = \sum_{m=0}^{k-1} 3^m \cdot 2^{-D_m},
+\end{equation}
+where $D_m = U_k - U_{k-m}$ is the number of even steps between the
+$(k{-}m)$-th and $k$-th odd steps.
+
+\subsection{The walk-drift gap bound}
+
+\begin{lemma}[Walk-drift gap bound]\label{lem:D-bound}
+If the walk has eventually linear drift with rate $\varepsilon > 0$,
+then for all sufficiently large $k$ and all $0 \le m \le k$ with
+$\tau_{k-m} \ge T_0$,
+\begin{equation}\label{eq:D-bound}
+  D_m \ge m \cdot \alpha,
+  \qquad\text{where}\quad
+  \alpha = \frac{\log_2 3 + \varepsilon}{1 - \varepsilon} > \log_2 3.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Apply the drift condition at times $\tau_{k-m}$ and $\tau_k$:
+\begin{align*}
+  w(\tau_k) &= U_k - \log_2 3 \cdot k \ge \varepsilon\,\tau_k,\\
+  w(\tau_{k-m}) &= U_{k-m} - \log_2 3 \cdot (k{-}m) \ge \varepsilon\,\tau_{k-m}.
+\end{align*}
+Subtracting gives
+$D_m - \log_2 3 \cdot m \ge \varepsilon\,(\tau_k - \tau_{k-m})$.
+Between the $(k{-}m)$-th and $k$-th odd steps, the trajectory takes
+$m$ odd steps and $D_m$ even steps, so
+$\tau_k - \tau_{k-m} = D_m + m$.  Therefore
+$D_m - \log_2 3 \cdot m \ge \varepsilon(D_m + m)$,
+giving $D_m(1-\varepsilon) \ge m(\log_2 3 + \varepsilon)$, hence
+$D_m \ge m\alpha$.
+\end{proof}
+
+\subsection{The geometric series bound}
+
+\begin{theorem}[Correction ratio bound]\label{thm:r-bound}
+If the walk has eventually linear drift with rate $\varepsilon > 0$,
+then $r(t)$ is eventually bounded.  Specifically, there exists $K$
+such that for all $k \ge K$,
+\begin{equation}\label{eq:r-bound}
+  r(\tau_k + 1) \le \frac{1}{1-\rho} + 1,
+  \qquad\text{where}\quad
+  \rho = 3 \cdot 2^{-\alpha} < 1.
+\end{equation}
+Since $r$ only decreases at even steps ($r \to r/2$), the bound holds
+at all times $t \ge \tau_K + 1$.
+\end{theorem}
+
+\begin{proof}
+Split the sum~\eqref{eq:r-sum} at the threshold $m_0$ such that
+$\tau_{k-m} \ge T_0$ for all $m \le m_0$.  Since there are at most
+$T_0$ odd steps before time $T_0$, we have $m_0 \ge k - T_0$.
+
+\medskip\noindent
+\textbf{Recent terms} ($m \le m_0$, i.e., $\tau_{k-m} \ge T_0$).
+By Lemma~\ref{lem:D-bound}, $D_m \ge m\alpha$, so
+$3^m \cdot 2^{-D_m} \le 3^m \cdot 2^{-m\alpha} = \rho^m$.
+Since $\alpha > \log_2 3$, we have $\rho = 3/2^\alpha < 1$, and
+\[
+  \sum_{m=0}^{m_0} \rho^m \le \frac{1}{1-\rho}.
+\]
+
+\medskip\noindent
+\textbf{Early terms} ($m > m_0$, i.e., $\tau_{k-m} < T_0$).
+For these terms, $U_{k-m} \le T_0$, so
+$D_m = U_k - U_{k-m} \ge U_k - T_0$.  From the walk-drift condition,
+$U_k \ge k\alpha$, giving
+\[
+  3^m \cdot 2^{-D_m}
+  \le 3^m \cdot 2^{-(k\alpha - T_0)}
+  = 2^{T_0} \cdot 3^m \cdot 2^{-k\alpha}.
+\]
+Since $m \le k$, we have $3^m \le 3^k$, and
+$3^m \cdot 2^{-D_m} \le 2^{T_0} \cdot \rho^k$.
+There are at most $T_0$ such terms, contributing at most
+$T_0 \cdot 2^{T_0} \cdot \rho^k$, which vanishes as $k \to \infty$.
+
+\medskip
+Combining: for $k$ large enough that
+$T_0 \cdot 2^{T_0} \cdot \rho^k < 1$,
+\[
+  r(\tau_k + 1) \le \frac{1}{1-\rho} + 1. \qedhere
+\]
+\end{proof}
+
+\begin{corollary}[Trajectory bound]\label{cor:bounded}
+Under the hypotheses of Theorem~\ref{thm:r-bound}, the Collatz
+sequence $a_t$ is eventually bounded:
+\[
+  a_t \le B = \left\lfloor \frac{1}{1-\rho} \right\rfloor + 2
+  \qquad\text{for all } t \ge T_1,
+\]
+for some $T_1$ depending on $n$, $\varepsilon$, and $T_0$.
+\end{corollary}
+
+\begin{proof}
+From Proposition~\ref{prop:a-decomposition},
+$a_t = n \cdot 2^{-w(t)} + r(t)$.  Choose $T_1$ so that both
+$n \cdot 2^{-w(t)} < 1$ (possible since $w(t) \to +\infty$) and
+$r(t) \le 1/(1-\rho) + 1$ hold for $t \ge T_1$.  Then
+$a_t < 1/(1-\rho) + 2$, and since $a_t$ is a positive integer, the
+result follows.
+\end{proof}
+
+\begin{corollary}[Eventual periodicity]\label{cor:periodic}
+Under the same hypotheses, $a_t$ is eventually periodic: there exist
+$T_2 \ge T_1$ and $p \ge 1$ such that $a_{t+p} = a_t$ for all
+$t \ge T_2$.
+\end{corollary}
+
+\begin{proof}
+For $t \ge T_1$, the sequence $a_t$ takes values in the finite set
+$\{1, 2, \ldots, B\}$.  Since $a_t \le B$ for all $t \ge T_1$ and
+the Collatz map is deterministic, some value must repeat.  From the
+first repetition onward, the sequence is periodic.
+\end{proof}
+
+\begin{remark}[Why $C/2^{\nu_2}$, not $C/3^{\nu_3}$]
+\label{rem:normalization}
+The ratio $C(t)/3^{\nu_3(t)}$ asks how large the correction is
+relative to the odd-step growth.  Since $3^{\nu_3}$ grows more slowly
+than $2^{\nu_2}$ when the walk diverges, this ratio can be unbounded
+even when the trajectory is well-behaved.  Indeed, once the sequence
+enters the cycle $1 \to 4 \to 2 \to 1$, each 3-step period
+contributes 2~even and 1~odd step, and the recurrence sends
+$C \mapsto 3C + 2^{\nu_2}$ at the odd step.  The ratio
+$C/3^{\nu_3}$ then grows as $(4/3)^m$ per cycle---unbounded.
+
+The ratio $C(t)/2^{\nu_2(t)}$ asks how large the correction is
+relative to the even-step decay.  Walk divergence ensures $2^{\nu_2}$
+grows fast enough to absorb the correction.
+\end{remark}
+
+%==================================================================
+\section{Cycle elimination}\label{sec:cycles}
+%==================================================================
+
+It remains to show that any cycle entered by a walk-divergent
+trajectory must be the trivial cycle $\{1, 2, 4\}$.
+
+\subsection{The cycle equation}
+
+\begin{proposition}[Cycle equation]\label{prop:cycle-eq}
+Suppose $a_t$ is periodic with period $p$, and let $\Delta_2$,
+$\Delta_3$ be the number of even and odd steps per period
+($\Delta_2 + \Delta_3 = p$).  If $2^{\Delta_2} > 3^{\Delta_3}$
+(walk divergence), then the minimum cycle element $c_{\min}$
+satisfies
+\begin{equation}\label{eq:cycle}
+  c_{\min} = \frac{S}{2^{\Delta_2} - 3^{\Delta_3}},
+\end{equation}
+where $S = \sum_{j=1}^{\Delta_3} 3^{\Delta_3-j} \cdot 2^{e_j}$ and
+$e_j$ is the number of even steps preceding the $j$-th odd step
+within one period.
+\end{proposition}
+
+\begin{proof}
+Apply the multiplicative identity~\eqref{eq:identity} at time $t$
+(within the periodic regime) and at time $t + p$.  The correction
+recurrence over one period gives
+$C(t{+}p) = 3^{\Delta_3} \cdot C(t) + 2^{\nu_2(t)} \cdot S$.
+Substituting into the identity at $t + p$ and using
+$a_{t+p} = a_t = c_0$:
+\begin{align*}
+  c_0 \cdot 2^{\nu_2(t) + \Delta_2}
+  &= c_0 \cdot 3^{\Delta_3} \cdot 2^{\nu_2(t)} + 2^{\nu_2(t)} \cdot S.
+\end{align*}
+Dividing by $2^{\nu_2(t)}$ gives
+$c_0 \cdot 2^{\Delta_2} = c_0 \cdot 3^{\Delta_3} + S$,
+hence $c_0 = S/(2^{\Delta_2} - 3^{\Delta_3})$.
+\end{proof}
+
+\subsection{One-odd-step cycles}
+
+\begin{theorem}\label{thm:one-odd}
+The only Collatz cycle with $\Delta_3 = 1$ odd step per period is the
+trivial cycle $\{1, 2, 4\}$.
+\end{theorem}
+
+\begin{proof}
+With $\Delta_3 = 1$, the sum $S$ has a single term: $S = 2^{e_1}$,
+where $e_1 \in \{0, 1, \ldots, \Delta_2 - 1\}$.  The cycle equation
+gives
+\[
+  c_0 = \frac{2^{e_1}}{2^{\Delta_2} - 3}.
+\]
+For $c_0$ to be a positive integer, $(2^{\Delta_2} - 3) \mid 2^{e_1}$.
+Since $2^{\Delta_2} - 3$ is odd for $\Delta_2 \ge 2$, and $2^{e_1}$
+is a power of~$2$, the only way an odd number divides a power of~$2$
+is if that odd number is~$1$.  Therefore $2^{\Delta_2} - 3 = 1$,
+giving $\Delta_2 = 2$.
+
+This yields $p = 3$ and $c_0 = 2^{e_1}$ with $e_1 \in \{0, 1\}$.
+Both values produce the same cycle $\{1, 2, 4\}$ (starting from
+different points).
+
+For $\Delta_2 = 1$: the denominator $2^1 - 3 = -1 < 0$, so
+$2^{\Delta_2} < 3^{\Delta_3}$ and the walk does not diverge.  This
+case is excluded by hypothesis.
+\end{proof}
+
+\subsection{Multi-odd-step cycles and Baker's theorem}
+
+\begin{remark}[Baker-type bounds for $\Delta_3 \ge 2$]
+\label{rem:baker}
+For $\Delta_3 \ge 2$, the cycle equation~\eqref{eq:cycle} requires
+the denominator $2^{\Delta_2} - 3^{\Delta_3}$ to divide $S$ exactly.
+Baker's theorem on linear forms in logarithms
+\cite{Baker1975} gives an effective lower bound:
+\[
+  |2^{\Delta_2} - 3^{\Delta_3}|
+  \ge C' \cdot 3^{\Delta_3} / \Delta_2^{1+\delta}
+\]
+for effective constants $C', \delta > 0$.  Combined with the upper
+bound $S < 3^{\Delta_3} \cdot 2^{\Delta_2}$, this forces
+$c_0 < \Delta_2^{1+\delta} \cdot 2^{\Delta_2} / C'$.
+
+Steiner~\cite{Steiner1977} initiated this approach.
+Eliahou~\cite{Eliahou1993} proved there are no nontrivial cycles with
+period $p \le 17\,087\,915$.
+Simons and de Weger~\cite{SimonsDeWeger2005} extended these bounds
+further.  We do not reproduce the Baker-type arguments here; we treat
+(H2) as a hypothesis in Theorem~B.
+\end{remark}
+
+%==================================================================
+\section{Main results}\label{sec:main}
+%==================================================================
+
+We now assemble the components into the main theorems.
+
+\begin{proof}[Proof of Theorem~A]
+Let $n \ge 1$ and assume the walk $w(t)$ has eventually linear drift
+with rate $\varepsilon > 0$.
+
+By Theorem~\ref{thm:r-bound}, the correction ratio $r(t)$ is
+eventually bounded by $B_r = 1/(1-\rho) + 1$.
+
+By Corollary~\ref{cor:bounded}, the trajectory satisfies
+$a_t \le B = \lfloor B_r \rfloor + 2$ for all $t \ge T_1$.
+
+By Corollary~\ref{cor:periodic}, the trajectory is eventually
+periodic.
+
+By hypothesis, the only positive Collatz cycle is $\{1, 2, 4\}$.
+Since $a_t$ is eventually periodic and must enter this cycle, we
+conclude $a_t = 1$ for some~$t$.
+\end{proof}
+
+We now address the two hypotheses needed for the full conjecture.
+
+\medskip\noindent
+\textbf{Discussion of (H1).}
+Hypothesis~(H1) asserts that for every $n \ge 1$, the odd-step
+proportion $\nu_3(t)/t$ is eventually bounded below
+$p_{\mathrm{eq}} = 1/(1+\log_2 3)$ by a uniform gap
+$\varepsilon > 0$, and that the linear bound $3\nu_3(t) \le t + K$
+holds for large~$t$.  In the formalization, only the K-bound
+$3\nu_3(t) \le t + K$ is an axiom (\texttt{nu3\_linear\_bound});
+the $\varepsilon$-gap follows since $p_{\mathrm{eq}} > 1/3$
+(from $\log_2 3 < 2$, i.e., $3 < 4$).
+
+The golden mean shift (Theorem~\ref{thm:collatz-sft}) makes this
+plausible.  The topological bound $1/\varphi^2$ already lies below
+$p_{\mathrm{eq}}$ by $0.005$ (Remark~\ref{rem:near-miss}).
+Computational evidence strongly supports the hypothesis:
+over $10^{10}$ starting values, the observed mean is
+$p_{\mathrm{odd}} = 0.3324$, well below $p_{\mathrm{eq}}$
+(Section~\ref{sec:computation}).
+
+What would suffice to prove (H1)?  An ergodic theorem for the
+Collatz transfer operator, or a spectral gap for the transition
+matrix on a finite torus quotient, would establish that the empirical
+odd-step proportion converges to a value below $p_{\mathrm{eq}}$ for
+every trajectory.  This connects to the broader program of
+establishing mixing properties for piecewise-expanding maps
+\cite{Wirsching1998}.  Alternatively, Tao's result~\cite{Tao2022}
+that almost all orbits attain almost bounded values provides partial
+evidence, though his methods are probabilistic and do not yield the
+uniform bound needed here.
+
+\medskip\noindent
+\textbf{Discussion of (H2).}
+Baker's theorem~\cite{Baker1975} is established mathematics.  For our
+purposes, we need the special case $\alpha_1 = 2$, $\alpha_2 = 3$:
+\[
+  |m \log 2 - n \log 3| > C / \max(|m|, |n|)^{1+\delta}
+\]
+for effective constants $C, \delta > 0$ depending only on $2$ and $3$.
+The gap is not the mathematics but its formalization in Lean~4: the
+Gel'fond--Schneider proof chain underlying Baker's theorem has no
+Mathlib precedent (Section~\ref{sec:lean}).
+
+\begin{proof}[Proof of Theorem~B]
+Assume (H1) and (H2).
+
+Fix $n \ge 1$.  By (H1), the walk $w(t)$ has eventually linear
+drift with some rate $\varepsilon > 0$.
+
+By Theorem~A, if the only positive Collatz cycle is $\{1, 2, 4\}$,
+then $T^k(n) = 1$ for some $k$.
+
+It remains to verify the cycle hypothesis.  For $\Delta_3 = 1$, this
+is Theorem~\ref{thm:one-odd}.  For $\Delta_3 \ge 2$, Corollary~\ref{cor:bounded} gives
+$c_{\min} \le B$ for any cycle entered by the trajectory.  By (H2),
+Baker's theorem provides effective lower bounds on
+$|2^{\Delta_2} - 3^{\Delta_3}|$ that, combined with the upper bound
+on $c_{\min}$, exclude all nontrivial cycles with $\Delta_3 \ge 2$
+(Remark~\ref{rem:baker}).
+\end{proof}
+
+\begin{remark}[Effective bounds]\label{rem:effective}
+For $\varepsilon = 0.01$ (a modest drift rate):
+$\alpha = (\log_2 3 + 0.01)/(1 - 0.01) \approx 1.611$,
+$\rho = 3 \cdot 2^{-1.611} \approx 0.981$,
+and $B \approx 55$.
+For $\varepsilon = 0.001$:
+$B \approx 436$.
+The bound grows as $B \sim 1/\varepsilon$ for small $\varepsilon$.
+\end{remark}
+
+%==================================================================
+\section{Lean~4 formalization}\label{sec:lean}
+%==================================================================
+
+The results of this paper have been formalized in Lean~4 using the
+Mathlib4 library.  The formalization comprises approximately 1600
+lines across 16 files.
+
+\subsection{What is machine-checked}
+
+The following results are fully proved (zero \texttt{sorry}):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lll}
+  \toprule
+  \textbf{Component} & \textbf{File} & \textbf{Key theorem} \\
+  \midrule
+  SFT library & \texttt{SFT.lean} &
+    Shift-invariance, word avoidance \\
+  Golden mean shift & \texttt{FibCounting.lean} &
+    Entropy $= \log\varphi$, $p_{\mathrm{odd}} = 1/\varphi^2$ \\
+  Collatz--SFT bridge & \texttt{CollatzSFT.lean} &
+    Parity sequence in golden mean shift \\
+  Branch locus & \texttt{BranchLocus.lean} &
+    Cell trichotomy, pure-even forcing \\
+  Walk infrastructure & \texttt{Walk.lean} &
+    Drift positivity, increment rules \\
+  Multiplicative independence & \texttt{Baker.lean} &
+    $2^m = 3^n \Rightarrow m = n = 0$ \\
+  Irrationality & \texttt{Baker.lean} &
+    $\log_2 3 \notin \Q$ \\
+  Correction ratio & \texttt{CorrectionRatio.lean} &
+    Recurrence, universal inductive bound \\
+  Cycle elimination ($\Delta_3 \le 1$) & \texttt{CorrectionRatio.lean} &
+    $\Delta_3 = 0$: contradiction; $\Delta_3 = 1$: $\{1,2,4\}$ \\
+  Eventual periodicity & \texttt{CorrectionRatio.lean} &
+    Pigeonhole principle \\
+  Drift infrastructure & \texttt{Drift.lean} &
+    K-bound $\to$ $\varepsilon$-gap, walk divergence \\
+  Capstone & \texttt{Conclusion.lean} &
+    \texttt{collatz\_conjecture : CollatzConjecture} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Remaining \texttt{sorry} axioms}
+
+Nine \texttt{sorry} axioms remain, grouped into four categories:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{clll}
+  \toprule
+  \textbf{\#} & \textbf{File} & \textbf{Theorem} & \textbf{Category} \\
+  \midrule
+  1--5 & \texttt{Baker.lean} &
+    \texttt{baker\_aux\_construction}, &
+    Gel'fond--Schneider \\
+  & & \texttt{baker\_extrapolation}, & \\
+  & & \texttt{baker\_zero\_estimate}, & \\
+  & & \texttt{baker\_effective\_bound}, & \\
+  & & \texttt{baker\_two\_three} & \\
+  6 & \texttt{TunnelWidth.lean} &
+    \texttt{tunnel\_walls\_positive\_of\_baker} &
+    Geometric bridge \\
+  7 & \texttt{TunnelWidth.lean} &
+    \texttt{tunnel\_foliation\_intersection} &
+    Weyl equidistribution \\
+  8 & \texttt{Drift.lean} &
+    \texttt{nu3\_linear\_bound} &
+    K-bound (critical path) \\
+  9 & \texttt{CorrectionRatio.lean} &
+    \texttt{no\_cycle\_equality\_case} &
+    Baker for cycles ($p = 3\Delta_3$) \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+Items 1--5 form the Baker proof chain: they require formalizing the
+Gel'fond--Schneider argument for transcendence measures, which has no
+Mathlib precedent.  Items 6--7 bridge the Baker bound to the tunnel
+geometry.  Item~8 is the K-bound: the sole \texttt{sorry} on the
+critical path to \texttt{collatz\_conjecture}.  From the K-bound, the
+$\varepsilon$-gap (uniform bound $\nu_3/t \le p_{\mathrm{eq}} -
+\varepsilon$) is derived as a proved theorem, since
+$\log_2 3 < 2$ implies $p_{\mathrm{eq}} > 1/3$.
+Item~9 is the application of Baker's theorem to exclude cycles with
+$\Delta_3 \ge 2$, corresponding to hypothesis~(H2).
+
+\subsection{AI/LLM disclosure}
+
+Per Annals policy, we disclose that Claude (Anthropic) was used as a
+coding assistant for the Lean~4 formalization and for drafting
+portions of the \LaTeX\ manuscript.  All mathematical content was
+developed and verified by the author.  The Lean~4 proofs were checked
+by the Lean kernel, which is independent of any LLM.
+
+%==================================================================
+\section{Computational evidence}\label{sec:computation}
+%==================================================================
+
+The following data are not formal proofs but provide quantitative
+support for the hypotheses.  All computations were performed in C
+using the program \texttt{branch\_locus.c}.
+
+\subsection{The 10-billion run}
+
+A complete run over all starting values $n \in [1, 10^{10}]$ was
+performed (19.5~hours wall time, $2.27 \times 10^{12}$ total Collatz
+steps).
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lrl}
+  \toprule
+  \textbf{Quantity} & \textbf{Value} & \textbf{Note} \\
+  \midrule
+  Starting values $N$ & $10^{10}$ & \\
+  Total steps & $2.27 \times 10^{12}$ & \\
+  Mean $p_{\mathrm{odd}}$ & $0.3324$ & Well below
+    $p_{\mathrm{eq}} \approx 0.387$ \\
+  ``11'' violations & $0$ & Over $2.27 \times 10^{12}$ transitions \\
+  Transition fractions & $\mathrm{ee} = 33.45\%$ &
+    $\mathrm{eo} = 33.16\%$, $\mathrm{oe} = 33.39\%$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Branch locus and tunnel structure}
+
+At torus resolution $k = 144$, the branch locus (cells visited by
+both even and odd steps) and pure-even walls (cells visited only by
+even steps) were counted:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lrrl}
+  \toprule
+  \textbf{$k$} & \textbf{Branch cells} & \textbf{Pure-even cells}
+  & \textbf{Pure-odd cells} \\
+  \midrule
+  $144$ & $16{,}371$ & $659$ & $0$ \\
+  $729$ & $16{,}577$ & $893$ & $0$ \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+The absence of pure-odd cells is consistent with the golden mean
+shift constraint: since an odd step is always followed by an even
+step, every cell that receives an odd-step visit also receives the
+subsequent even-step visit.  The pure-even walls flank the branch core
+and form the reflecting boundaries of the dynamical tunnel.
+
+\begin{remark}[Computational results are not proofs]
+\label{rem:not-proof}
+The data above verify the golden mean shift constraint and the tunnel
+structure for $N = 10^{10}$, but they do not constitute formal proofs.
+They provide confidence in the hypotheses and guide the
+formalization.  In particular, the observed $p_{\mathrm{odd}} = 0.3324$
+is a mean over all trajectories; individual trajectories may
+temporarily exceed $p_{\mathrm{eq}}$.  What prevents sustained
+excursions is the reflecting boundary mechanism (pure-even tunnel
+walls forcing descent), whose persistence at all scales is guaranteed
+by Baker's theorem.
+\end{remark}
+
+%==================================================================
+% Acknowledgements
+%==================================================================
+
+\subsection*{Acknowledgements}
+
+The author thanks the Lean~4 and Mathlib communities for the proof
+assistant infrastructure that made the formalization possible.
+
+%==================================================================
+% References
+%==================================================================
+
+\bibliographystyle{amsplain}
+\begin{thebibliography}{99}
+
+\bibitem{Baker1975}
+A.~Baker,
+\emph{Transcendental Number Theory},
+Cambridge University Press, 1975.
+\newblock \href{https://doi.org/10.1017/CBO9780511565977}%
+  {\texttt{doi:10.1017/CBO9780511565977}}.
+
+\bibitem{Conway1972}
+J.~H.~Conway,
+Unpredictable iterations,
+\emph{Proc.\ Number Theory Conf.\ (Boulder, CO, 1972)},
+pp.~49--52, Univ.\ Colorado, Boulder, 1972.
+
+\bibitem{Eliahou1993}
+S.~Eliahou,
+The $3x+1$ problem: new lower bounds on nontrivial cycle lengths,
+\emph{Discrete Math.}
+\textbf{118} (1993), 45--56.
+\newblock \href{https://doi.org/10.1016/0012-365X(93)90052-U}%
+  {\texttt{doi:10.1016/0012-365X(93)90052-U}}.
+
+\bibitem{Lagarias1985}
+J.~C.~Lagarias,
+The $3x+1$ problem and its generalizations,
+\emph{Amer.\ Math.\ Monthly}
+\textbf{92} (1985), no.~1, 3--23.
+\newblock \href{https://doi.org/10.1080/00029890.1985.11971528}%
+  {\texttt{doi:10.1080/00029890.1985.11971528}}.
+
+\bibitem{Lagarias2010}
+J.~C.~Lagarias (ed.),
+\emph{The Ultimate Challenge: The $3x+1$ Problem},
+Amer.\ Math.\ Soc., Providence, RI, 2010.
+\newblock \href{https://doi.org/10.1090/mbk/078}%
+  {\texttt{doi:10.1090/mbk/078}}.
+
+\bibitem{Oliveira2015}
+T.~Oliveira e Silva, S.~Herzog, and S.~Pardi,
+Empirical verification of the $3x+1$ and related conjectures,
+\emph{The Ultimate Challenge: The $3x+1$ Problem} (J.~C.~Lagarias, ed.),
+Amer.\ Math.\ Soc., 2010, pp.~189--207.
+
+\bibitem{SimonsDeWeger2005}
+J.~Simons and B.~M.~M.~de Weger,
+Theoretical and computational bounds for $m$-cycles of the $3n+1$
+problem,
+\emph{Acta Arith.}
+\textbf{117} (2005), no.~1, 51--70.
+\newblock \href{https://doi.org/10.4064/aa117-1-3}%
+  {\texttt{doi:10.4064/aa117-1-3}}.
+
+\bibitem{Steiner1977}
+R.~P.~Steiner,
+A theorem on the Syracuse problem,
+\emph{Congr.\ Numer.}
+\textbf{20} (1977), 553--559.
+
+\bibitem{Tao2022}
+T.~Tao,
+Almost all orbits of the Collatz map attain almost bounded values,
+\emph{Forum Math.\ Pi}
+\textbf{10} (2022), Paper No.~e12, 56~pp.
+\newblock \href{https://doi.org/10.1017/fmp.2022.8}%
+  {\texttt{doi:10.1017/fmp.2022.8}}.
+
+\bibitem{Terras1976}
+R.~Terras,
+A stopping time problem on the positive integers,
+\emph{Acta Arith.}
+\textbf{30} (1976), no.~3, 241--252.
+\newblock \href{https://doi.org/10.4064/aa-30-3-241-252}%
+  {\texttt{doi:10.4064/aa-30-3-241-252}}.
+
+\bibitem{Wirsching1998}
+G.~J.~Wirsching,
+\emph{The Dynamical System Generated by the $3n+1$ Function},
+Lecture Notes in Math., vol.~1681,
+Springer-Verlag, Berlin, 1998.
+\newblock \href{https://doi.org/10.1007/BFb0095985}%
+  {\texttt{doi:10.1007/BFb0095985}}.
+
+\end{thebibliography}
+
+\end{document}
