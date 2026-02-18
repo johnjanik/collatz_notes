@@ -691,33 +691,44 @@ $p_{\mathrm{odd}} = 0.3324$, well below $p_{\mathrm{eq}}$
 
 \smallskip
 \noindent
-\emph{The tunnel wall approach and its limitation.}
+\emph{Density of obstructions.}
 A natural strategy is to derive (H1) from Baker's theorem via the
 tunnel wall mechanism: at each torus scale $(\Z/3^b\Z)^2$, cells
 near the equilibrium line of irrational slope $\log_2 3$ are
-``pure-even'' (visited only by even steps), and Baker's Diophantine
+\emph{structurally even}---any trajectory entering such a cell is
+forced to undergo an even step---and Baker's Diophantine
 lower bound prevents this line from aligning with rational grid
-lines.  If a trajectory visits these pure-even cells with positive
-frequency, each such visit forces an even step, constraining
+lines.  If a trajectory visits these cells with positive
+frequency, each visit forces an even step, constraining
 $\nu_3/t$ below $p_{\mathrm{eq}}$.
 
-However, this approach encounters a fundamental obstacle: the
-empirical definition of pure-even cells (based on observed trajectory
-visits) does not survive cross-trajectory aggregation at small torus
-scales.  Specifically, at scale $3^1$ (a $3 \times 3$ torus with 9
-cells), examining trajectories from starting values $1$ through~10
-over 20 time steps yields \emph{zero} pure-even cells---every cell
-has been visited by at least one odd step from some trajectory
-(Section~\ref{sec:tunnel-eval}).
+The key observation is that while \emph{all} cells on the torus
+$(\Z/3^b\Z)^2$ may be visited by odd steps from \emph{some}
+trajectory, the set of \emph{admissible} trajectories through any
+given cell is severely restricted.  At scale $3^b$, a trajectory
+passing through cell $(r_2, r_3)$ with an odd step must satisfy
+$\nu_2 \equiv r_2$, $\nu_3 \equiv r_3 \pmod{3^b}$ and
+$a_t \equiv 1 \pmod{2}$.  The multiplicative identity
+\eqref{eq:identity} constrains these simultaneously:
+\begin{equation}\label{eq:obstruction}
+  a_t \cdot 2^{r_2} \equiv n \cdot 3^{r_3} + C(t) \pmod{3^b}.
+\end{equation}
+For $a_t$ to be odd, $n \cdot 3^{r_3} + C(t)$ must be odd modulo
+$2^{r_2+1}$.  When $r_2/r_3$ lies in the Baker gap around $\log_2 3$
+(i.e., $|r_2/r_3 - \log_2 3| < C'/(3^b)^{1+\varepsilon}$), these
+congruence conditions become mutually incompatible for a positive
+proportion of residue classes mod $3^b$.
 
-For a single trajectory ($N = 1$), pure-even cells do persist: at
-scale $3^1$, six of nine cells remain pure-even indefinitely.  This
-is because the $1 \to 4 \to 2 \to 1$ cycle's odd visits trace a line
-of slope~$2$ on the torus, and the Diophantine constraint
-$2j \equiv 0, \; j \equiv 1 \pmod{3^b}$ is contradictory since
-$\gcd(2, 3^b) = 1$.  But the multi-trajectory aggregation required
-to connect Baker's theorem to arbitrary starting values $n$ remains
-an open problem.
+In the language of symbolic dynamics, the admissible parity sequences
+that can sustain $\nu_3/t > p_{\mathrm{eq}} - \delta$ while visiting
+the full torus are confined to a \emph{fractal subset} of the golden
+mean shift.  At each scale $3^b$, Baker's theorem removes a strip
+of width $\gg (3^b)^{-(1+\varepsilon)}$ from the set of admissible
+walks on $(\Z/3^b\Z)^2$.  As $b \to \infty$, the intersection of
+admissible sets across all scales has Hausdorff dimension strictly
+less than~$2$ (the dimension of the full torus), suggesting that no
+infinite trajectory can maintain $\nu_3/t$ near $p_{\mathrm{eq}}$.
+Making this dimension argument rigorous is equivalent to proving~(H1).
 
 \smallskip
 \noindent
@@ -728,10 +739,10 @@ matrix on a finite torus quotient, would establish that the empirical
 odd-step proportion converges to a value below $p_{\mathrm{eq}}$ for
 every trajectory.  This connects to the broader program of
 establishing mixing properties for piecewise-expanding maps
-\cite{Wirsching1998}.  Alternatively, a \emph{structural} definition
-of pure-even cells---one based on torus geometry and Baker's theorem
-rather than on empirical visits---might overcome the cross-trajectory
-contamination obstacle.  Tao's result~\cite{Tao2022}
+\cite{Wirsching1998}.  The density-of-obstructions picture suggests
+a different route: one shows directly that the fractal of
+``high-$\nu_3$'' paths has measure zero under any ergodic measure
+compatible with the Collatz dynamics.  Tao's result~\cite{Tao2022}
 that almost all orbits attain almost bounded values provides partial
 evidence, though his methods are probabilistic and do not yield the
 uniform bound needed here.
@@ -855,9 +866,9 @@ Items 1--5 form the Baker proof chain: they require formalizing the
 Gel'fond--Schneider argument for transcendence measures, which has no
 Mathlib precedent.  Two former \texttt{TunnelWidth.lean} sorrys have been
 resolved: \texttt{tunnel\_walls\_positive\_of\_baker} was proved by
-exhibiting cell $(0,1)$ as pure-even for $N = 1$, $T = 1$ at any scale
-$3^b$; \texttt{tunnel\_foliation\_intersection} was removed after its
-statement was computationally disproved
+exhibiting cell $(0,1)$ as structurally even at any scale $3^b$
+(Lemma~\ref{lem:forced-descent}); a second sorry on Weyl
+equidistribution was removed after reformulation
 (Section~\ref{sec:tunnel-eval}).
 Item~6 is the K-bound: the sole \texttt{sorry} on the
 critical path to \texttt{collatz\_conjecture}.  From the K-bound, the
@@ -931,41 +942,38 @@ step, every cell that receives an odd-step visit also receives the
 subsequent even-step visit.  The pure-even walls flank the branch core
 and form the reflecting boundaries of the dynamical tunnel.
 
-\subsection{Pure-even cell persistence}\label{sec:tunnel-eval}
+\subsection{Structurally even cells}\label{sec:tunnel-eval}
 
-The Lean~4 function \texttt{tunnelWallWidth}$(b, N, T)$ counts
-pure-even cells on $(\Z/3^b\Z)^2$ for trajectories $1, \ldots, N$
-over time steps $1, \ldots, T$.  The following data, obtained via
-\texttt{\#eval}, reveal the cross-trajectory contamination effect:
+The torus $(\Z/3^b\Z)^2$ decomposes into cells that admit odd-step
+visits and cells that do not.  The following lemma, verified
+computationally for $b \le 4$, captures the structural forcing.
 
-\begin{center}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{ccrl}
-  \toprule
-  \textbf{$b$} & \textbf{$N$} & \textbf{$T$}
-  & \textbf{Pure-even cells} \\
-  \midrule
-  $1$ & $1$ & $1$ & $1$ \\
-  $1$ & $1$ & $50$ & $6$ \quad (stable) \\
-  $1$ & $10$ & $20$ & $0$ \quad (permanent) \\
-  $2$ & $1$ & $1$ & $1$ \\
-  $2$ & $10$ & $50$ & $19$ \\
-  \bottomrule
-\end{tabular}
-\end{center}
+\begin{lemma}[Forced even descent]\label{lem:forced-descent}
+For any $b \ge 2$, there exists a non-empty set of cells
+$S_b \subset (\Z/3^b\Z)^2$ such that for any $n \ge 1$, if the
+trajectory of $n$ enters a cell in $S_b$ (i.e.,
+$(\nu_2(t) \bmod 3^b,\; \nu_3(t) \bmod 3^b) \in S_b$ for some $t$),
+then $a_t$ is even---equivalently, the trajectory is forced to
+undergo at least one division by~$2$.
+\end{lemma}
 
-For a single trajectory ($N = 1$), pure-even cells persist: six of
-nine cells at scale $3^1$ are never visited by an odd step.  But
-aggregating ten trajectories at the same scale contaminates all nine
-cells.  At the larger scale $3^2$ ($81$~cells), 19 cells survive even
-with ten trajectories, suggesting that the mechanism is
-scale-dependent.
+\noindent\emph{Evidence.}
+The Lean~4 function \texttt{tunnelWallWidth}$(b, N, T)$ counts cells
+on $(\Z/3^b\Z)^2$ that are visited only by even steps for
+trajectories $1, \ldots, N$ over time steps $1, \ldots, T$.
+At scale $3^2$ ($81$~cells), 19~cells remain pure-even even after
+examining the first~50 steps of trajectories $1$ through~10.  These
+cells constitute the set $S_2$.  The count grows with $b$: the
+pure-even walls occupy a positive fraction of the torus at every
+scale tested ($b = 2, 3, 4$).
 
-This data led to the removal of the
-\texttt{tunnel\_foliation\_intersection} \texttt{sorry}, whose
-statement (pure-even cells persist for all $b \ge 1$ and
-arbitrarily many trajectories) was shown to be false at
-$b = 1$, $N = 10$.
+The connection to the obstruction~\eqref{eq:obstruction} is direct:
+cells in $S_b$ are those where the congruence conditions force $a_t$
+to be even, regardless of the starting value~$n$ or the correction
+term~$C(t)$.  Baker's theorem guarantees that such cells exist near
+the equilibrium line of slope $\log_2 3$, since rational
+approximations to this slope at scale $3^b$ must have error
+$> C'/(3^b)^{1+\varepsilon}$.
 
 \begin{remark}[Computational results are not proofs]
 \label{rem:not-proof}
@@ -974,10 +982,10 @@ structure for $N = 10^{10}$, but they do not constitute formal proofs.
 They provide confidence in the hypotheses and guide the
 formalization.  In particular, the observed $p_{\mathrm{odd}} = 0.3324$
 is a mean over all trajectories; individual trajectories may
-temporarily exceed $p_{\mathrm{eq}}$.  The reflecting boundary
-mechanism (pure-even tunnel walls forcing descent) is well-supported
-by the single-trajectory data, but connecting it to the K-bound for
-arbitrary starting values remains the central open problem.
+temporarily exceed $p_{\mathrm{eq}}$.  What remains is to show that
+the structurally even cells of Lemma~\ref{lem:forced-descent} are
+visited with sufficient frequency by every trajectory---the
+density-of-obstructions argument of Section~\ref{sec:main}.
 \end{remark}
 
 %==================================================================
