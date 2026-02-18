@@ -11,7 +11,7 @@
 | Metric            | Value                          |
 |-------------------+--------------------------------|
 | Files             | 18 (.lean)                     |
-| Total lines       | 3,392                          |
+| Total lines       | 3,515                          |
 | Theorems proved   | All except 7 sorry             |
 | Sorrys remaining  | 7 (Baker: 6, Drift: 1)        |
 | Sorry-free files  | 16 of 18                       |
@@ -153,7 +153,7 @@ The chain: hensel_attrition + baker_cell_separation
 | CorrectionRatio.lean   |   776 | Cycle elimination, main composition       |
 | WallPersistence.lean   |   199 | Wall persistence, confinement, walk boost |
 | StructuralPureEven.lean|    89 | Structural pure-even definitions          |
-| HenselAttrition.lean   |   559 | =hensel_attrition=, counting, walk effect |
+| HenselAttrition.lean   |   642 | =hensel_attrition=, counting, deficit     |
 | Conclusion.lean        |   136 | =collatz_conjecture= capstone + equiv     |
 
 ** Files with sorrys (2)
@@ -161,7 +161,7 @@ The chain: hensel_attrition + baker_cell_separation
 | File       | Lines | Sorrys | Content                              |
 |------------+-------+--------+--------------------------------------|
 | Baker.lean |   190 |      6 | Gel'fond-Schneider chain + cycle     |
-| Drift.lean |   250 |      1 | K-bound + reverse direction          |
+| Drift.lean |   290 |      1 | K-bound + deficit equiv + reverse    |
 
 * Import DAG
 
@@ -181,7 +181,7 @@ Baker ─────────────────────┐        
                            │                         │
 TunnelWidth ◄──────────────┤◄── Walk ◄── BranchLocus │
                            │                         │
-Drift ◄──── Walk           │                         │
+Drift ◄──── Walk, HenselAttrition                     │
                            │                         │
 CorrectionRatio ◄──────────┤◄── Identity, Drift, CollatzSFT
                            │
@@ -195,6 +195,31 @@ Conclusion ◄── CorrectionRatio, CollatzSFT
 #+end_example
 
 * Recent Changes
+
+** 2026-02-18: Deficit wiring to K-bound sorry (0 new sorrys)
+
+Defined =deficit(n,t) = 3·ν₃(t) - t= as integer-valued K-bound tracker in
+=HenselAttrition.lean= (+83 lines → 642 total), and proved the equivalence
+=K-bound ⟺ deficit bounded= in =Drift.lean= (+40 lines → 290 total).
+
+HenselAttrition.lean — deficit infrastructure:
+- =deficit= : integer-valued tracking quantity 3·ν₃ - t
+- =deficit_step_odd= (+2), =deficit_step_even= (-1) : step rules
+- =deficit_le_two_mul_t= : upper bound (since ν₃ ≤ t)
+- =deficit_of_v2_run= : v₂=1 run of d steps increases deficit by exactly d
+- =deficit_of_run_plus_exit= : run + 3-step exit also increases by d (exit = 0)
+- =deficit_nonincreasing_at_safe_step= : safe step (1 odd + ≥2 even) ≤ 0
+- =walk_eq_deficit_form= : walk = ((2 - log₂3)·t - (1 + log₂3)·deficit) / 3
+
+Drift.lean — equivalence wiring:
+- =k_bound_of_deficit_bounded= : deficit bounded ⟹ K-bound
+- =deficit_bounded_of_k_bound= : K-bound ⟹ deficit bounded
+- New import: =CollatzLean.HenselAttrition=
+
+The deficit makes the K-bound transparent: it grows ONLY during v₂=1 runs
+(by exactly d per run of length d), is unchanged during exits, and is
+non-increasing during safe steps. The question of whether 3ν₃ ≤ t + K
+reduces to whether enough safe steps follow each dangerous run to compensate.
 
 ** 2026-02-18: Attrition counting — exact 2^{-d} rate (0 new sorrys)
 
@@ -341,7 +366,7 @@ The Diophantine Repeller analysis refines the gap:
 - Empirical margin: P(D|D) ≈ 0.06 vs the 0.415 threshold needed
   to defeat the K-bound, giving a 7× safety factor
 
-Proved lemmas (HenselAttrition.lean, 37 theorems, 0 sorrys):
+Proved lemmas (HenselAttrition.lean + Drift.lean wiring, 0 sorrys):
 - =hensel_attrition= : d consec v₂=1 ↔ 2^{d+1} ∣ (x+1) ✓
 - =dangerous_exit_forced= : after maximal v₂=1 run, 4 ∣ (3a+1) ✓
 - =collatz_two_steps_eq_oddCollatzStep= : bridge to =collatzSeq= ✓
@@ -353,3 +378,11 @@ Proved lemmas (HenselAttrition.lean, 37 theorems, 0 sorrys):
 - =attrition_rate= : 1 × 2^d = |odd in period| (exact 2^{-d}) ✓
 - =survivors_eq_singleton= : only x = 2^{d+1}-1 survives ✓
 - =attrition_count= : 1 survivor per period (dvd form) ✓
+- =deficit= : integer K-bound tracker 3·ν₃ - t ✓
+- =deficit_step_odd= / =deficit_step_even= : step rules ✓
+- =deficit_of_v2_run= : run accounting (deficit += d) ✓
+- =deficit_of_run_plus_exit= : run + exit accounting ✓
+- =deficit_nonincreasing_at_safe_step= : safe steps ≤ 0 ✓
+- =walk_eq_deficit_form= : walk-deficit relation ✓
+- =k_bound_of_deficit_bounded= : deficit bounded ⟹ K-bound ✓
+- =deficit_bounded_of_k_bound= : K-bound ⟹ deficit bounded ✓
