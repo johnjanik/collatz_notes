@@ -156,7 +156,27 @@ theorem tunnel_walls_positive_of_baker (b : ℕ) (hb : b ≥ 1)
     (C' ε : ℝ) (_hC : C' > 0) (_hε : ε > 0)
     (_hbaker : |diophError b| > C' / (↑(3 ^ b : ℕ) : ℝ) ^ (1 + ε)) :
     ∃ N T, tunnelWallWidth b N T > 0 := by
-  sorry
+  -- Cell (0,1) on (Z/3^bZ)² is pure-even for N=1, T=1:
+  -- n=1 at t=1 has collatzSeq(1,1)=4 (even), torusResidue=(0,1).
+  -- The only candidate (n=1,t=1) has even value, so no odd visits.
+  refine ⟨1, 1, ?_⟩
+  unfold tunnelWallWidth pureEvenCount
+  apply Finset.card_pos.mpr
+  refine ⟨((0 : ZMod (3 ^ b)), (1 : ZMod (3 ^ b))),
+    Finset.mem_filter.mpr ⟨Finset.mem_univ _, ?_⟩⟩
+  -- Goal: isPureEvenBool (3^b) (0, 1) 1 1 = true
+  -- At (n,t)=(1,1): collatzSeq(1,1)=4 (even), cell=(0,1). No odd visits.
+  show isPureEvenBool (3 ^ b) ((0 : ZMod (3 ^ b)), (1 : ZMod (3 ^ b))) 1 1 = true
+  simp only [isPureEvenBool, hasEvenVisitBool, hasOddVisitBool]
+  simp only [List.range_succ, List.range_zero, List.nil_append,
+    List.any_cons, List.any_nil, Bool.or_false]
+  have heven : isEvenStep 1 1 = true := by native_decide
+  have hodd : isOddStep 1 1 = false := by native_decide
+  have hnu2 : nu2 1 1 = 0 := by native_decide
+  have hnu3 : nu3 1 1 = 1 := by native_decide
+  rw [heven, hodd, Bool.false_and, Bool.not_false, Bool.and_true, Bool.true_and]
+  -- Goal: (torusResidue (3^b) 1 1 == ((0 : ZMod (3^b)), (1 : ZMod (3^b)))) = true
+  simp only [torusResidue, hnu2, hnu3, Nat.cast_zero, Nat.cast_one, beq_self_eq_true]
 
 /-! ## Walk confinement at pure-even boundary -/
 
