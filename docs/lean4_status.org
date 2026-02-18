@@ -11,7 +11,7 @@
 | Metric            | Value                          |
 |-------------------+--------------------------------|
 | Files             | 18 (.lean)                     |
-| Total lines       | 3,140                          |
+| Total lines       | 3,392                          |
 | Theorems proved   | All except 7 sorry             |
 | Sorrys remaining  | 7 (Baker: 6, Drift: 1)        |
 | Sorry-free files  | 16 of 18                       |
@@ -133,7 +133,7 @@ The chain: hensel_attrition + baker_cell_separation
 - P(D|D) decreasing with N: 0.06 (10^6) → 0.062 (10^7) → 0.032 (10^{10})
 - Hensel attrition: exactly 2^{-d} per step (proved algebraically)
 
-* File Inventory (18 files, 3025 lines)
+* File Inventory (18 files, 3392 lines)
 
 ** Sorry-free files (16)
 
@@ -153,7 +153,7 @@ The chain: hensel_attrition + baker_cell_separation
 | CorrectionRatio.lean   |   776 | Cycle elimination, main composition       |
 | WallPersistence.lean   |   199 | Wall persistence, confinement, walk boost |
 | StructuralPureEven.lean|    89 | Structural pure-even definitions          |
-| HenselAttrition.lean   |   307 | =hensel_attrition=, v₂=1 run accounting  |
+| HenselAttrition.lean   |   559 | =hensel_attrition=, counting, walk effect |
 | Conclusion.lean        |   136 | =collatz_conjecture= capstone + equiv     |
 
 ** Files with sorrys (2)
@@ -189,10 +189,38 @@ WallPersistence ◄── TunnelWidth, Drift, StructuralPureEven
                            │
 StructuralPureEven ◄── BranchLocus
                            │
+HenselAttrition ◄── Walk
+                           │
 Conclusion ◄── CorrectionRatio, CollatzSFT
 #+end_example
 
 * Recent Changes
+
+** 2026-02-18: Attrition counting — exact 2^{-d} rate (0 new sorrys)
+
+Extended =HenselAttrition.lean= (+122 lines → 559 total) with Finset-based
+counting theorems proving the exact attrition rate:
+
+- =odd_range_eq_image=: odd numbers in {0..2n-1} = image of k↦2k+1
+- =card_odd_in_period=: exactly 2^d odd numbers in {0..2^{d+1}-1}
+- =survivors_eq_singleton=: survivors = {2^{d+1}-1} (singleton!)
+- =card_survivors_in_period=: exactly 1 survivor per period
+- =attrition_rate=: 1 × 2^d = |odd numbers| (the 2^{-d} identity)
+- =attrition_count=: combined theorem using divisibility form
+- =survivor_iff_dvd=: bridge between mod and dvd formulations
+- Concrete =native_decide= verification for d = 1, 2, 3
+
+** 2026-02-18: Walk effect and bridge theorems (0 new sorrys)
+
+Extended =HenselAttrition.lean= (+130 lines) with multi-step bridge and
+walk effect theorems:
+
+- =collatzSeq_tracks_oddCollatzIter=: collatzSeq at even offsets = oddCollatzIter
+- =nu3_of_v2_run=, =nu2_of_v2_run=: Δν₂ = Δν₃ = d during v₂=1 runs
+- =equal_winding_of_v2_run=: equal winding increments
+- =walk_of_v2_run=: walk changes by d×(1 - log₂3) ≈ -0.585d
+- =walk_exit_recovery=: forced exit contributes (2 - log₂3) ≈ +0.415
+- =walk_run_plus_exit=: combined formula for run + exit
 
 ** 2026-02-18: Formalize Hensel attrition theorem (0 new sorrys)
 
@@ -313,7 +341,15 @@ The Diophantine Repeller analysis refines the gap:
 - Empirical margin: P(D|D) ≈ 0.06 vs the 0.415 threshold needed
   to defeat the K-bound, giving a 7× safety factor
 
-Proved lemmas (HenselAttrition.lean, 0 sorrys):
+Proved lemmas (HenselAttrition.lean, 37 theorems, 0 sorrys):
 - =hensel_attrition= : d consec v₂=1 ↔ 2^{d+1} ∣ (x+1) ✓
 - =dangerous_exit_forced= : after maximal v₂=1 run, 4 ∣ (3a+1) ✓
 - =collatz_two_steps_eq_oddCollatzStep= : bridge to =collatzSeq= ✓
+- =collatzSeq_tracks_oddCollatzIter= : multi-step bridge ✓
+- =nu3_of_v2_run=, =nu2_of_v2_run= : winding accounting ✓
+- =walk_of_v2_run= : walk deficit d×(1 - log₂3) ✓
+- =walk_exit_recovery= : exit gain (2 - log₂3) ✓
+- =walk_run_plus_exit= : combined run + exit formula ✓
+- =attrition_rate= : 1 × 2^d = |odd in period| (exact 2^{-d}) ✓
+- =survivors_eq_singleton= : only x = 2^{d+1}-1 survives ✓
+- =attrition_count= : 1 survivor per period (dvd form) ✓
