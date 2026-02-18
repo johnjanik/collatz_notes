@@ -110,6 +110,18 @@ theorem collatz_conjecture : CollatzConjecture := by
   -- Apply the correction ratio proof chain
   exact reaches_one_of_linear_drift n hn K T₀ hbound3
 
+/-! ## Equivalence: nu3_linear_bound ↔ collatzReaches -/
+
+/-- The K-bound is equivalent to the Collatz conjecture for each n.
+    Forward: K-bound → trajectory bounded → periodic → cycle = {1,2,4} → reaches 1.
+    Reverse: reaches 1 → enters the 1→4→2→1 cycle → ν₃ grows as t/3 → K-bound. -/
+theorem nu3_linear_bound_iff_reaches (n : ℕ) (hn : n ≥ 1) :
+    (∃ K T₀, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) ↔ collatzReaches n := by
+  constructor
+  · intro ⟨K, T₀, hbound⟩
+    exact reaches_one_of_linear_drift n hn K T₀ hbound
+  · exact nu3_linear_bound_of_reaches n hn
+
 /-! ## Evaluation -/
 
 -- Demonstrate that correction / 3^nu3 grows unboundedly (no uniform constant C works).

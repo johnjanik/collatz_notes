@@ -14,6 +14,8 @@ import CollatzLean.Walk
 import Mathlib.Topology.Order.Basic
 import Mathlib.Order.Filter.AtTopBot.Basic
 
+set_option linter.style.nativeDecide false
+
 namespace Collatz
 
 open Real Filter
@@ -173,5 +175,76 @@ theorem walk_diverges_of_podd_bound (n : ℕ) (hn : n ≥ 1) :
   have ht1 : t ≥ 1 := le_of_max_le_right ht
   have := walk_lower_bound_linear n hn ε hε T₀ hbound t ht0 ht1
   linarith
+
+/-! ## Reverse direction: collatzReaches → K-bound -/
+
+/-- After reaching 1, the Collatz sequence returns to 1 in 3 steps: 1 → 4 → 2 → 1. -/
+private theorem collatzSeq_cycle3 (n T : ℕ) (hT : collatzSeq n T = 1) :
+    collatzSeq n (T + 3) = 1 := by
+  have h1 : collatzSeq n (T + 1) = 4 := by rw [collatzSeq_succ, hT]; native_decide
+  have h2 : collatzSeq n (T + 2) = 2 := by
+    rw [show T + 2 = (T + 1) + 1 from by omega, collatzSeq_succ, h1]; native_decide
+  rw [show T + 3 = (T + 2) + 1 from by omega, collatzSeq_succ, h2]; native_decide
+
+/-- After reaching 1, ν₃ increases by exactly 1 every 3 steps. -/
+private theorem nu3_add3_of_one (n T : ℕ) (hT : collatzSeq n T = 1) :
+    nu3 n (T + 3) = nu3 n T + 1 := by
+  have h1 : collatzSeq n (T + 1) = 4 := by rw [collatzSeq_succ, hT]; native_decide
+  have h2 : collatzSeq n (T + 2) = 2 := by
+    rw [show T + 2 = (T + 1) + 1 from by omega, collatzSeq_succ, h1]; native_decide
+  have ho := nu3_step_odd n T (by unfold isOddStep; rw [hT]; native_decide)
+  have he1 : nu3 n (T + 2) = nu3 n (T + 1) := by
+    rw [show T + 2 = (T + 1) + 1 from by omega]
+    exact nu3_step_even n (T + 1) (by unfold isEvenStep; rw [h1]; native_decide)
+  have he2 : nu3 n (T + 3) = nu3 n (T + 2) := by
+    rw [show T + 3 = (T + 2) + 1 from by omega]
+    exact nu3_step_even n (T + 2) (by unfold isEvenStep; rw [h2]; native_decide)
+  omega
+
+/-- Induction: collatzSeq stays in the 1→4→2→1 cycle, ν₃ grows by k over 3k steps. -/
+private theorem nu3_cycle_induction (n T : ℕ) (hT : collatzSeq n T = 1) (k : ℕ) :
+    collatzSeq n (T + 3 * k) = 1 ∧ nu3 n (T + 3 * k) = nu3 n T + k := by
+  induction k with
+  | zero => exact ⟨by simpa using hT, by simp⟩
+  | succ k ih =>
+    obtain ⟨ihseq, ihnu⟩ := ih
+    constructor
+    · rw [show T + 3 * (k + 1) = (T + 3 * k) + 3 from by omega]
+      exact collatzSeq_cycle3 n _ ihseq
+    · rw [show T + 3 * (k + 1) = (T + 3 * k) + 3 from by omega,
+          nu3_add3_of_one n _ ihseq, ihnu]; omega
+
+/-- ν₃ increases by at most 1 per step. -/
+private theorem nu3_mono_step (n t : ℕ) : nu3 n (t + 1) ≤ nu3 n t + 1 := by
+  simp only [nu3]; split_ifs <;> omega
+
+/-- ν₃ increases by at most s over s steps. -/
+private theorem nu3_add_le (n t s : ℕ) : nu3 n (t + s) ≤ nu3 n t + s := by
+  induction s with
+  | zero => exact le_refl _
+  | succ s ih =>
+    exact le_trans (nu3_mono_step n (t + s)) (Nat.add_le_add_right ih 1)
+
+/-- If a Collatz trajectory reaches 1, the K-bound holds.
+    Together with the forward chain (nu3_linear_bound → reaches_one_of_linear_drift),
+    this shows nu3_linear_bound ⟺ collatzReaches n. -/
+theorem nu3_linear_bound_of_reaches (n : ℕ) (_hn : n ≥ 1) (hr : collatzReaches n) :
+    ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K := by
+  obtain ⟨T, hT⟩ := hr
+  refine ⟨3 * nu3 n T + 4, T, fun t ht => ?_⟩
+  -- Divide (t - T) by 3: quotient and remainder
+  set m := t - T
+  have htm : t = T + m := by omega
+  have ⟨_, hnu_q⟩ := nu3_cycle_induction n T hT (m / 3)
+  -- nu3(t) ≤ nu3(T) + m/3 + m%3 via cycle formula + monotonicity for remainder
+  have hnu_bound : nu3 n t ≤ nu3 n T + m / 3 + m % 3 := by
+    calc nu3 n t = nu3 n (T + m) := by rw [htm]
+      _ = nu3 n (T + (3 * (m / 3) + m % 3)) := by rw [Nat.div_add_mod]
+      _ = nu3 n ((T + 3 * (m / 3)) + m % 3) := by congr 1; omega
+      _ ≤ nu3 n (T + 3 * (m / 3)) + m % 3 := nu3_add_le n _ _
+      _ = nu3 n T + m / 3 + m % 3 := by omega
+  -- 3*(nu3 T + m/3 + m%3) ≤ t + 3*nu3 T + 4 since 2*(m%3) ≤ 4 ≤ T + 4
+  have : m % 3 < 3 := Nat.mod_lt m (by omega)
+  omega
 
 end Collatz

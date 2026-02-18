@@ -11,7 +11,7 @@
 | Metric            | Value                          |
 |-------------------+--------------------------------|
 | Files             | 17 (.lean)                     |
-| Total lines       | 2,704                          |
+| Total lines       | 2,789                          |
 | Theorems proved   | All except 7 sorry             |
 | Sorrys remaining  | 7 (Baker: 6, Drift: 1)        |
 | Sorry-free files  | 15 of 17                       |
@@ -116,14 +116,14 @@ Equivalent to the Collatz conjecture for a given $n$.
 | CorrectionRatio.lean   |   776 | Cycle elimination, main composition       |
 | WallPersistence.lean   |   155 | Wall persistence and confinement          |
 | StructuralPureEven.lean|    89 | Structural pure-even definitions          |
-| Conclusion.lean        |   124 | =collatz_conjecture= capstone             |
+| Conclusion.lean        |   136 | =collatz_conjecture= capstone + equiv     |
 
 ** Files with sorrys (2)
 
 | File       | Lines | Sorrys | Content                              |
 |------------+-------+--------+--------------------------------------|
 | Baker.lean |   190 |      6 | Gel'fond-Schneider chain + cycle     |
-| Drift.lean |   177 |      1 | K-bound (=nu3_linear_bound=)         |
+| Drift.lean |   250 |      1 | K-bound + reverse direction          |
 
 * Import DAG
 
@@ -155,6 +155,18 @@ Conclusion ◄── CorrectionRatio, CollatzSFT
 #+end_example
 
 * Recent Changes
+
+** 2026-02-18: Prove nu3_linear_bound ↔ collatzReaches equivalence
+
+Formalized the reverse direction: =collatzReaches n → nu3_linear_bound n=.
+After reaching 1, the 1→4→2→1 cycle has exactly 1 odd step per 3 steps,
+so $\nu_3$ grows as $t/3$, yielding $3\nu_3 \le t + K$.
+
+- Drift.lean: +73 lines (=collatzSeq_cycle3=, =nu3_add3_of_one=,
+  =nu3_cycle_induction=, =nu3_mono_step=, =nu3_add_le=,
+  =nu3_linear_bound_of_reaches=)
+- Conclusion.lean: +12 lines (=nu3_linear_bound_iff_reaches= biconditional)
+- 0 new sorrys
 
 ** 2026-02-18: Close =no_cycle_equality_case= sorry
 
