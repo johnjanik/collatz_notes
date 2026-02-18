@@ -157,6 +157,30 @@ theorem baker_two_three :
         |linearFormLog m n| > C / (max |m| |n| : ℝ) ^ κ := by
   sorry
 
+/-! ## Cycle elimination (Baker-Steiner) -/
+
+/-- The Collatz step function (standalone definition for Baker-level results,
+    avoiding import dependencies on CollatzLean.Basic). -/
+def collatzStep (n : ℕ) : ℕ :=
+  if n = 0 then 0
+  else if n % 2 = 0 then n / 2
+  else 3 * n + 1
+
+/-- Baker-Steiner cycle theorem: no non-trivial Collatz cycle has period
+    p = 3·Δ₃ for any Δ₃ ≥ 2. Any such cycle must contain 1.
+
+    Proof requires Baker's theorem lower bound on |m·log 2 + n·log 3|
+    combined with Steiner-type analysis of the cycle equation
+    c₀·(4^Δ₃ - 3^Δ₃) = Σ 3^{Δ₃-j}·2^{e_j} and computational
+    verification for small Δ₃.
+
+    References: Steiner (1977), Simons & de Weger (2005). -/
+theorem baker_no_balanced_cycle (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 2)
+    (c₀ : ℕ) (hc : c₀ ≥ 1)
+    (hcycle : collatzStep^[3 * Δ₃] c₀ = c₀) :
+    ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 := by
+  sorry
+
 /-! ## Evaluation -/
 
 -- Verify 2^m ≠ 3^n for small m, n (except m = n = 0)

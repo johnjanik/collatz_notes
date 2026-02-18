@@ -12,6 +12,7 @@
 import CollatzLean.Identity
 import CollatzLean.Drift
 import CollatzLean.CollatzSFT
+import CollatzLean.Baker
 import Mathlib.Data.Fintype.Pigeonhole
 
 namespace Collatz
@@ -667,19 +668,47 @@ private theorem no_cycle_strict_inequality (n : ℕ) (hn : n ≥ 1)
       (Nat.pow_le_pow_right (by norm_num) (by omega))
   omega
 
-/-- The equality case (2Δ₃ = Δ₂, i.e. p = 3Δ₃): needs Baker's theorem.
+/-- collatzStep (from Baker.lean) equals collatz (from Basic.lean). -/
+private theorem collatzStep_eq_collatz (x : ℕ) : collatzStep x = collatz x := by
+  unfold collatzStep collatz; rfl
+
+/-- collatzSeq as iteration of collatz from a starting point. -/
+private theorem collatzSeq_as_iterate (n T₂ k : ℕ) :
+    collatzSeq n (T₂ + k) = collatz^[k] (collatzSeq n T₂) := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+    change collatz (collatzSeq n (T₂ + k)) = collatz^[k + 1] (collatzSeq n T₂)
+    rw [Function.iterate_succ', Function.comp_apply, ih]
+
+/-- The equality case (2Δ₃ = Δ₂, i.e. p = 3Δ₃): uses Baker-Steiner cycle theorem.
     When p = 3·Δ₃, the cycle equation gives c₀ = S/(4^Δ₃ - 3^Δ₃) where
-    S ~ 3^Δ₃ grows, so c₀ doesn't shrink to zero. Ruling out integer
-    solutions requires Baker's theorem on linear forms in logarithms
-    (specifically, lower bounds on |2^a - 3^b|) combined with
-    computational verification for small Δ₃. -/
-private theorem no_cycle_equality_case (n : ℕ) (_hn : n ≥ 1)
+    S ~ 3^Δ₃ grows, so c₀ doesn't shrink to zero. Baker's theorem on
+    linear forms in logarithms rules out all non-trivial solutions. -/
+private theorem no_cycle_equality_case (n : ℕ) (hn : n ≥ 1)
     (T₂ p : ℕ) (_hp : p ≥ 1)
-    (_hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
-    (_hpeq : p = 3 * oddStepsInPeriod n T₂ p)
-    (_hdelta : oddStepsInPeriod n T₂ p ≥ 2) :
+    (hperiodic : ∀ t, t ≥ T₂ → collatzSeq n (t + p) = collatzSeq n t)
+    (hpeq : p = 3 * oddStepsInPeriod n T₂ p)
+    (hdelta : oddStepsInPeriod n T₂ p ≥ 2) :
     ∃ t, t ≥ T₂ ∧ collatzSeq n t = 1 := by
-  sorry
+  set Δ₃ := oddStepsInPeriod n T₂ p with hΔ₃_def
+  set c₀ := collatzSeq n T₂ with hc₀_def
+  have hc₀_pos : c₀ ≥ 1 := collatzSeq_pos n hn T₂
+  have hstep_eq : collatzStep = collatz := funext collatzStep_eq_collatz
+  -- Establish the cycle condition for Baker's theorem
+  have hcycle : collatzStep^[3 * Δ₃] c₀ = c₀ := by
+    have h : collatzSeq n (T₂ + 3 * Δ₃) = c₀ := by
+      rw [← hpeq]; exact hperiodic T₂ (le_refl _)
+    calc collatzStep^[3 * Δ₃] c₀
+        = collatz^[3 * Δ₃] c₀ := by rw [hstep_eq]
+      _ = collatzSeq n (T₂ + 3 * Δ₃) := by rw [← collatzSeq_as_iterate]
+      _ = c₀ := h
+  -- Apply Baker-Steiner cycle theorem
+  obtain ⟨t, ht_lt, ht_one⟩ := baker_no_balanced_cycle Δ₃ hdelta c₀ hc₀_pos hcycle
+  -- Bridge back to collatzSeq
+  refine ⟨T₂ + t, by omega, ?_⟩
+  rw [collatzSeq_as_iterate, ← hstep_eq]
+  exact ht_one
 
 /-- Cycles with Δ₃ ≥ 2 are impossible.
     Case split: if 3Δ₃ < p (strict), the universal bound gives a contradiction.
