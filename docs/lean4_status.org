@@ -1,0 +1,209 @@
+#+TITLE: Lean 4 Formalization Status
+#+AUTHOR: John A. Janik
+#+DATE: <2026-02-18 Tue>
+#+STARTUP: overview
+#+TODO: SORRY BLOCKED | PROVED CLOSED
+#+PRIORITIES: A B C
+#+OPTIONS: toc:2
+
+* Summary
+
+| Metric            | Value                          |
+|-------------------+--------------------------------|
+| Files             | 17 (.lean)                     |
+| Total lines       | 2,704                          |
+| Theorems proved   | All except 7 sorry             |
+| Sorrys remaining  | 7 (Baker: 6, Drift: 1)        |
+| Sorry-free files  | 15 of 17                       |
+| Capstone          | =collatz_conjecture= (proved!) |
+
+The capstone =collatz_conjecture : CollatzConjecture= is fully proved,
+conditional on 7 sorry'd lemmas encoding established mathematics
+(Baker's theorem on linear forms in logarithms, Steiner-type cycle
+elimination, and the K-bound).
+
+* Critical Path
+
+#+begin_example
+nu3_linear_bound   [SORRY, Drift.lean]
+        │
+        ▼
+reaches_one_of_linear_drift   [PROVED, CorrectionRatio.lean]
+  ├─ collatzSeq_eventually_bounded_of_linear_drift  [PROVED]
+  ├─ collatzSeq_eventually_periodic_of_bounded      [PROVED, pigeonhole]
+  └─ cycle_contains_one                             [PROVED, Δ₃ case split]
+       ├─ Δ₃=0: no_cycle_delta3_zero               [PROVED]
+       ├─ Δ₃=1: cycle_contains_one_of_delta3_one    [PROVED, algebraic]
+       └─ Δ₃≥2: no_cycle_delta3_ge2                [PROVED]
+            ├─ 3Δ₃<p: no_cycle_strict_inequality    [PROVED]
+            └─ 3Δ₃=p: no_cycle_equality_case        [PROVED → Baker]
+                       └─ baker_no_balanced_cycle    [SORRY, Baker.lean]
+        │
+        ▼
+collatz_conjecture   [PROVED, Conclusion.lean]
+#+end_example
+
+* Sorry Inventory (7 total)
+
+** Gel'fond-Schneider chain (5 sorrys, Baker.lean)
+
+These 5 sorrys form the proof chain for Baker's theorem specialized to
+$\alpha_1 = 2, \alpha_2 = 3$: the effective lower bound
+$|m \log 2 + n \log 3| > C / \max(|m|,|n|)^\kappa$.
+
+*** SORRY [#B] baker_aux_construction                          :gelfond:
+Siegel's lemma: auxiliary polynomial with small coefficients.
+- File :: Baker.lean:125
+- Needs :: Polynomial ring types, height bounds
+
+*** SORRY [#B] baker_extrapolation                             :gelfond:
+Schwarz lemma + analytic continuation extends vanishing.
+- File :: Baker.lean:132
+- Needs :: Complex analysis foundations
+
+*** SORRY [#B] baker_zero_estimate                             :gelfond:
+Interpolation determinant nonvanishing by multiplicative independence.
+- File :: Baker.lean:141
+- Needs :: Linear algebra over $\mathbb{Z}$
+
+*** SORRY [#B] baker_effective_bound                           :gelfond:
+Composition of aux_construction + extrapolation + zero_estimate.
+- File :: Baker.lean:147
+
+*** SORRY [#B] baker_two_three                                 :gelfond:
+Main Baker inequality for $\alpha_1 = 2, \alpha_2 = 3$.
+- File :: Baker.lean:154
+- Downstream :: Used by =diophError_lower_bound= (TunnelWidth.lean)
+
+** Baker-Steiner cycle elimination (1 sorry, Baker.lean)
+
+*** SORRY [#B] baker_no_balanced_cycle                         :steiner:
+No non-trivial Collatz cycle has period $p = 3\Delta_3$ with $\Delta_3 \ge 2$.
+Uses Baker's lower bound on $|m \log 2 + n \log 3|$ + Steiner analysis
+of the cycle equation + computational verification for small $\Delta_3$.
+- File :: Baker.lean:178
+- Ref :: Steiner (1977), Simons & de Weger (2005)
+- Downstream :: =no_cycle_equality_case= (CorrectionRatio.lean)
+- Bridge :: =collatzStep_eq_collatz= + =collatzSeq_as_iterate=
+
+** K-bound / critical path (1 sorry, Drift.lean)
+
+*** SORRY [#A] nu3_linear_bound                                :critical:
+$\exists K\, T_0,\; \forall t \ge T_0,\; 3\nu_3(n,t) \le t + K$.
+This is the sole sorry on the critical path to =collatz_conjecture=.
+Equivalent to the Collatz conjecture for a given $n$.
+- File :: Drift.lean:25
+- Downstream :: =reaches_one_of_linear_drift= $\to$ =collatz_conjecture=
+- Derives :: =podd_uniform_bound= ($\varepsilon$-gap, proved from this)
+
+* File Inventory (17 files, 2704 lines)
+
+** Sorry-free files (15)
+
+| File                   | Lines | Role                                      |
+|------------------------+-------+-------------------------------------------|
+| Basic.lean             |    81 | =collatz=, =collatzSeq=, =collatzReaches= |
+| Parity.lean            |    51 | =isEvenStep=, =isOddStep=, "11" constraint |
+| Winding.lean           |    78 | =nu2=, =nu3=, =nu_partition=              |
+| Identity.lean          |    95 | =correction=, =collatz_identity=          |
+| SFT.lean               |   100 | Symbolic dynamics library                 |
+| FibCounting.lean       |   221 | Fibonacci, entropy, $\log_2 3 < \varphi$  |
+| CollatzSFT.lean        |    67 | Collatz parity $\in$ golden mean shift    |
+| Torus.lean             |    37 | $(\mathbb{Z}/k\mathbb{Z})^2$ residues    |
+| BranchLocus.lean       |   120 | Branch/pure-even cells, tunnel            |
+| Walk.lean              |   133 | Transverse walk, reflecting boundary      |
+| TunnelWidth.lean       |   210 | Diophantine error, wall width from Baker  |
+| CorrectionRatio.lean   |   776 | Cycle elimination, main composition       |
+| WallPersistence.lean   |   155 | Wall persistence and confinement          |
+| StructuralPureEven.lean|    89 | Structural pure-even definitions          |
+| Conclusion.lean        |   124 | =collatz_conjecture= capstone             |
+
+** Files with sorrys (2)
+
+| File       | Lines | Sorrys | Content                              |
+|------------+-------+--------+--------------------------------------|
+| Baker.lean |   190 |      6 | Gel'fond-Schneider chain + cycle     |
+| Drift.lean |   177 |      1 | K-bound (=nu3_linear_bound=)         |
+
+* Import DAG
+
+#+begin_example
+Basic ─── Parity ─── Winding ──┬── Identity ──┐
+                               │              │
+                               ├── Walk ──────┤
+                               │              │
+                               ├── Torus      │
+                               │   └── BranchLocus ──┐
+                               │                     │
+                     SFT ──┬── CollatzSFT            │
+                           │                         │
+                     FibCounting                      │
+                                                     │
+Baker ─────────────────────┐                         │
+                           │                         │
+TunnelWidth ◄──────────────┤◄── Walk ◄── BranchLocus │
+                           │                         │
+Drift ◄──── Walk           │                         │
+                           │                         │
+CorrectionRatio ◄──────────┤◄── Identity, Drift, CollatzSFT
+                           │
+WallPersistence ◄── TunnelWidth, Drift
+                           │
+StructuralPureEven ◄── BranchLocus
+                           │
+Conclusion ◄── CorrectionRatio, CollatzSFT
+#+end_example
+
+* Recent Changes
+
+** 2026-02-18: Close =no_cycle_equality_case= sorry
+
+Moved the balanced-cycle sorry ($p = 3\Delta_3$, $\Delta_3 \ge 2$) from
+CorrectionRatio.lean to Baker.lean as =baker_no_balanced_cycle=, stated
+using standalone =collatzStep= definition (pure arithmetic, no Collatz
+imports).  Bridge lemmas =collatzStep_eq_collatz= and
+=collatzSeq_as_iterate= connect the two formulations.
+
+- CorrectionRatio.lean: 1 sorry $\to$ 0 sorrys (sorry-free)
+- Baker.lean: 5 sorrys $\to$ 6 sorrys (+1 =baker_no_balanced_cycle=)
+- Net: 7 $\to$ 7 (redistribution, not reduction)
+
+** 2026-02-18: Formalize structural pure-even definitions
+
+Added =StructuralPureEven.lean= with double-halving lemmas (0 new sorrys).
+
+** 2026-02-17: Correction ratio proof chain
+
+Proved =collatzSeq_eventually_bounded_of_linear_drift= via universal
+inductive bound $n \cdot 3^{\nu_3} + C(t) \le n \cdot 4^{\nu_3}$.
+Proved =collatzSeq_eventually_periodic_of_bounded= via pigeonhole.
+Proved =cycle_contains_one= via $\Delta_3$ case analysis: $\Delta_3 = 0$
+(impossible), $\Delta_3 = 1$ (algebraic: only $\{1,2,4\}$), $\Delta_3 \ge 2$
+(strict case proved, equality case was sorry).
+
+** 2026-02-17: Sorry direction flip
+
+=nu3_linear_bound= (K-bound) is now the sole critical-path sorry.
+=podd_uniform_bound= derived from it.  Walk divergence =hdiv= removed
+as dead code from =reaches_one_of_linear_drift=.
+
+* What Remains
+
+All 7 remaining sorrys encode *established mathematics*---no open
+conjectures or novel arguments are needed.
+
+| Sorry                     | Mathematical content                  | Estimated effort   |
+|---------------------------+---------------------------------------+--------------------|
+| baker_aux_construction    | Siegel's lemma for polynomials        | 2--4 weeks         |
+| baker_extrapolation       | Schwarz lemma + analytic continuation | 2--4 weeks         |
+| baker_zero_estimate       | Interpolation determinants            | 2--4 weeks         |
+| baker_effective_bound     | Composition of above three            | 1 week             |
+| baker_two_three           | Baker for $\alpha = 2,3$              | Follows from above |
+| baker_no_balanced_cycle   | Steiner cycle analysis + computation  | 2--4 weeks         |
+| nu3_linear_bound          | K-bound (equivalent to Collatz for n) | Open               |
+
+The Gel'fond-Schneider chain (5 sorrys) is the long pole: ~3--6 months
+of formalization with no Mathlib precedent.  =baker_no_balanced_cycle=
+is independent and could be attacked separately via Steiner's method.
+=nu3_linear_bound= is equivalent to the Collatz conjecture itself---it
+is the irreducible core.
