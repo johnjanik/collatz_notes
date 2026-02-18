@@ -11,7 +11,7 @@
 | Metric            | Value                          |
 |-------------------+--------------------------------|
 | Files             | 17 (.lean)                     |
-| Total lines       | 2,789                          |
+| Total lines       | 2,833                          |
 | Theorems proved   | All except 7 sorry             |
 | Sorrys remaining  | 7 (Baker: 6, Drift: 1)        |
 | Sorry-free files  | 15 of 17                       |
@@ -96,7 +96,7 @@ Equivalent to the Collatz conjecture for a given $n$.
 - Downstream :: =reaches_one_of_linear_drift= $\to$ =collatz_conjecture=
 - Derives :: =podd_uniform_bound= ($\varepsilon$-gap, proved from this)
 
-* File Inventory (17 files, 2704 lines)
+* File Inventory (17 files, 2833 lines)
 
 ** Sorry-free files (15)
 
@@ -114,7 +114,7 @@ Equivalent to the Collatz conjecture for a given $n$.
 | Walk.lean              |   133 | Transverse walk, reflecting boundary      |
 | TunnelWidth.lean       |   210 | Diophantine error, wall width from Baker  |
 | CorrectionRatio.lean   |   776 | Cycle elimination, main composition       |
-| WallPersistence.lean   |   155 | Wall persistence and confinement          |
+| WallPersistence.lean   |   199 | Wall persistence, confinement, walk boost |
 | StructuralPureEven.lean|    89 | Structural pure-even definitions          |
 | Conclusion.lean        |   136 | =collatz_conjecture= capstone + equiv     |
 
@@ -147,7 +147,7 @@ Drift ◄──── Walk           │                         │
                            │                         │
 CorrectionRatio ◄──────────┤◄── Identity, Drift, CollatzSFT
                            │
-WallPersistence ◄── TunnelWidth, Drift
+WallPersistence ◄── TunnelWidth, Drift, StructuralPureEven
                            │
 StructuralPureEven ◄── BranchLocus
                            │
@@ -155,6 +155,17 @@ Conclusion ◄── CorrectionRatio, CollatzSFT
 #+end_example
 
 * Recent Changes
+
+** 2026-02-18: Fix Baker-Feldman bridge, add walk boost theorems
+
+Aligned manuscript Definition 7.4 with Lean (every visit at an even step,
+not $v_2(3a_t+1) \ge 2$).  Added Definition 7.4' (forces double halving).
+Revised bridge Step 3 to be honest about the equidistribution gap.
+
+- WallPersistence.lean: +44 lines (=walk_boost_pos=, =walk_boost_double_halving=,
+  updated proof chain summary)
+- New import: =StructuralPureEven= (for =double_halving_two_even_steps=)
+- 0 new sorrys
 
 ** 2026-02-18: Prove nu3_linear_bound ↔ collatzReaches equivalence
 
