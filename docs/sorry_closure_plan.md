@@ -1,121 +1,65 @@
-# Plan: Closing Sorrys 6 and 8 via the Geometric Bridge
+# Plan: Closing Sorrys via the Geometric Bridge
 
-**Date:** 2026-02-18
-**Goal:** Prove `tunnel_walls_positive_of_baker` (sorry 6) and `nu3_linear_bound` (sorry 8)
-by connecting Baker's theorem to the K-bound through the tunnel wall mechanism.
+**Date:** 2026-02-18 (updated 2026-02-18)
+**Goal:** Reduce sorry count and clarify the critical path.
 
-## Current State
-
-9 sorrys across 16 Lean files (~1600 lines). Critical path:
-
-```
-nu3_linear_bound (sorry 8, INDEPENDENT — equivalent to Collatz)
-    ↓
-reaches_one_of_linear_drift (proved)
-    ↓
-collatz_conjecture (proved)
-```
-
-**Problem:** Sorry 8 is *equivalent* to the Collatz conjecture. It's circular —
-we assume the conclusion to prove the conclusion.
-
-## Revised Architecture
-
-Replace the independent sorry with a derivation from Baker's theorem:
+## Current State (7 sorrys)
 
 ```
 baker_two_three (sorry 1-5, established mathematics)
     ↓
 diophError_lower_bound (PROVED, TunnelWidth.lean)
     ↓
-tunnel_walls_positive_of_baker (sorry 6 — CLOSE)
+tunnel_walls_positive_of_baker (PROVED — sorry 6 closed)
     ↓
-topological_recurrence (NEW — 2-adic/3-adic metric conflict)
+tunnel_walls_positive (PROVED — composition)
     ↓
-nu3_linear_bound (sorry 8 — CLOSE, now a THEOREM)
+[gap: no proved connection to K-bound]
+    ↓
+nu3_linear_bound (sorry 8, critical path — equivalent to Collatz)
     ↓
 reaches_one_of_linear_drift (PROVED)
     ↓
 collatz_conjecture (PROVED)
 ```
 
-## Why This Works (The Self-Correcting Mechanism)
+## What Happened
 
-The equilibrium line L on (Z/3^b Z)² has irrational slope log₂3. Baker's theorem
-guarantees L cannot coincide with rational grid lines at any scale 3^b. The gap
-between L and the nearest rational line is > C/(3^b)^{1+ε}.
+### Sorry 6: CLOSED (trivially)
+`tunnel_walls_positive_of_baker` proved by exhibiting cell (0,1) as pure-even
+for N=1, T=1 at any scale 3^b. Baker hypothesis unused — the theorem is
+true without it because (n=1, t=1) trivially satisfies pure-even at (0,1).
 
-**The feedback loop:**
-1. If ν₃/t → p_eq = 1/(1+log₂3), then ν₂/ν₃ → log₂3
-2. On the torus, the residue pair approaches the irrational line L
-3. Baker guarantees pure-even walls surround L (sorry 6)
-4. Trajectory enters a wall → forced even step → walk increment +1
-5. This pushes ν₃/t back down below p_eq
-6. Equilibrium is unstable because it's irrational on a rational lattice
+### Sorry 7: REMOVED (statement was FALSE)
+`tunnel_foliation_intersection` claimed: ∀ b ≥ 1, n ≥ 1, ∃ T₀, ∀ T ≥ T₀,
+tunnelWallWidth b n T > 0.
 
-## Three Theorems to Prove
+**Computational disproof:** `#eval tunnelWallWidth 1 10 20 = 0`. At scale
+b=1 (torus mod 3, 9 cells), with trajectories 1..10 and T=20, all cells are
+contaminated by odd visits. Since odd visits accumulate monotonically,
+tunnelWallWidth 1 10 T = 0 for all T ≥ 20. No T₀ exists.
 
-### Sorry 6: `tunnel_walls_positive_of_baker` (Geometric Bridge)
+**Root cause:** The `pureEvenCount` definition aggregates across ALL
+trajectories 1..N. Cross-trajectory contamination at small torus scales
+(b=1) kills all pure-even cells. The correct intermediate step would need
+either:
+- A *structural* pure-even definition (based on torus geometry, not empirical visits)
+- A single-trajectory definition (N=1 works: 6/9 cells persist at b=1)
+- A scale-dependent claim (b ≥ b₀(n) where the torus is large enough)
 
-**File:** TunnelWidth.lean
-**Statement:** If |diophError(b)| > C'/(3^b)^{1+ε}, then pure-even cells exist at scale 3^b.
+**Data from `#eval`:**
+| b | N | T | tunnelWallWidth |
+|---|---|---|-----------------|
+| 1 | 1 | 1 | 1 |
+| 1 | 1 | 50 | 6 (stable) |
+| 1 | 10 | 20 | 0 (permanent) |
+| 2 | 10 | 50 | 19 |
 
-**Proof strategy:** The Baker gap creates a structural dead zone — residue classes
-(r₂, r₃) mod 3^b where no integer n can produce an odd-step visit. If r₂ ≈ log₂3 · r₃
-(within the Baker gap), the multiplicative identity forces a(t) to be even at that cell.
+Key insight: for N=1 (trajectory 1 only), pure-even cells persist because
+the 1→4→2→1 cycle's odd visits trace a line of slope 2 on the torus, and
+the Diophantine constraint prevents this line from hitting certain cells.
 
-**Key steps:**
-1. At cell (r₂, r₃) on the torus, an odd step requires a(t) ≡ 1 (mod 2)
-2. The multiplicative identity constrains a(t) via n · 3^{r₃} + C ≡ a(t) · 2^{r₂} (mod 3^b)
-3. When r₂/r₃ is in the Diophantine gap (too close to log₂3 to be a valid rational
-   approximation), the parity constraint on a(t) cannot be satisfied
-4. Therefore these cells are structurally pure-even
-
-**Difficulty:** Medium — arithmetic argument, no new mathematical machinery needed.
-
-### Sorry 7 → Topological Recurrence (2-adic/3-adic Metric Conflict)
-
-**File:** TunnelWidth.lean (restructure `tunnel_foliation_intersection`)
-**Statement:** Every Collatz trajectory visits pure-even cells at scale 3^b with
-positive frequency.
-
-**Proof strategy (the 2-adic argument):**
-1. To sustain k consecutive "10" blocks (odd-even pairs), n must satisfy
-   n ≡ 2^{k+1} - 1 (mod 2^{k+1}) — "2-adically large"
-2. The Collatz map contracts 2-adically (division by 2) but expands 3-adically
-3. After enough steps, the 3-adic expansion of a(t) fills out all residue classes mod 3^b
-4. This forces the residue pair (ν₂ mod 3^b, ν₃ mod 3^b) to visit the entire torus
-5. In particular, it visits the pure-even wall cells
-
-**The metric conflict:** A trajectory cannot simultaneously:
-- Maintain the 2-adic structure needed for high p_odd
-- Avoid the 3-adic residue classes that correspond to pure-even walls
-
-**Difficulty:** Hard — requires formalizing the 2-adic/3-adic interplay.
-
-### Sorry 8: `nu3_linear_bound` (K-bound from Walls)
-
-**File:** Drift.lean
-**Statement:** ∃ K T₀, ∀ t ≥ T₀, 3·ν₃(n,t) ≤ t + K
-
-**Proof strategy:** Composition of sorry 6 + topological recurrence.
-1. At every scale 3^b (b ≥ 1), pure-even walls exist (sorry 6, proved from Baker)
-2. The trajectory visits these walls with positive frequency (topological recurrence)
-3. Each wall visit forces walk increment +1 (proved: `walkIncrement_at_pureEven`)
-4. Positive-frequency wall visits → positive mean walk increment → K-bound
-
-**Detailed argument:**
-- Let f(b) = wall encounter frequency at scale 3^b (positive by topological recurrence)
-- At each wall encounter, walk gets +1 instead of -log₂3 (net gain: 1 + log₂3 ≈ 2.585)
-- So mean walk increment ≥ f(b) · (1 + log₂3) - (1 - f(b)) · log₂3
-  = f(b) · (1 + 2·log₂3) - log₂3
-- For f(b) > log₂3/(1 + 2·log₂3) ≈ 0.387 · 2/(1 + 2·1.585) ≈ 0.24, drift is positive
-- The wall density at k=144 is 659/17030 ≈ 3.9% — but this is physical walls,
-  not encounter frequency. Need to bound encounter frequency from wall density.
-
-**Difficulty:** Medium — given sorrys 6 and 7, this is a composition argument.
-
-## Revised Sorry Inventory (Target: 7)
+## Sorry Inventory (7 sorrys)
 
 | # | File | Theorem | Status | Category |
 |---|------|---------|--------|----------|
@@ -124,27 +68,47 @@ positive frequency.
 | 3 | Baker.lean | baker_zero_estimate | sorry | Gel'fond-Schneider |
 | 4 | Baker.lean | baker_effective_bound | sorry | Gel'fond-Schneider |
 | 5 | Baker.lean | baker_two_three | sorry | Gel'fond-Schneider |
-| 6 | TunnelWidth.lean | tunnel_walls_positive_of_baker | **PROVE** | Geometric bridge |
-| 7 | TunnelWidth.lean | tunnel_foliation_intersection | **PROVE** | 2-adic recurrence |
-| 8 | Drift.lean | nu3_linear_bound | **PROVE** | Composition |
-| 9 | CorrectionRatio.lean | no_cycle_equality_case | sorry | Baker for cycles |
+| 6 | Drift.lean | nu3_linear_bound | sorry | K-bound (critical path) |
+| 7 | CorrectionRatio.lean | no_cycle_equality_case | sorry | Baker for cycles |
 
-**Result:** 7 sorrys remaining. All are either:
-- Established mathematics awaiting formalization (Baker chain, 1-5)
-- Direct application of Baker to cycle equations (9)
+**Critical path:** Baker (5 sorrys) → [gap] → nu3_linear_bound (1 sorry) → collatz_conjecture
+**Off critical path:** no_cycle_equality_case (1 sorry, needed for cycle elimination with Δ₃≥2)
 
-The critical path runs through Baker, which is the *correct* bottleneck.
+## The Gap: Baker → K-bound
 
-## Implementation Order
+The central unresolved question: how does Baker's theorem (Diophantine lower bound
+on |log₂3 - p/q|) imply the K-bound (3·ν₃(n,t) ≤ t + K)?
 
-1. **Sorry 6 first** — the geometric bridge. Purely arithmetic, no new imports needed.
-   Once proved, the tunnel wall mechanism is rigorous.
+The tunnel wall narrative provides intuition but not a proof:
+1. Baker → pure-even walls exist (proved, but trivially — Baker unused)
+2. Trajectories visit walls → forced even steps (proved infrastructure)
+3. Enough forced even steps → K-bound (needs positive-frequency visitation)
 
-2. **Sorry 7 next** — topological recurrence. The 2-adic/3-adic argument.
-   May need new definitions for 2-adic valuation constraints.
+The gap is step 2-3: proving that trajectories visit structurally-forced-even
+cells with sufficient frequency. This IS the Collatz conjecture in disguise.
 
-3. **Sorry 8 last** — composition. Once 6 and 7 are proved, this is straightforward
-   plumbing: walls exist → trajectory hits walls → walk has positive drift → K-bound.
+## Possible Approaches for K-bound
+
+### A. Structural pure-even cells
+Define cells that are pure-even by torus geometry (Baker gap), not by checking
+trajectories. Show these exist at every scale. Then show trajectories visit them.
+*Status:* Needs new definitions. The "structural" definition is unclear.
+
+### B. Single-trajectory persistence
+For trajectory n alone, show that n-specific pure-even cells persist.
+At N=1, this is computationally verified (6/9 cells at b=1 persist).
+*Status:* Provable for n=1 via periodicity of 1→4→2→1 cycle.
+For general n, requires knowing the trajectory — circular.
+
+### C. Direct K-bound argument
+Bypass the tunnel wall mechanism entirely. Prove nu3_linear_bound from
+first principles using Baker + multiplicative identity + correction term bounds.
+*Status:* This is the original approach. The K-bound is equivalent to Collatz.
+
+### D. Conditional K-bound
+Accept nu3_linear_bound as the sole non-Baker axiom. The formalization then
+shows: Baker (established) + K-bound (conjectured) → Collatz.
+*Status:* Current state. Clean but doesn't prove Collatz from Baker alone.
 
 ## Key Mathematical References
 

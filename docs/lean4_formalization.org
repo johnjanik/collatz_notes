@@ -413,9 +413,10 @@ Fully proved:
 - =diophError_ne_zero=: error $\neq 0$ (else $\log_2(3)$ rational)
 - =walk_confined_at_boundary=: walk increment $= +1$ at pure-even cells
 
-Two =sorry=:
-- =tunnel_walls_positive_of_baker=: Diophantine gap $\to$ pure-even cells exist
-- =tunnel_foliation_intersection=: Weyl equidistribution (not in Mathlib)
+Zero =sorry= (both closed):
+- =tunnel_walls_positive_of_baker=: PROVED — cell $(0,1)$ pure-even for $N=1, T=1$
+- =tunnel_foliation_intersection=: REMOVED — statement was false
+  (cross-trajectory contamination kills all pure-even cells at $b=1, N \ge 5$)
 
 Fully proved (was sorry, now closed):
 - =diophError_lower_bound=: Baker $\to$ $|\epsilon(b)| > C'/(3^b)^{1+\epsilon}$
@@ -749,10 +750,8 @@ derived from it.  Removed =hdiv= dead code from =reaches_one_of_linear_drift=.
 | 3 | Baker.lean | =baker_zero_estimate= | Gel'fond--Schneider | Yes |
 | 4 | Baker.lean | =baker_effective_bound= | Gel'fond--Schneider | Yes |
 | 5 | Baker.lean | =baker_two_three= | Gel'fond--Schneider | Yes |
-| 6 | TunnelWidth.lean | =tunnel_walls_positive_of_baker= | Geometric bridge | Med |
-| 7 | TunnelWidth.lean | =tunnel_foliation_intersection= | Weyl equidistr. | Med |
-| 8 | Drift.lean | =nu3_linear_bound= | K-bound (critical path) | Yes |
-| 9 | CorrectionRatio.lean | =no_cycle_equality_case= | Baker for p=3Δ₃ | Med |
+| 6 | Drift.lean | =nu3_linear_bound= | K-bound (critical path) | Yes |
+| 7 | CorrectionRatio.lean | =no_cycle_equality_case= | Baker for p=3Δ₃ | Med |
 
 *Hard* = requires new mathematical machinery or deep Mathlib extensions.
 *Med* = known math, moderate formalization effort.
@@ -777,11 +776,17 @@ Closed since initial inventory:
 - CorrectionRatio.lean =reaches_one_of_linear_drift=: =hdiv= parameter (walk divergence)
   removed as dead code---K-bound alone drives: bounded $\to$ periodic $\to$ trivial cycle
 
+- TunnelWidth.lean =tunnel_walls_positive_of_baker=: PROVED --- cell $(0,1)$ pure-even
+  for $N=1, T=1$ at any scale $3^b$ (Baker hypothesis unused)
+- TunnelWidth.lean =tunnel_foliation_intersection=: REMOVED --- statement was
+  false. Cross-trajectory contamination kills all pure-even cells at $b=1, N \ge 5$
+  (computationally verified: =tunnelWallWidth 1 10 20 = 0=)
+
 The 5 Baker chain stubs (#1--5) are the long pole: they require formalizing the
 Gel'fond--Schneider proof of transcendence measures, which has no Mathlib
-precedent.  If the finite-state bypass (Phase 4alt) succeeds, these 5 + the 2
-TunnelWidth sorry's become unnecessary, leaving only 2 independent sorry's
-(#8, #9).
+precedent.  The remaining 2 non-Baker sorry's (#6, #7) are the K-bound
+(equivalent to Collatz) and the cycle equality case (needs Baker for
+$p = 3\Delta_3$).
 
 * Appendix: What Has Been Verified Computationally
 

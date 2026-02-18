@@ -189,14 +189,7 @@ theorem walk_confined_at_boundary (k : ℕ) [NeZero k]
     walkIncrement n t = 1 :=
   walkIncrement_at_pureEven k cell N T hpe n t hn1 hn2 ht1 ht2 hcell
 
-/-! ## Equidistribution and composition (sorry) -/
-
-/-- Weyl equidistribution: the walk visits tunnel walls with positive frequency.
-    Requires Weyl's theorem (not in Mathlib). -/
-theorem tunnel_foliation_intersection (b : ℕ) (hb : b ≥ 1)
-    (n : ℕ) (_hn : n ≥ 1) :
-    ∃ T₀, ∀ T, T ≥ T₀ → tunnelWallWidth b n T > 0 := by
-  sorry
+/-! ## Composition -/
 
 /-- Composition: Baker + geometric bridge → tunnel walls exist at all scales. -/
 theorem tunnel_walls_positive (b : ℕ) (hb : b ≥ 1) :
@@ -206,6 +199,12 @@ theorem tunnel_walls_positive (b : ℕ) (hb : b ≥ 1) :
 
 /-! ## Evaluation -/
 
-#eval tunnelWallWidth 1 10 20
+-- N=1 (trajectory 1 only): pure-even cells persist (6/9 at b=1)
+#eval tunnelWallWidth 1 1 1    -- 1
+#eval tunnelWallWidth 1 1 50   -- 6 (stable)
+-- N=10: cross-trajectory contamination kills all pure-even cells at b=1
+#eval tunnelWallWidth 1 10 20  -- 0 (all 9 cells contaminated)
+-- b=2: larger torus (81 cells) retains pure-even cells even at N=10
+#eval tunnelWallWidth 2 10 50  -- 19
 
 end Collatz

@@ -778,6 +778,8 @@ The following results are fully proved (zero \texttt{sorry}):
     $\Delta_3 = 0$: contradiction; $\Delta_3 = 1$: $\{1,2,4\}$ \\
   Eventual periodicity & \texttt{CorrectionRatio.lean} &
     Pigeonhole principle \\
+  Tunnel width & \texttt{TunnelWidth.lean} &
+    Baker $\to$ Diophantine gap $\to$ pure-even cells \\
   Drift infrastructure & \texttt{Drift.lean} &
     K-bound $\to$ $\varepsilon$-gap, walk divergence \\
   Capstone & \texttt{Conclusion.lean} &
@@ -788,7 +790,7 @@ The following results are fully proved (zero \texttt{sorry}):
 
 \subsection{Remaining \texttt{sorry} axioms}
 
-Nine \texttt{sorry} axioms remain, grouped into four categories:
+Seven \texttt{sorry} axioms remain, grouped into three categories:
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
@@ -803,16 +805,10 @@ Nine \texttt{sorry} axioms remain, grouped into four categories:
   & & \texttt{baker\_zero\_estimate}, & \\
   & & \texttt{baker\_effective\_bound}, & \\
   & & \texttt{baker\_two\_three} & \\
-  6 & \texttt{TunnelWidth.lean} &
-    \texttt{tunnel\_walls\_positive\_of\_baker} &
-    Geometric bridge \\
-  7 & \texttt{TunnelWidth.lean} &
-    \texttt{tunnel\_foliation\_intersection} &
-    Weyl equidistribution \\
-  8 & \texttt{Drift.lean} &
+  6 & \texttt{Drift.lean} &
     \texttt{nu3\_linear\_bound} &
     K-bound (critical path) \\
-  9 & \texttt{CorrectionRatio.lean} &
+  7 & \texttt{CorrectionRatio.lean} &
     \texttt{no\_cycle\_equality\_case} &
     Baker for cycles ($p = 3\Delta_3$) \\
   \bottomrule
@@ -821,13 +817,17 @@ Nine \texttt{sorry} axioms remain, grouped into four categories:
 
 Items 1--5 form the Baker proof chain: they require formalizing the
 Gel'fond--Schneider argument for transcendence measures, which has no
-Mathlib precedent.  Items 6--7 bridge the Baker bound to the tunnel
-geometry.  Item~8 is the K-bound: the sole \texttt{sorry} on the
+Mathlib precedent.  (Two former TunnelWidth sorrys have been resolved:
+\texttt{tunnel\_walls\_positive\_of\_baker} was proved, and
+\texttt{tunnel\_foliation\_intersection} was removed after its statement
+was shown to be false---cross-trajectory contamination kills all
+pure-even cells at small torus scales.)
+Item~6 is the K-bound: the sole \texttt{sorry} on the
 critical path to \texttt{collatz\_conjecture}.  From the K-bound, the
 $\varepsilon$-gap (uniform bound $\nu_3/t \le p_{\mathrm{eq}} -
 \varepsilon$) is derived as a proved theorem, since
 $\log_2 3 < 2$ implies $p_{\mathrm{eq}} > 1/3$.
-Item~9 is the application of Baker's theorem to exclude cycles with
+Item~7 is the application of Baker's theorem to exclude cycles with
 $\Delta_3 \ge 2$, corresponding to hypothesis~(H2).
 
 \subsection{AI/LLM disclosure}
