@@ -434,4 +434,126 @@ theorem walk_run_plus_exit (n t d : ℕ) (hn : n ≥ 1)
   push_cast at *
   linarith
 
+/-! ## Attrition counting: exact 2^{-d} rate -/
+
+-- We prove that in {0, ..., 2^(d+1) - 1}, there are 2^d odd numbers
+-- and exactly 1 of them satisfies 2^(d+1) | (x+1). Hence the attrition
+-- rate for d consecutive v₂=1 steps is exactly 1/2^d.
+
+/-- The odd numbers in {0, ..., 2n-1} are exactly {2k+1 | k ∈ {0, ..., n-1}}. -/
+theorem odd_range_eq_image (n : ℕ) :
+    (Finset.range (2 * n)).filter (fun x => x % 2 = 1) =
+    (Finset.range n).image (fun k => 2 * k + 1) := by
+  ext x
+  simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_image]
+  constructor
+  · intro ⟨hlt, hodd⟩
+    exact ⟨x / 2, by omega, by omega⟩
+  · intro ⟨k, hk, hx⟩
+    subst hx
+    exact ⟨by omega, by omega⟩
+
+/-- There are exactly 2^d odd numbers in {0, ..., 2^(d+1) - 1}. -/
+theorem card_odd_in_period (d : ℕ) :
+    ((Finset.range (2 ^ (d + 1))).filter (fun x => x % 2 = 1)).card = 2 ^ d := by
+  have h : 2 ^ (d + 1) = 2 * 2 ^ d := by ring
+  rw [h, odd_range_eq_image]
+  rw [Finset.card_image_of_injective _ (fun a b (hab : 2 * a + 1 = 2 * b + 1) => by omega)]
+  exact Finset.card_range _
+
+/-- The survivors (those with 2^(d+1) | (x+1)) among odd numbers in one period
+    form the singleton {2^(d+1) - 1}. -/
+theorem survivors_eq_singleton (d : ℕ) :
+    ((Finset.range (2 ^ (d + 1))).filter (fun x => x % 2 = 1 ∧ (x + 1) % 2 ^ (d + 1) = 0)) =
+    {2 ^ (d + 1) - 1} := by
+  set p := 2 ^ (d + 1) with hp_def
+  have hp_pos : p ≥ 1 := Nat.one_le_pow _ _ (by omega)
+  have hp_even : 2 ∣ p := by
+    rw [hp_def]; exact dvd_pow_self 2 (by omega : d + 1 ≠ 0)
+  ext x
+  simp only [Finset.mem_filter, Finset.mem_range, Finset.mem_singleton]
+  constructor
+  · intro ⟨hlt, hodd, hdvd⟩
+    -- x + 1 ≡ 0 mod p and x < p, so x + 1 = p
+    have hdvd' : p ∣ x + 1 := Nat.dvd_of_mod_eq_zero hdvd
+    obtain ⟨k, hk⟩ := hdvd'
+    have hk_pos : k ≥ 1 := by
+      rcases Nat.eq_zero_or_pos k with rfl | h
+      · simp at hk  -- x + 1 = 0, impossible for ℕ
+      · exact h
+    -- k = 1 since x + 1 = p * k ≤ p (because x < p)
+    have : x + 1 = p := by nlinarith
+    omega
+  · intro hx; subst hx
+    obtain ⟨m, hm⟩ := hp_even
+    refine ⟨by omega, by omega, ?_⟩
+    -- (p - 1 + 1) % p = p % p = 0
+    have : p - 1 + 1 = p := by omega
+    rw [this]; exact Nat.mod_self p
+
+/-- There is exactly 1 survivor per period. -/
+theorem card_survivors_in_period (d : ℕ) :
+    ((Finset.range (2 ^ (d + 1))).filter
+      (fun x => x % 2 = 1 ∧ (x + 1) % 2 ^ (d + 1) = 0)).card = 1 := by
+  rw [survivors_eq_singleton]
+  exact Finset.card_singleton _
+
+/-- **Attrition rate**: Among odd numbers in one period of 2^(d+1),
+    exactly 1 out of 2^d satisfies the divisibility condition for
+    d consecutive v₂=1 steps. The survival fraction is 2^{-d}. -/
+theorem attrition_rate (d : ℕ) :
+    ((Finset.range (2 ^ (d + 1))).filter
+      (fun x => x % 2 = 1 ∧ (x + 1) % 2 ^ (d + 1) = 0)).card * 2 ^ d =
+    ((Finset.range (2 ^ (d + 1))).filter (fun x => x % 2 = 1)).card := by
+  rw [card_survivors_in_period, card_odd_in_period]
+  ring
+
+/-- Equivalent formulation: survivors = odd_count / 2^d. -/
+theorem attrition_rate_div (d : ℕ) :
+    ((Finset.range (2 ^ (d + 1))).filter
+      (fun x => x % 2 = 1 ∧ (x + 1) % 2 ^ (d + 1) = 0)).card =
+    ((Finset.range (2 ^ (d + 1))).filter (fun x => x % 2 = 1)).card / 2 ^ d := by
+  rw [card_survivors_in_period, card_odd_in_period]
+  exact (Nat.div_self (Nat.one_le_pow _ _ (by omega))).symm
+
+/-- The survivor condition connects back to hensel_attrition via divisibility.
+    For odd x in the period, (x+1) % 2^(d+1) = 0 iff 2^(d+1) ∣ (x+1). -/
+theorem survivor_iff_dvd (x d : ℕ) :
+    (x + 1) % 2 ^ (d + 1) = 0 ↔ 2 ^ (d + 1) ∣ x + 1 := by
+  constructor
+  · exact Nat.dvd_of_mod_eq_zero
+  · intro ⟨k, hk⟩; simp [hk, Nat.mul_mod_right]
+
+/-- **Combined attrition theorem**: Among odd numbers in {0, ..., 2^(d+1)-1},
+    the number capable of d consecutive v₂=1 steps is exactly 1.
+    By hensel_attrition, these are exactly those with 2^(d+1) | (x+1),
+    i.e., only x = 2^(d+1) - 1 in each period. -/
+theorem attrition_count (d : ℕ) :
+    ((Finset.range (2 ^ (d + 1))).filter
+      (fun x => x % 2 = 1 ∧ 2 ^ (d + 1) ∣ x + 1)).card = 1 := by
+  -- Convert divisibility to modular form
+  have : (Finset.range (2 ^ (d + 1))).filter
+      (fun x => x % 2 = 1 ∧ 2 ^ (d + 1) ∣ x + 1) =
+    (Finset.range (2 ^ (d + 1))).filter
+      (fun x => x % 2 = 1 ∧ (x + 1) % 2 ^ (d + 1) = 0) := by
+    congr 1; ext x; simp [survivor_iff_dvd]
+  rw [this, card_survivors_in_period]
+
+-- Concrete examples
+example : ((Finset.range 4).filter (fun x => x % 2 = 1 ∧ 4 ∣ x + 1)).card = 1 := by
+  native_decide
+
+-- d=1: period 4, odd = {1,3}, survivor = {3} (3+1=4, so 4|4). Rate = 1/2.
+example : ((Finset.range 4).filter (fun x => x % 2 = 1)).card = 2 := by native_decide
+
+-- d=2: period 8, odd = {1,3,5,7}, survivor = {7} (7+1=8, so 8|8). Rate = 1/4.
+example : ((Finset.range 8).filter (fun x => x % 2 = 1 ∧ 8 ∣ x + 1)).card = 1 := by
+  native_decide
+example : ((Finset.range 8).filter (fun x => x % 2 = 1)).card = 4 := by native_decide
+
+-- d=3: period 16, odd = {1,3,...,15}, survivor = {15}. Rate = 1/8.
+example : ((Finset.range 16).filter (fun x => x % 2 = 1 ∧ 16 ∣ x + 1)).card = 1 := by
+  native_decide
+example : ((Finset.range 16).filter (fun x => x % 2 = 1)).card = 8 := by native_decide
+
 end Collatz
