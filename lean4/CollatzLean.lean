@@ -15,3 +15,4 @@ import CollatzLean.Drift
 import CollatzLean.CorrectionRatio
 import CollatzLean.Conclusion
 import CollatzLean.WallPersistence
+import CollatzLean.HenselAttrition

@@ -3,7 +3,7 @@ CFLAGS  = -O3 -march=native -Wall
 CAIRO   = $(shell pkg-config --cflags --libs cairo)
 LIBS    = -lm
 
-all: collatz_tree collatz_scatter parity_sft profinite_compat branch_locus
+all: collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger
 
 collatz_tree: collatz_tree.c
 	$(CC) $(CFLAGS) -o $@ $< $(CAIRO) $(LIBS)
@@ -18,7 +18,7 @@ profinite_compat: profinite_compat.c
 	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
 
 branch_locus: branch_locus.c
-	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
+	$(CC) $(CFLAGS) -fopenmp -o $@ $< $(LIBS)
 
 run-sft: parity_sft
 	./parity_sft 1000000
@@ -38,7 +38,25 @@ run-branch: branch_locus
 run-branch-10B: branch_locus
 	./branch_locus 10000000000
 
-clean:
-	rm -f collatz_tree collatz_scatter parity_sft profinite_compat branch_locus *.png *.csv
+run-branch-100B: branch_locus
+	./branch_locus 100000000000
 
-.PHONY: all clean run-tree run-scatter run-sft run-profinite run-branch run-branch-10B
+resume-branch-100B: branch_locus
+	./branch_locus --resume 100000000000
+
+v2_danger: v2_danger.c
+	$(CC) $(CFLAGS) -fopenmp -o $@ $< $(LIBS)
+
+run-v2danger: v2_danger
+	./v2_danger --N 100000 --k 5
+
+run-v2danger-1M: v2_danger
+	./v2_danger --N 1000000 --k 7
+
+run-v2danger-10M: v2_danger
+	./v2_danger --N 10000000 --k 7
+
+clean:
+	rm -f collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger *.png *.csv
+
+.PHONY: all clean run-tree run-scatter run-sft run-profinite run-branch run-branch-10B run-branch-100B resume-branch-100B run-v2danger run-v2danger-1M run-v2danger-10M
