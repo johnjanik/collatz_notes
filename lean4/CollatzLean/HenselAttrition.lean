@@ -556,4 +556,87 @@ example : ((Finset.range 16).filter (fun x => x % 2 = 1 ∧ 16 ∣ x + 1)).card 
   native_decide
 example : ((Finset.range 16).filter (fun x => x % 2 = 1)).card = 8 := by native_decide
 
+/-! ## Deficit: integer-valued K-bound tracking -/
+
+/-- The deficit: deficit(n,t) = 3·ν₃(n,t) - t.
+    K-bound (3·ν₃ ≤ t + K) is equivalent to deficit bounded above. -/
+def deficit (n t : ℕ) : ℤ := 3 * (nu3 n t : ℤ) - ↑t
+
+@[simp] theorem deficit_zero (n : ℕ) : deficit n 0 = 0 := by
+  simp [deficit]
+
+/-- At an odd step, deficit increases by 2 (ν₃ +1, t +1: net 3·1 - 1 = 2). -/
+theorem deficit_step_odd (n t : ℕ) (ho : isOddStep n t = true) :
+    deficit n (t + 1) = deficit n t + 2 := by
+  simp only [deficit, nu3_step_odd n t ho]; push_cast; ring
+
+/-- At an even step, deficit decreases by 1 (ν₃ unchanged, t +1: net -1). -/
+theorem deficit_step_even (n t : ℕ) (he : isEvenStep n t = true) :
+    deficit n (t + 1) = deficit n t - 1 := by
+  simp only [deficit, nu3_step_even n t he]; push_cast; ring
+
+/-- Deficit is at most 2t (since ν₃ ≤ t). -/
+theorem deficit_le_two_mul_t (n t : ℕ) : deficit n t ≤ 2 * (↑t : ℤ) := by
+  unfold deficit
+  have : nu3 n t ≤ t := by have := nu_partition n t; omega
+  omega
+
+/-- During a v₂=1 run of d compressed steps (2d uncompressed), deficit increases by d. -/
+theorem deficit_of_v2_run (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1) :
+    deficit n (t + 2 * d) = deficit n t + ↑d := by
+  simp only [deficit, nu3_of_v2_run n t d hn hodd hrun]; push_cast; ring
+
+/-- A maximal v₂=1 run of d steps plus 3-step exit: deficit increases by d.
+    The exit (1 odd + 2 even) has net deficit change +2 - 1 - 1 = 0. -/
+theorem deficit_of_run_plus_exit (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1)
+    (hexit : oddCollatzStep (oddCollatzIter (collatzSeq n t) d) % 2 = 0) :
+    deficit n (t + 2 * d + 3) = deficit n t + ↑d := by
+  have h_odd := walk_exit_odd_step n t d hn hodd hrun
+  have h_ev1 := walk_exit_first_even n t d hn hodd hrun
+  have h_ev2 := walk_exit_second_even n t d hn hodd hrun hexit
+  have hnu_run := nu3_of_v2_run n t d hn hodd hrun
+  have s1 := nu3_step_odd n (t + 2 * d) h_odd
+  have s2 : nu3 n (t + 2 * d + 2) = nu3 n (t + 2 * d + 1) := by
+    rw [show t + 2 * d + 2 = (t + 2 * d + 1) + 1 from by omega]
+    exact nu3_step_even n (t + 2 * d + 1) h_ev1
+  have s3 : nu3 n (t + 2 * d + 3) = nu3 n (t + 2 * d + 2) := by
+    rw [show t + 2 * d + 3 = (t + 2 * d + 2) + 1 from by omega]
+    exact nu3_step_even n (t + 2 * d + 2) h_ev2
+  simp only [deficit, s3, s2, s1, hnu_run]; push_cast; ring
+
+/-- Safe compressed step (1 odd + ≥2 even): deficit non-increasing. -/
+theorem deficit_nonincreasing_at_safe_step (n t : ℕ)
+    (ho : isOddStep n t = true) (he1 : isEvenStep n (t + 1) = true)
+    (he2 : isEvenStep n (t + 2) = true) :
+    deficit n (t + 3) ≤ deficit n t := by
+  have s1 := deficit_step_odd n t ho
+  have s2 : deficit n (t + 2) = deficit n (t + 1) - 1 := by
+    rw [show t + 2 = (t + 1) + 1 from by omega]
+    exact deficit_step_even n (t + 1) he1
+  have s3 : deficit n (t + 3) = deficit n (t + 2) - 1 := by
+    rw [show t + 3 = (t + 2) + 1 from by omega]
+    exact deficit_step_even n (t + 2) he2
+  omega
+
+open Real in
+/-- The walk expressed via deficit:
+    walk = ((2 - logb 2 3) * t - (1 + logb 2 3) * deficit) / 3. -/
+theorem walk_eq_deficit_form (n t : ℕ) :
+    walk n t = ((2 - logb 2 3) * ↑t - (1 + logb 2 3) * (deficit n t : ℝ)) / 3 := by
+  have hpart : (nu2 n t : ℝ) = ↑t - ↑(nu3 n t) := by
+    have h := nu_partition n t
+    have h' : (↑(nu2 n t) : ℝ) + ↑(nu3 n t) = ↑t := by exact_mod_cast h
+    linarith
+  have hdef : (deficit n t : ℝ) = 3 * ↑(nu3 n t) - ↑t := by
+    simp only [deficit]; push_cast; ring
+  simp only [walk]; rw [hpart, hdef]; ring
+
+-- Concrete verification
+example : deficit 7 0 = 0 := by native_decide
+example : deficit 7 16 = -1 := by native_decide
+
 end Collatz

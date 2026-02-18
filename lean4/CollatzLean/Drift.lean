@@ -11,6 +11,7 @@
   the main theorem.
 -/
 import CollatzLean.Walk
+import CollatzLean.HenselAttrition
 import Mathlib.Topology.Order.Basic
 import Mathlib.Order.Filter.AtTopBot.Basic
 
@@ -246,5 +247,44 @@ theorem nu3_linear_bound_of_reaches (n : ℕ) (_hn : n ≥ 1) (hr : collatzReach
   -- 3*(nu3 T + m/3 + m%3) ≤ t + 3*nu3 T + 4 since 2*(m%3) ≤ 4 ≤ T + 4
   have : m % 3 < 3 := Nat.mod_lt m (by omega)
   omega
+
+/-! ## Deficit ↔ K-bound equivalence -/
+
+/-- Deficit bounded above implies the K-bound. -/
+theorem k_bound_of_deficit_bounded (n : ℕ) (_hn : n ≥ 1)
+    (hdef : ∃ D : ℤ, ∀ t, deficit n t ≤ D) :
+    ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K := by
+  obtain ⟨D, hD⟩ := hdef
+  -- deficit(0) = 0 ≤ D
+  have hD0 : 0 ≤ D := by have h0 := hD 0; simp only [deficit_zero] at h0; exact h0
+  refine ⟨D.toNat, 0, fun t _ => ?_⟩
+  have h := hD t
+  simp only [deficit] at h
+  -- h : (3 : ℤ) * ↑(nu3 n t) - ↑t ≤ D, D ≥ 0
+  -- Goal: 3 * nu3 n t ≤ t + D.toNat (in ℕ)
+  have hDcast : D = ↑D.toNat := by omega
+  have : (3 * nu3 n t : ℤ) ≤ ↑t + ↑D.toNat := by omega
+  exact_mod_cast this
+
+/-- The K-bound implies deficit bounded above. -/
+theorem deficit_bounded_of_k_bound (n : ℕ)
+    (hk : ∃ K T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K) :
+    ∃ D : ℤ, ∀ t, deficit n t ≤ D := by
+  obtain ⟨K, T₀, hbound⟩ := hk
+  refine ⟨max ↑K (2 * ↑T₀), fun t => ?_⟩
+  by_cases ht : t ≥ T₀
+  · have h := hbound t ht
+    have h' : (3 * nu3 n t : ℤ) ≤ ↑t + ↑K := by exact_mod_cast h
+    calc deficit n t = 3 * (nu3 n t : ℤ) - ↑t := rfl
+      _ ≤ ↑K := by linarith
+      _ ≤ max (↑K : ℤ) (2 * ↑T₀) := le_max_left _ _
+  · have ht' : t < T₀ := by omega
+    calc deficit n t ≤ 2 * (↑t : ℤ) := deficit_le_two_mul_t n t
+      _ ≤ 2 * ↑T₀ := by exact_mod_cast show 2 * t ≤ 2 * T₀ from by omega
+      _ ≤ max (↑K : ℤ) (2 * ↑T₀) := le_max_right _ _
+
+-- Concrete verification
+example : deficit 7 0 = 0 := by native_decide
+example : deficit 7 16 = -1 := by native_decide
 
 end Collatz
