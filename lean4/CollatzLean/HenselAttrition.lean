@@ -4,7 +4,7 @@
   Collatz sequence require x ≡ -1 (mod 2^(d+1)).
   Attrition rate exactly 2^{-d}. Pure modular arithmetic — no Baker needed.
 -/
-import CollatzLean.Winding
+import CollatzLean.Walk
 import Mathlib.Tactic
 
 set_option linter.style.nativeDecide false
@@ -303,5 +303,135 @@ theorem equal_winding_of_v2_run (n t d : ℕ) (hn : n ≥ 1)
     nu2 n (t + 2 * d) - nu2 n t = nu3 n (t + 2 * d) - nu3 n t := by
   rw [nu3_of_v2_run n t d hn hodd hrun, nu2_of_v2_run n t d hn hodd hrun]
   omega
+
+/-! ## Walk effect of v₂=1 runs -/
+
+open Real in
+/-- **Walk deficit**: During d consecutive v₂=1 steps (2d uncompressed steps),
+    the walk changes by exactly d * (1 - log₂3).
+    Since log₂3 ≈ 1.585, each v₂=1 pair contributes ≈ -0.585 to the walk. -/
+theorem walk_of_v2_run (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1) :
+    walk n (t + 2 * d) = walk n t + ↑d * (1 - logb 2 3) := by
+  induction d with
+  | zero => simp
+  | succ d ih =>
+    have hrun' : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1 :=
+      fun i hi => hrun i (by omega)
+    -- IH: walk n (t + 2*d) = walk n t + d * (1 - logb 2 3)
+    have ih_val := ih hrun'
+    -- Step t+2d is odd, step t+2d+1 is even
+    have hodd_d := isOddStep_during_v2_run n t (d + 1) hn hodd hrun d (by omega)
+    have heven_d := isEvenStep_during_v2_run n t (d + 1) hn hodd hrun d (by omega)
+    -- walk(t+2d+1) = walk(t+2d) - logb 2 3  (odd step)
+    have step1 : walk n (t + 2 * d + 1) = walk n (t + 2 * d) - logb 2 3 :=
+      walk_step_odd n (t + 2 * d) hodd_d
+    -- walk(t+2d+2) = walk(t+2d+1) + 1  (even step)
+    have step2 : walk n (t + 2 * d + 2) = walk n (t + 2 * d + 1) + 1 :=
+      walk_step_even n (t + 2 * d + 1) heven_d
+    -- Combine
+    have : t + 2 * (d + 1) = t + 2 * d + 2 := by ring
+    rw [this, step2, step1, ih_val]
+    push_cast
+    ring
+
+open Real in
+/-- **Walk deficit (difference form)**: The walk drops by d*(log₂3 - 1)
+    during a v₂=1 run of length d. -/
+theorem walk_deficit_of_v2_run (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1) :
+    walk n (t + 2 * d) - walk n t = ↑d * (1 - logb 2 3) := by
+  linarith [walk_of_v2_run n t d hn hodd hrun]
+
+/-! ## Exit recovery: walk gain at the end of a v₂=1 run -/
+
+-- After a maximal v₂=1 run, the exit odd step plus at least 2 even steps
+-- contribute (2 - log₂3) ≈ +0.415 to the walk.
+-- Requires: the value at time t+2d is odd (end of run), the exit has v₂ ≥ 2
+-- (from dangerous_exit_forced), i.e., the step after 3a+1 is still even.
+
+/-- The exit odd step at position t+2d (the value is odd but T gives an even result)
+    decreases the walk by log₂3. -/
+theorem walk_exit_odd_step (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1) :
+    isOddStep n (t + 2 * d) = true := by
+  -- The value at t+2d is oddCollatzIter(collatzSeq n t) d, which is odd
+  have htrack := collatzSeq_tracks_oddCollatzIter n t d hn hodd hrun d le_rfl
+  simp only [isOddStep, decide_eq_true_eq]
+  rw [htrack]
+  exact hrun d le_rfl
+
+/-- After the exit odd step, the next step is always even (3a+1 is even). -/
+theorem walk_exit_first_even (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1) :
+    isEvenStep n (t + 2 * d + 1) = true := by
+  have hodd_step := walk_exit_odd_step n t d hn hodd hrun
+  have hpos := collatzSeq_ne_zero n hn (t + 2 * d)
+  have := no_consecutive_odd_steps n (t + 2 * d) hpos hodd_step
+  simp only [isEvenStep, isOddStep, decide_eq_true_eq, decide_eq_false_iff_not] at this ⊢
+  omega
+
+/-- If the v₂=1 run is maximal (T^d(x) gives an even result), the second
+    halving step is also even: 4 | (3a+1) means (3a+1)/2 is still even. -/
+theorem walk_exit_second_even (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1)
+    (hexit : oddCollatzStep (oddCollatzIter (collatzSeq n t) d) % 2 = 0) :
+    isEvenStep n (t + 2 * d + 2) = true := by
+  -- The value at t+2d is a = oddCollatzIter(collatzSeq n t) d, odd
+  -- collatzSeq n (t+2d+1) = 3a+1 (from odd step)
+  -- collatzSeq n (t+2d+2) = (3a+1)/2 = oddCollatzStep a (from even step)
+  -- We need (3a+1)/2 to be even, which is the hexit hypothesis
+  have htrack := collatzSeq_tracks_oddCollatzIter n t d hn hodd hrun d le_rfl
+  have ha_odd : collatzSeq n (t + 2 * d) % 2 = 1 := by
+    rw [htrack]; exact hrun d le_rfl
+  have ha_pos := collatzSeq_ne_zero n hn (t + 2 * d)
+  -- collatzSeq n (t+2d+2) = oddCollatzStep(collatzSeq n (t+2d))
+  have hval : collatzSeq n (t + 2 * d + 2) = oddCollatzStep (collatzSeq n (t + 2 * d)) := by
+    exact collatzSeq_two_steps n (t + 2 * d) ha_odd ha_pos
+  simp only [isEvenStep, decide_eq_true_eq]
+  rw [hval, htrack]
+  omega
+
+open Real in
+/-- **Exit recovery**: After a maximal v₂=1 run of length d, the 3 steps
+    (1 odd + 2 even) immediately following the run contribute
+    (2 - log₂3) ≈ +0.415 to the walk. -/
+theorem walk_exit_recovery (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1)
+    (hexit : oddCollatzStep (oddCollatzIter (collatzSeq n t) d) % 2 = 0) :
+    walk n (t + 2 * d + 3) = walk n (t + 2 * d) + (2 - logb 2 3) := by
+  have h_odd := walk_exit_odd_step n t d hn hodd hrun
+  have h_ev1 := walk_exit_first_even n t d hn hodd hrun
+  have h_ev2 := walk_exit_second_even n t d hn hodd hrun hexit
+  -- walk(t+2d+1) = walk(t+2d) - logb 2 3
+  have s1 : walk n (t + 2 * d + 1) = walk n (t + 2 * d) - logb 2 3 :=
+    walk_step_odd n (t + 2 * d) h_odd
+  -- walk(t+2d+2) = walk(t+2d+1) + 1
+  have s2 : walk n (t + 2 * d + 2) = walk n (t + 2 * d + 1) + 1 :=
+    walk_step_even n (t + 2 * d + 1) h_ev1
+  -- walk(t+2d+3) = walk(t+2d+2) + 1
+  have s3 : walk n (t + 2 * d + 3) = walk n (t + 2 * d + 2) + 1 :=
+    walk_step_even n (t + 2 * d + 2) h_ev2
+  linarith
+
+open Real in
+/-- **Net walk for run + exit**: A maximal v₂=1 run of length d followed by
+    its 3-step exit changes the walk by d*(1 - log₂3) + (2 - log₂3)
+    = (d+1)*(1 - log₂3) + 1 over 2d + 3 uncompressed steps. -/
+theorem walk_run_plus_exit (n t d : ℕ) (hn : n ≥ 1)
+    (hodd : collatzSeq n t % 2 = 1)
+    (hrun : ∀ i, i ≤ d → oddCollatzIter (collatzSeq n t) i % 2 = 1)
+    (hexit : oddCollatzStep (oddCollatzIter (collatzSeq n t) d) % 2 = 0) :
+    walk n (t + 2 * d + 3) = walk n t + ↑(d + 1) * (1 - logb 2 3) + 1 := by
+  have h1 := walk_of_v2_run n t d hn hodd hrun
+  have h2 := walk_exit_recovery n t d hn hodd hrun hexit
+  push_cast at *
+  linarith
 
 end Collatz
