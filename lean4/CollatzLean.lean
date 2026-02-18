@@ -7,6 +7,7 @@ import CollatzLean.SFT
 import CollatzLean.FibCounting
 import CollatzLean.CollatzSFT
 import CollatzLean.BranchLocus
+import CollatzLean.StructuralPureEven
 import CollatzLean.Walk
 import CollatzLean.Baker
 import CollatzLean.TunnelWidth
