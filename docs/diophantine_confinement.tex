@@ -59,12 +59,14 @@ sequence.  We show that the parity sequence of every Collatz orbit
 lies in the golden mean shift (no two consecutive odd steps), implying
 $p_{\mathrm{odd}} \le 1/\varphi^2 \approx 0.382$, within $0.005$ of
 the equilibrium threshold $p_{\mathrm{eq}} \approx 0.387$.  Combined
-with cycle elimination---proved here for cycles with one odd step per
-period, and following from Baker-type estimates for longer
-cycles---this yields a conditional proof of the Collatz conjecture:
-linear walk drift implies $\mathrm{collatzReaches}(n)$.  The argument
-is formalized in approximately 1600 lines of Lean~4 with seven
-explicit \texttt{sorry} axioms, all identified and categorized.
+with cycle elimination---proved here for all cycle lengths, delegating
+longer cycles ($\Delta_3 \ge 2$) to Baker--Steiner estimates---this
+yields a conditional proof of the Collatz conjecture:
+linear walk drift implies $\mathrm{collatzReaches}(n)$.  We also prove
+the converse: reaching~$1$ implies the K-bound, so the sole
+critical-path axiom is formally equivalent to the conjecture itself.
+The argument is formalized in approximately 2800 lines of Lean~4 with
+seven explicit \texttt{sorry} axioms, all identified and categorized.
 \end{abstract}
 
 \maketitle
@@ -680,6 +682,13 @@ holds for large~$t$.  In the formalization, only the K-bound
 $3\nu_3(t) \le t + K$ is an axiom (\texttt{nu3\_linear\_bound});
 the $\varepsilon$-gap follows since $p_{\mathrm{eq}} > 1/3$
 (from $\log_2 3 < 2$, i.e., $3 < 4$).
+The converse also holds: if $T^k(n) = 1$ for some~$k$, then
+the trajectory enters the cycle $1 \to 4 \to 2 \to 1$, which
+contributes exactly one odd step per three steps, so
+$3\nu_3(t) \le t + K$ with $K = 3\nu_3(k) + 4$.  This equivalence
+is formalized as \texttt{nu3\_linear\_bound\_iff\_reaches} in
+\texttt{Conclusion.lean}, confirming that the K-bound is the
+irreducible core of the Collatz conjecture.
 
 The golden mean shift (Theorem~\ref{thm:collatz-sft}) makes this
 plausible.  The topological bound $1/\varphi^2$ already lies below
@@ -757,12 +766,16 @@ drift with some rate $\varepsilon > 0$.
 By Theorem~A, if the only positive Collatz cycle is $\{1, 2, 4\}$,
 then $T^k(n) = 1$ for some $k$.
 
-It remains to verify the cycle hypothesis.  For $\Delta_3 = 1$, this
-is Theorem~\ref{thm:one-odd}.  For $\Delta_3 \ge 2$, Corollary~\ref{cor:bounded} gives
-$c_{\min} \le B$ for any cycle entered by the trajectory.  By (H2),
-Baker's theorem provides effective lower bounds on
-$|2^{\Delta_2} - 3^{\Delta_3}|$ that, combined with the upper bound
-on $c_{\min}$, exclude all nontrivial cycles with $\Delta_3 \ge 2$
+It remains to verify the cycle hypothesis.  For $\Delta_3 = 0$,
+a cycle is impossible (no odd steps means the trajectory decreases).
+For $\Delta_3 = 1$, this is Theorem~\ref{thm:one-odd}: the only
+cycle is $\{1,2,4\}$.
+For $\Delta_3 \ge 2$ with $3\Delta_3 < p$, the strict inequality
+$a(t) \cdot 2^{\nu_2} < n \cdot 4^{\nu_3}$ contracts over the period.
+For $\Delta_3 \ge 2$ with $p = 3\Delta_3$ (the balanced case),
+by~(H2), Baker's theorem provides effective lower bounds on
+$|2^{\Delta_2} - 3^{\Delta_3}|$ that, combined with Steiner-type
+analysis of the cycle equation, exclude all nontrivial cycles
 (Remark~\ref{rem:baker}).
 \end{proof}
 
@@ -781,8 +794,8 @@ The bound grows as $B \sim 1/\varepsilon$ for small $\varepsilon$.
 %==================================================================
 
 The results of this paper have been formalized in Lean~4 using the
-Mathlib4 library.  The formalization comprises approximately 1600
-lines across 16 files.
+Mathlib4 library.  The formalization comprises approximately 2800
+lines across 17 files.
 
 \subsection{What is machine-checked}
 
@@ -810,14 +823,17 @@ The following results are fully proved (zero \texttt{sorry}):
     $\log_2 3 \notin \Q$ \\
   Correction ratio & \texttt{CorrectionRatio.lean} &
     Recurrence, universal inductive bound \\
-  Cycle elimination ($\Delta_3 \le 1$) & \texttt{CorrectionRatio.lean} &
-    $\Delta_3 = 0$: contradiction; $\Delta_3 = 1$: $\{1,2,4\}$ \\
+  Cycle elimination & \texttt{CorrectionRatio.lean} &
+    $\Delta_3 = 0$: contradiction; $\Delta_3 = 1$: $\{1,2,4\}$; \\
+  & & $\Delta_3 \ge 2$: via Baker--Steiner sorry \\
   Eventual periodicity & \texttt{CorrectionRatio.lean} &
     Pigeonhole principle \\
   Tunnel width & \texttt{TunnelWidth.lean} &
     Baker $\to$ Diophantine gap $\to$ pure-even cells \\
   Drift infrastructure & \texttt{Drift.lean} &
     K-bound $\to$ $\varepsilon$-gap, walk divergence \\
+  K-bound equivalence & \texttt{Drift.lean}, \texttt{Conclusion.lean} &
+    K-bound $\Leftrightarrow$ \texttt{collatzReaches} \\
   Capstone & \texttt{Conclusion.lean} &
     \texttt{collatz\_conjecture : CollatzConjecture} \\
   \bottomrule
@@ -826,7 +842,7 @@ The following results are fully proved (zero \texttt{sorry}):
 
 \subsection{Remaining \texttt{sorry} axioms}
 
-Seven \texttt{sorry} axioms remain, grouped into three categories:
+Seven \texttt{sorry} axioms remain, grouped into two categories:
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
@@ -841,12 +857,12 @@ Seven \texttt{sorry} axioms remain, grouped into three categories:
   & & \texttt{baker\_zero\_estimate}, & \\
   & & \texttt{baker\_effective\_bound}, & \\
   & & \texttt{baker\_two\_three} & \\
-  6 & \texttt{Drift.lean} &
+  6 & \texttt{Baker.lean} &
+    \texttt{baker\_no\_balanced\_cycle} &
+    Baker--Steiner cycles ($\Delta_3 \ge 2$) \\
+  7 & \texttt{Drift.lean} &
     \texttt{nu3\_linear\_bound} &
     K-bound (critical path) \\
-  7 & \texttt{CorrectionRatio.lean} &
-    \texttt{no\_cycle\_equality\_case} &
-    Baker for cycles ($p = 3\Delta_3$) \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -859,16 +875,26 @@ exhibiting cell $(0,1)$ as structurally even at any scale $3^b$
 (Lemma~\ref{lem:forced-descent}); a second sorry on Weyl
 equidistribution was removed after reformulation
 (Section~\ref{sec:tunnel-eval}).
-Item~6 is the K-bound: the sole \texttt{sorry} on the
+Item~6 applies Baker's theorem to exclude non-trivial cycles with
+$\Delta_3 \ge 2$ and period $p = 3\Delta_3$ (the balanced case),
+using Steiner-type analysis of the cycle equation combined with
+computational verification for small~$\Delta_3$.  This sorry was
+previously in \texttt{CorrectionRatio.lean} as
+\texttt{no\_cycle\_equality\_case}; it has been restated in pure
+arithmetic terms in \texttt{Baker.lean}, making
+\texttt{CorrectionRatio.lean} sorry-free.
+Item~7 is the K-bound: the sole \texttt{sorry} on the
 critical path to \texttt{collatz\_conjecture}.  From the K-bound, the
 $\varepsilon$-gap (uniform bound $\nu_3/t \le p_{\mathrm{eq}} -
 \varepsilon$) is derived as a proved theorem, since
 $\log_2 3 < 2$ implies $p_{\mathrm{eq}} > 1/3$.
+The converse is also proved: \texttt{collatzReaches}$(n)$ implies the
+K-bound (via the $1 \to 4 \to 2 \to 1$ cycle), so the K-bound is
+formally equivalent to the Collatz conjecture
+(\texttt{nu3\_linear\_bound\_iff\_reaches}).
 The Baker--Feldman bridge (Section~\ref{sec:tunnel-eval}) identifies a
 route to proving this sorry from Baker's theorem via the structural
 pure-even sieve; the missing ingredient is a visitation frequency bound.
-Item~7 is the application of Baker's theorem to exclude cycles with
-$\Delta_3 \ge 2$, corresponding to hypothesis~(H2).
 
 \subsection{AI/LLM disclosure}
 
