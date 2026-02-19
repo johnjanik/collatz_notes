@@ -27,3 +27,4 @@ import CollatzLean.ContinuedFraction
 import CollatzLean.SyracuseDrift
 import CollatzLean.WeylEquidistribution
 import CollatzLean.DeficitBudget
+import CollatzLean.SolenoidMixing

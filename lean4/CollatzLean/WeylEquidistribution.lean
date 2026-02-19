@@ -115,66 +115,123 @@ noncomputable def safeCellDensity (N : ℕ) (δ : ℝ) : ℝ :=
   ((Finset.Icc (0 : ℤ) (N - 1) ×ˢ Finset.Icc (0 : ℤ) (N - 1)).filter
     (fun p => |cellError p.1 p.2| > δ)).card / ((N : ℝ) ^ 2)
 
-/-- At any scale N, most cells are safe: the dangerous cells are sparse.
-    This follows from Baker cell separation: the number of (a,b) pairs
-    in [0,N)² with |a - log₂3 · b| ≤ δ is O(N · δ + 1) for any δ > 0,
-    since log₂3 is irrational. The fraction of dangerous cells is thus
-    O(δ/N + 1/N²), which tends to 0 as N → ∞ for fixed δ. -/
-theorem safe_density_positive_of_irrational :
-    ∀ δ : ℝ, δ > 0 → ∃ N₀ : ℕ, N₀ ≥ 2 ∧ ∀ N : ℕ, N ≥ N₀ →
-      safeCellDensity N δ > 1 / 2 := by
-  intro δ hδ
-  -- The proof uses irrationality of log₂3: for large N, the proportion
-  -- of (a,b) ∈ [0,N)² with |a - log₂3 · b| ≤ δ is ≈ 2δ/N → 0.
-  -- The detailed bound comes from the three-distance theorem for
-  -- irrational rotations on the circle.
-  --
-  -- We prove this via the Diophantine separation from Baker:
-  -- for the nonzero pairs, |cellError a b| > C / max(|a|,|b|)^κ.
-  -- At scale N, this gives a threshold below which no nonzero cell falls.
-  obtain ⟨C, κ, hC, hκ, hbaker⟩ := baker_cell_separation
-  -- For N large enough, C / N^κ < δ, so all nonzero cells with
-  -- max(|a|,|b|) ≤ N have |cellError| > C/N^κ.
-  -- The only possibly dangerous cell is (0,0) itself (1 out of N²).
-  -- But we can quantify more carefully using the counting argument.
-  --
-  -- For the formal bound: among cells (a,b) with 0 ≤ a,b < N,
-  -- those with |a - log₂3 · b| ≤ δ lie in a strip of width 2δ
-  -- around the line a = log₂3 · b. The number of lattice points
-  -- in this strip ∩ [0,N)² is at most 2δN + O(1) (standard).
-  -- So dangerous fraction ≤ (2δN + O(1)) / N² → 0.
-  --
-  -- Since this requires some lattice point counting machinery we
-  -- don't have, we prove the key structural fact and defer the
-  -- counting to a helper lemma.
-  --
-  -- For now we prove the existence claim using the irrationality:
-  -- pick N₀ large enough that 1/N₀ < δ, then the strip width
-  -- relative to N ensures > 1/2 of cells are safe.
-  sorry
-
 /-! ## D3'. Baker-based safe cell count
 
-    A cleaner approach: at scale N, the number of dangerous cells
-    (those with |cellError| ≤ δ) is at most 2N for any fixed δ,
-    because for each b ∈ [0,N), there are at most 2 values of a
-    with |a - log₂3 · b| ≤ δ (the floor and ceiling of log₂3 · b ± δ).
-    So the dangerous fraction ≤ 2N / N² = 2/N → 0. -/
+    At scale N, the number of dangerous cells (those with |cellError| ≤ δ)
+    is at most N · (⌈2δ⌉ + 1), because for each b ∈ [0,N), there are at most
+    ⌈2δ⌉ + 1 values of a with |a - log₂3 · b| ≤ δ (integers in an interval
+    of length 2δ). So the dangerous fraction ≤ (⌈2δ⌉+1)/N → 0. -/
 
 /-- For each b, at most ⌈2δ⌉ + 1 values of a satisfy |a - log₂3 · b| ≤ δ.
     This is a basic property of intervals on the real line. -/
-theorem dangerous_cells_per_row_bound (b : ℤ) (_N : ℕ) (δ : ℝ) (hδ : δ > 0) :
+theorem dangerous_cells_per_row_bound (b : ℤ) (_N : ℕ) (δ : ℝ) (_hδ : δ > 0) :
     ((Finset.Icc (0 : ℤ) (↑N - 1)).filter
       (fun a => |cellError a b| ≤ δ)).card ≤ ⌈2 * δ⌉₊ + 1 := by
-  -- |a - log₂3 · b| ≤ δ means a ∈ [log₂3 · b - δ, log₂3 · b + δ]
-  -- This interval has length 2δ, so contains at most ⌈2δ⌉ + 1 integers.
-  sorry
+  -- The filtered set ⊆ Finset.Icc ⌈c - δ⌉ ⌊c + δ⌋ where c = logb 2 3 * b
+  set c := logb 2 3 * (↑b : ℝ)
+  have hsub : (Finset.Icc (0 : ℤ) (↑N - 1)).filter (fun a => |cellError a b| ≤ δ) ⊆
+      Finset.Icc ⌈c - δ⌉ ⌊c + δ⌋ := by
+    intro a ha
+    rw [Finset.mem_filter] at ha
+    rw [Finset.mem_Icc]
+    have habs : |cellError a b| ≤ δ := ha.2
+    simp only [cellError] at habs
+    rw [abs_le] at habs
+    exact ⟨Int.ceil_le.mpr (by linarith),
+           Int.le_floor.mpr (by linarith)⟩
+  calc ((Finset.Icc (0 : ℤ) (↑N - 1)).filter (fun a => |cellError a b| ≤ δ)).card
+      ≤ (Finset.Icc ⌈c - δ⌉ ⌊c + δ⌋).card := Finset.card_le_card hsub
+    _ ≤ ⌈2 * δ⌉₊ + 1 := by
+        rw [Int.card_Icc]
+        suffices h : ⌊c + δ⌋ + 1 - ⌈c - δ⌉ ≤ ↑(⌈2 * δ⌉₊ + 1) from Int.toNat_le.mpr h
+        have h1 : (↑⌊c + δ⌋ : ℝ) ≤ c + δ := Int.floor_le _
+        have h2 : c - δ ≤ (↑⌈c - δ⌉ : ℝ) := Int.le_ceil _
+        have h3 : (↑(⌊c + δ⌋ - ⌈c - δ⌉) : ℝ) ≤ 2 * δ := by push_cast; linarith
+        have h4 : (2 * δ : ℝ) ≤ ↑⌈2 * δ⌉₊ := Nat.le_ceil _
+        have h5 : ⌊c + δ⌋ - ⌈c - δ⌉ ≤ ↑⌈2 * δ⌉₊ := by exact_mod_cast le_trans h3 h4
+        push_cast; linarith
 
 /-- The total number of dangerous cells at scale N is at most N · (⌈2δ⌉ + 1). -/
 theorem total_dangerous_cells_bound (N : ℕ) (δ : ℝ) (hδ : δ > 0) :
     ((Finset.Icc (0 : ℤ) (↑N - 1) ×ˢ Finset.Icc (0 : ℤ) (↑N - 1)).filter
       (fun p => |cellError p.1 p.2| ≤ δ)).card ≤ N * (⌈2 * δ⌉₊ + 1) := by
-  sorry
+  set S := Finset.Icc (0 : ℤ) (↑N - 1) with hS_def
+  have hsub : (S ×ˢ S).filter (fun p => |cellError p.1 p.2| ≤ δ) ⊆
+      S.biUnion (fun b => (S.filter (fun a => |cellError a b| ≤ δ)).image (fun a => (a, b))) := by
+    intro ⟨a, b⟩ hab
+    simp only [Finset.mem_filter, Finset.mem_product, Finset.mem_biUnion, Finset.mem_image] at hab ⊢
+    exact ⟨b, hab.1.2, a, ⟨hab.1.1, hab.2⟩, rfl⟩
+  have hcard_S : S.card = N := by
+    simp only [hS_def, Int.card_Icc]; omega
+  calc ((S ×ˢ S).filter (fun p => |cellError p.1 p.2| ≤ δ)).card
+      ≤ (S.biUnion (fun b => (S.filter (fun a => |cellError a b| ≤ δ)).image
+          (fun a => (a, b)))).card := Finset.card_le_card hsub
+    _ ≤ S.card * (⌈2 * δ⌉₊ + 1) := by
+        apply Finset.card_biUnion_le_card_mul
+        intro b _
+        calc ((S.filter (fun a => |cellError a b| ≤ δ)).image (fun a => (a, b))).card
+            ≤ (S.filter (fun a => |cellError a b| ≤ δ)).card := Finset.card_image_le
+          _ ≤ ⌈2 * δ⌉₊ + 1 := dangerous_cells_per_row_bound b N δ hδ
+    _ = N * (⌈2 * δ⌉₊ + 1) := by rw [hcard_S]
+
+/-- At any scale N, most cells are safe: the dangerous cells are sparse.
+    From total_dangerous_cells_bound, dangerous ≤ N·(⌈2δ⌉+1), so the
+    safe fraction ≥ 1 - (⌈2δ⌉+1)/N → 1 as N → ∞ for fixed δ. -/
+theorem safe_density_positive_of_irrational :
+    ∀ δ : ℝ, δ > 0 → ∃ N₀ : ℕ, N₀ ≥ 2 ∧ ∀ N : ℕ, N ≥ N₀ →
+      safeCellDensity N δ > 1 / 2 := by
+  intro δ hδ
+  set M := ⌈2 * δ⌉₊ + 1 with hM_def
+  use max 2 (2 * M + 1)
+  refine ⟨le_max_left _ _, fun N hN => ?_⟩
+  have hN2 : N ≥ 2 := le_trans (le_max_left _ _) hN
+  have hNM : N > 2 * M := by omega
+  have hN_pos : (0 : ℝ) < N := by positivity
+  have hN2_pos : (0 : ℝ) < (N : ℝ) ^ 2 := by positivity
+  set S := Finset.Icc (0 : ℤ) (↑N - 1) with hS_def
+  set safe := (S ×ˢ S).filter (fun p => |cellError p.1 p.2| > δ)
+  set dang := (S ×ˢ S).filter (fun p => |cellError p.1 p.2| ≤ δ)
+  -- dang ⊆ S ×ˢ S
+  have hdang_sub : dang ⊆ S ×ˢ S := Finset.filter_subset _ _
+  -- safe = (S ×ˢ S) \ dang  (complement: > δ vs ≤ δ)
+  have hsafe_eq : safe = (S ×ˢ S) \ dang := by
+    ext p
+    simp only [safe, dang, Finset.mem_filter, Finset.mem_sdiff]
+    constructor
+    · intro ⟨hm, hgt⟩; exact ⟨hm, fun ⟨_, hle⟩ => not_lt.mpr hle hgt⟩
+    · intro ⟨hm, hnd⟩; exact ⟨hm, not_le.mp fun hle => hnd ⟨hm, hle⟩⟩
+  have hdang_card : dang.card ≤ N * M := total_dangerous_cells_bound N δ hδ
+  have hcard_S : S.card = N := by simp only [hS_def, Int.card_Icc]; omega
+  have hcard_prod : (S ×ˢ S).card = N * N := by
+    rw [Finset.card_product, hcard_S]
+  -- safe.card + dang.card = N * N
+  have hcomp : safe.card + dang.card = N * N := by
+    have h := Finset.card_sdiff_add_card_eq_card hdang_sub
+    rw [← hsafe_eq] at h; linarith
+  -- Therefore safe.card ≥ N*N - N*M
+  have hsafe_lower : safe.card ≥ N * N - N * M := by omega
+  -- safeCellDensity N δ = safe.card / N² > 1/2
+  show safeCellDensity N δ > 1 / 2
+  unfold safeCellDensity
+  change (safe.card : ℝ) / ((N : ℝ) ^ 2) > 1 / 2
+  rw [gt_iff_lt, div_lt_div_iff₀ (by norm_num : (0:ℝ) < 2) hN2_pos, one_mul]
+  -- Goal: (N : ℝ)^2 < 2 * ↑safe.card
+  -- From hsafe_lower: safe.card ≥ N*N - N*M (as ℕ)
+  -- From hNM: N > 2*M, so N*N - N*M ≥ N*N - N*(N/2 - 1) > N*N/2
+  -- Actually: 2*(N*N - N*M) ≥ 2*N*N - 2*N*M > N*N since N > 2*M
+  have hNM_nat : N * M < N * N := by nlinarith
+  have hsafe_pos : safe.card > 0 := by omega
+  -- Work in ℝ: safe.card ≥ N*N - N*M (ℕ), and N > 2*M
+  -- So (safe.card : ℝ) ≥ N*N - N*M ≥ 0, and we need N² < 2 * safe.card
+  have hNM_nat : N * M < N * N := by nlinarith
+  -- In ℤ: safe.card ≥ N*N - N*M
+  have hsafe_int : (safe.card : ℤ) ≥ ↑(N * N) - ↑(N * M) := by omega
+  -- In ℝ
+  have hsafe_real : (safe.card : ℝ) ≥ (N : ℝ) * N - (N : ℝ) * M := by
+    have := @Int.cast_le ℝ _ _ _ |>.mpr hsafe_int
+    push_cast at this ⊢; linarith
+  have hN_real : (N : ℝ) > 2 * (M : ℝ) := by exact_mod_cast hNM
+  nlinarith [sq_nonneg (N : ℝ)]
 
 /-! ## D4. Bridge: equidistribution implies safe cell visits
 
@@ -308,36 +365,34 @@ theorem nu3_linear_bound_from_weyl (n : ℕ) (hn : n ≥ 1) :
       + irrational_logb_two_three [proved, Baker.lean]
       → log2_3_rotation_equidistributed [proved, this file]
     baker_cell_separation [proved, DiophantineRepeller.lean]
-      → safe_density_positive_of_irrational [needs counting lemma]
-    equidistribution_implies_deficit_bounded [needs accounting bridge]
-      → equidistribution_implies_sliding_window [needs deficit→window]
+      → dangerous_cells_per_row_bound [proved, this file]
+      → total_dangerous_cells_bound [proved, this file]
+      → safe_density_positive_of_irrational [proved, this file]
+    equidistribution_implies_deficit_bounded [sorry — accounting bridge]
+      → equidistribution_implies_sliding_window [sorry — deficit→window]
       → k_bound_from_repeller [proved, DiophantineRepeller.lean]
-      → nu3_linear_bound_from_weyl
+      → nu3_linear_bound_from_weyl [sorry — assembly]
 
   Key insight: The Collatz cell visits on (Z/3^k Z)² are driven by an
   irrational rotation (log₂3 is irrational), so by Weyl they are
   equidistributed. Combined with Baker's separation of dangerous cells,
   this ensures enough safe cell visits to prevent deficit growth.
 
-  The sorry gaps in this file are:
-  1. safe_density_positive_of_irrational — lattice point counting in strips
-     (standard but requires Finset arithmetic we don't have)
-  2. dangerous_cells_per_row_bound — interval length → integer count
-  3. total_dangerous_cells_bound — sum over rows
-  4. equidistribution_implies_deficit_bounded — deficit budget accounting
-  5. equidistribution_implies_sliding_window — bounded→window upgrade
-  6. nu3_linear_bound_from_weyl — assembly of all pieces
+  Remaining sorry gaps (3, down from 6):
+  1. equidistribution_implies_deficit_bounded — connects equidistribution
+     to bounded deficit via safe/dangerous cell accounting
+  2. equidistribution_implies_sliding_window — upgrades bounded deficit
+     to the sliding window condition (stronger, per-window bound)
+  3. nu3_linear_bound_from_weyl — assembly of 1+2 with existing K-bound
 
-  Items 2-3 are elementary lattice counting.
-  Item 1 follows from 2-3 for large N.
-  Items 4-5 are the core analytical content bridging equidistribution
-  to the deficit condition.
-  Item 6 is just wiring.
+  Closed sorrys (3):
+  - dangerous_cells_per_row_bound — interval ⊆ Icc proof, card ≤ ⌈2δ⌉₊+1
+  - total_dangerous_cells_bound — biUnion decomposition over b coordinate
+  - safe_density_positive_of_irrational — complement counting + N > 2M
 
   The ONLY new axiom is weyl_equidistribution_of_irrational_rotation.
-  All sorry items above are provable from existing infrastructure
-  plus this axiom — they are marked sorry for length, not for
-  mathematical doubt.
+  Items 1-2 represent genuine analytical content connecting equidistribution
+  theory to the deficit budget accounting framework.
 -/
 
 end Collatz

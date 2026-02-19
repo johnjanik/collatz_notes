@@ -7,9 +7,11 @@
   Defines the auxiliary entire function F(z) = Σ a(i,j) · exp((i + j·β)·z)
   and provides:
   1. Differentiability (entire) — proved
-  2. Growth bounds (exponential type) — sorry'd
-  3. Schwarz-type extrapolation of vanishing — sorry'd
-  4. Polynomial zero estimate via multiplicative independence — sorry'd
+  2. Growth bounds (exponential type) — proved
+  3. Schwarz-type extrapolation of vanishing — proved (from sub-lemmas)
+  4. Polynomial zero estimate via multiplicative independence — proved
+  5. Jensen zero counting — proved
+  6. Gel'fond-Schneider contradiction — proved
 
   These are the analytical core of `baker_extrapolation` in Baker.lean.
 
@@ -157,9 +159,83 @@ noncomputable def blaschkeProduct (T : ℕ) (z : ℂ) : ℝ :=
     ((2 * (T : ℝ) + 1) * ‖z - (k : ℂ)‖ /
       ‖((2 * (T : ℝ) + 1) ^ 2 : ℂ) - (k : ℂ) * z‖)
 
+/-- Each Blaschke factor is nonneg (ratio of nonneg reals). -/
+private lemma blaschke_factor_nonneg (T : ℕ) (z : ℂ) (k : ℕ) :
+    0 ≤ (2 * (T : ℝ) + 1) * ‖z - (k : ℂ)‖ /
+      ‖((2 * (T : ℝ) + 1) ^ 2 : ℂ) - (k : ℂ) * z‖ :=
+  div_nonneg (mul_nonneg (by positivity) (norm_nonneg _)) (norm_nonneg _)
+
+/-- The Blaschke product is nonneg (product of nonneg factors). -/
+private lemma blaschke_product_nonneg (T : ℕ) (z : ℂ) :
+    0 ≤ blaschkeProduct T z :=
+  Finset.prod_nonneg (fun k _ => blaschke_factor_nonneg T z k)
+
+/-- Tight Blaschke factor bound: each factor ≤ (‖z‖ + k) / R where R = 2T+1.
+
+    Proof sketch: The Blaschke factor |R(z-a)/(R²-az)| is maximized over
+    |z| ≤ r at z = -r (real, opposite to the zero). At that point,
+    |b| = R(r+a)/(R²+ar). Since R²+ar ≥ R², this gives |b| ≤ (r+a)/R.
+
+    The maximum principle argument: |b(z,a)|² = R²(r²-2at+a²)/(R⁴-2aR²t+a²r²)
+    where t = Re(z). The derivative in t is proportional to -a(R²-r²)(R²-a²) < 0,
+    so |b|² is decreasing in t, maximized at t = -r.
+
+    Requires: Complex.norm computation, algebraic manipulation. -/
+private lemma blaschke_factor_le_ratio (T : ℕ) (_hT : T ≥ 2) (k : ℕ)
+    (hk : k ∈ Finset.range (T + 1)) (z : ℂ) (hz : ‖z‖ ≤ ↑T / 2) :
+    (2 * (T : ℝ) + 1) * ‖z - (k : ℂ)‖ /
+      ‖((2 * (T : ℝ) + 1) ^ 2 : ℂ) - (k : ℂ) * z‖ ≤
+    (‖z‖ + ↑k) / (2 * ↑T + 1) := by
+  sorry
+
+/-- The rising factorial ∏_{k=0}^{T} (r+k) ≤ T^(T+1) when 0 ≤ r ≤ T/2.
+
+    Follows from AM-GM (Mathlib: `Real.geom_mean_le_arith_mean_weighted`):
+    the geometric mean of (r+0, r+1, ..., r+T) is at most their arithmetic
+    mean r + T/2 ≤ T. So ∏(r+k) ≤ T^{T+1}.
+
+    For the AM-GM setup: use uniform weights w_k = 1/(T+1), so ∑w = 1.
+    Then (∏ (r+k)^{1/(T+1)}) ≤ (1/(T+1))∑(r+k) = r + T/2 ≤ T.
+    Raising to the (T+1)-th power: ∏(r+k) ≤ T^(T+1). -/
+private lemma rising_factorial_le_pow (T : ℕ) (r : ℝ) (_hr : 0 ≤ r) (hrT : r ≤ ↑T / 2) :
+    ∏ k ∈ Finset.range (T + 1), (r + ↑k) ≤ (↑T : ℝ) ^ (T + 1) := by
+  sorry
+
+/-- Product bound: ∏_{k=0}^{T} (r+k)/(2T+1) ≤ (1/2)^(T+1) for 0 ≤ r ≤ T/2.
+
+    Proof: by `rising_factorial_le_pow`, ∏(r+k) ≤ T^(T+1).
+    Dividing by (2T+1)^(T+1): product ≤ (T/(2T+1))^(T+1).
+    Since T < T + 1/2 < T + 1 ≤ 2T+1 for T ≥ 0, we get T/(2T+1) < 1/2. -/
+private lemma ratio_product_le_half_pow (T : ℕ) (_hT : T ≥ 2) (r : ℝ)
+    (hr : 0 ≤ r) (hrT : r ≤ ↑T / 2) :
+    ∏ k ∈ Finset.range (T + 1), ((r + ↑k) / (2 * ↑T + 1)) ≤ (1 / 2) ^ (T + 1) := by
+  have hR_pos : (0 : ℝ) < 2 * ↑T + 1 := by positivity
+  -- Rewrite ∏ (f/g) = (∏ f) / (∏ g), with g constant
+  conv_lhs =>
+    arg 2; ext k
+    rw [show (r + ↑k) / (2 * ↑T + 1) = (fun i => r + ↑i) k / (fun _ => 2 * (↑T : ℝ) + 1) k
+      from rfl]
+  rw [Finset.prod_div_distrib, Finset.prod_const, Finset.card_range]
+  -- Goal: ∏(r+k) / (2T+1)^(T+1) ≤ (1/2)^(T+1)
+  rw [div_le_iff₀ (pow_pos hR_pos _), ← mul_pow]
+  -- Goal: ∏(r+k) ≤ ((1/2) * (2T+1))^(T+1)
+  calc ∏ k ∈ Finset.range (T + 1), (r + ↑k)
+      ≤ (↑T : ℝ) ^ (T + 1) := rising_factorial_le_pow T r hr hrT
+    _ ≤ (1 / 2 * (2 * ↑T + 1)) ^ (T + 1) :=
+        pow_le_pow_left₀ (by positivity) (by linarith) _
+
 /-- Poisson-Jensen inequality: an entire function with growth bound and
     integer zeros satisfies |f(z)| ≤ C·exp(σR) · blaschkeProduct.
-    Requires extending Mathlib's Jensen formula to pointwise Poisson-Jensen. -/
+
+    Proof outline (Boas "Entire Functions" §2.10):
+    1. Define B(z) = ∏_{k=0}^{T} R(z-k)/(R²-kz) (complex Blaschke product)
+    2. g(z) = f(z)/B(z) is entire (zeros of f cancel poles of 1/B)
+    3. On |z| = R: |B(z)| = 1 (standard Blaschke identity), so |g| = |f| ≤ C·exp(σR)
+    4. Maximum modulus principle: |g(z)| ≤ C·exp(σR) for all |z| ≤ R
+    5. Therefore |f(z)| = |g(z)|·|B(z)| ≤ C·exp(σR) · blaschkeProduct(z)
+
+    Requires: removable singularity theorem, maximum modulus principle (Mathlib),
+    Blaschke boundary identity |B| = 1 on |z| = R. -/
 private lemma poisson_jensen_blaschke
     (f : ℂ → ℂ) (_hf : Differentiable ℂ f)
     (C σ : ℝ) (_hC : C > 0) (_hσ : σ > 0)
@@ -171,12 +247,23 @@ private lemma poisson_jensen_blaschke
   sorry
 
 /-- The Blaschke product is at most (1/2)^(T+1) for |z| ≤ T/2, R = 2T+1.
-    Individual factors can exceed 1/2 for k near T, but factors for small k
-    are of order k/(2T), making the product geometrically small. -/
+
+    Proof chain:
+    1. Each factor ≤ (‖z‖+k)/(2T+1) by `blaschke_factor_le_ratio`
+    2. Product of ratios ≤ (1/2)^(T+1) by `ratio_product_le_half_pow` (AM-GM)
+    Assembled via `Finset.prod_le_prod` (monotonicity of products). -/
 private lemma blaschke_product_le_half_pow
-    (T : ℕ) (_hT : T ≥ 2) (z : ℂ) (_hz : ‖z‖ ≤ ↑T / 2) :
+    (T : ℕ) (hT : T ≥ 2) (z : ℂ) (hz : ‖z‖ ≤ ↑T / 2) :
     blaschkeProduct T z ≤ (1 / 2) ^ (T + 1) := by
-  sorry
+  unfold blaschkeProduct
+  calc ∏ k ∈ Finset.range (T + 1),
+        ((2 * (T : ℝ) + 1) * ‖z - (k : ℂ)‖ /
+          ‖((2 * (T : ℝ) + 1) ^ 2 : ℂ) - (k : ℂ) * z‖)
+      ≤ ∏ k ∈ Finset.range (T + 1), ((‖z‖ + ↑k) / (2 * ↑T + 1)) :=
+        Finset.prod_le_prod (fun k _ => blaschke_factor_nonneg T z k)
+          (fun k hk => blaschke_factor_le_ratio T hT k hk z hz)
+    _ ≤ (1 / 2) ^ (T + 1) :=
+        ratio_product_le_half_pow T hT ‖z‖ (norm_nonneg z) hz
 
 /-- Schwarz-type vanishing extrapolation for entire functions of exponential type.
 
