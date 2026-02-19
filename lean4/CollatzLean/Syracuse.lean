@@ -66,15 +66,19 @@ theorem pow_val2_dvd (n : ℕ) : 2 ^ val2 n ∣ n := by
     · by_cases ho : n % 2 = 1
       · rw [val2_odd n ho]; simp
       · have he : n % 2 = 0 := by omega
-        rw [val2_even n (by omega) he, pow_succ, mul_comm]
-        -- Goal: 2 * 2 ^ val2 (n / 2) ∣ n
+        rw [val2_even n (by omega) he, pow_succ]
+        -- Goal: 2 ^ val2 (n / 2) * 2 ∣ n
         have hlt : n / 2 < n := Nat.div_lt_self (by omega) (by omega)
         obtain ⟨j, hj⟩ := ih _ hlt
         -- hj: n / 2 = 2 ^ val2 (n / 2) * j
         refine ⟨j, ?_⟩
+        -- Abstract val2(n/2) to avoid rewriting inside it
+        set k := val2 (n / 2)
+        -- hj: n / 2 = 2 ^ k * j, goal: n = 2 ^ k * 2 * j
         have h1 : n = 2 * (n / 2) := by omega
-        conv_lhs => rw [h1, hj]
-        ring
+        rw [hj] at h1
+        -- h1: n = 2 * (2 ^ k * j), goal: n = 2 ^ k * 2 * j
+        rw [h1]; ring
 
 /-- n = (n / 2^val2(n)) * 2^val2(n). -/
 theorem val2_cancel (n : ℕ) : n / 2 ^ val2 n * 2 ^ val2 n = n :=
