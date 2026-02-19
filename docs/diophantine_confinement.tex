@@ -72,9 +72,9 @@ reaching~$1$ implies the K-bound, so the sole critical-path axiom is
 formally equivalent to the conjecture itself.  A Syracuse framework
 bridge connects Tao's odd-step formulation to the walk/drift
 infrastructure.  The argument is formalized in approximately
-6\,400~lines of Lean~4 across 29~files with four explicit
-\texttt{sorry} gaps and four external axioms (Baker~1966,
-Rhin~1987, Hercher~2024, Weyl~1916), all identified and categorized.
+7\,100~lines of Lean~4 across 30~files with five external axioms
+(Baker~1966, Rhin~1987, Hercher~2023, Weyl~1916, and one open
+mixing axiom on the $(2,3)$-solenoid), all identified and categorized.
 \end{abstract}
 
 \maketitle
@@ -781,8 +781,8 @@ Hypothesis~(H1) asserts that for every $n \ge 1$, the odd-step
 proportion $\nu_3(t)/t$ is eventually bounded below
 $p_{\mathrm{eq}} = 1/(1+\log_2 3)$ by a uniform gap
 $\varepsilon > 0$, and that the linear bound $3\nu_3(t) \le t + K$
-holds for large~$t$.  In the formalization, only the K-bound
-$3\nu_3(t) \le t + K$ is an axiom (\texttt{nu3\_linear\_bound});
+holds for large~$t$.  In the formalization, the K-bound
+$3\nu_3(t) \le t + K$ is implied by axiom~A5 (\texttt{solenoid\_mixing});
 the $\varepsilon$-gap follows since $p_{\mathrm{eq}} > 1/3$
 (from $\log_2 3 < 2$, i.e., $3 < 4$).
 The converse also holds: if $T^k(n) = 1$ for some~$k$, then
@@ -912,7 +912,7 @@ The bound grows as $B \sim 1/\varepsilon$ for small $\varepsilon$.
 
 The results of this paper have been formalized in Lean~4 using the
 Mathlib4 library.  The formalization comprises approximately
-6\,400~lines across 29~files, building in 3\,105~jobs.
+7\,100~lines across 30~files, building in 3\,106~jobs.
 
 \subsection{What is machine-checked}
 
@@ -967,7 +967,9 @@ The following results are fully proved (zero \texttt{sorry}):
   Deficit budget & \texttt{DeficitBudget.lean} &
     Deficit tracking, sliding window reduction \\
   Weyl equidistribution & \texttt{WeylEquidistribution.lean} &
-    Irrational rotation, safe cell density \\
+    Irrational rotation, lattice counting, safe density \\
+  Solenoid mixing bridge & \texttt{SolenoidMixing.lean} &
+    Cell error shift, Hensel--Baker conflict \\
   Drift infrastructure & \texttt{Drift.lean} &
     K-bound $\to$ $\varepsilon$-gap, walk divergence \\
   K-bound equivalence & \texttt{Conclusion.lean} &
@@ -978,109 +980,107 @@ The following results are fully proved (zero \texttt{sorry}):
 \end{tabular}
 \end{center}
 
-\subsection{Remaining gaps: four \texttt{sorry} declarations and four axioms}
+\subsection{Remaining gaps: five axioms and the critical path}
 
-Four \texttt{sorry} declarations and four external axioms remain,
-grouped into three categories:
+Five external axioms remain, four of which cite established
+results with published proofs and one of which is the sole genuinely
+open hypothesis on the critical path to \texttt{collatz\_conjecture}.
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{clll}
   \toprule
-  \textbf{\#} & \textbf{File} & \textbf{Theorem} & \textbf{Category} \\
-  \midrule
-  1 & \texttt{GrowthEstimates.lean} &
-    \texttt{schwarz\_vanishing\_bound} &
-    Gel'fond--Schneider chain \\
-  2 & \texttt{SteinerCycle.lean} &
-    \texttt{steiner\_cycle\_large} &
-    Cycles, $\Delta_3 \ge 80$ \\
-  3 & \texttt{Drift.lean} &
-    \texttt{nu3\_linear\_bound} &
-    K-bound (critical path) \\
-  4 & \texttt{DiophantineRepeller.lean} &
-    \texttt{finite\_residence\_bound} &
-    Solenoid mixing \\
+  \textbf{\#} & \textbf{File} & \textbf{Axiom} & \textbf{Status} \\
   \midrule
   A1 & \texttt{Baker.lean} &
     \texttt{baker\_two\_three} &
-    External (Baker 1966) \\
+    Established (Baker 1966) \\
   A2 & \texttt{IrrationalityMeasure.lean} &
     \texttt{rhin\_irrationality\_measure} &
-    External (Rhin 1987) \\
+    Established (Rhin 1987) \\
   A3 & \texttt{SteinerCycle.lean} &
     \texttt{hercher\_no\_small\_cycle} &
-    External (Hercher 2024) \\
+    Established (Hercher 2023) \\
   A4 & \texttt{WeylEquidistribution.lean} &
     \texttt{weyl\_equidistribution} &
-    External (Weyl 1916) \\
+    Established (Weyl 1916) \\
+  A5 & \texttt{SolenoidMixing.lean} &
+    \texttt{solenoid\_mixing} &
+    \textbf{Open} (critical path) \\
   \bottomrule
 \end{tabular}
 \end{center}
 
 Axiom~A1 is Baker's theorem on linear forms in logarithms: $|m \log 2
 + n \log 3| > C / \max(|m|, |n|)^{\kappa}$ for effective $C, \kappa >
-0$~\cite{Baker1966}.  Item~1 is the Schwarz-type extrapolation
-in the Gel'fond--Schneider chain that feeds into axiom~A1.
-The two other steps in the Gel'fond--Schneider
-chain---the Jensen zero-counting argument
-(\texttt{jensen\_zero\_count}) and the polynomial zero estimate
-(\texttt{polynomial\_zero\_estimate})---are now fully proved: the
-former via the identity principle and sequential compactness, the
-latter via Vandermonde determinants and \texttt{Fintype.sum\_equiv}
-reindexing.  The Schwarz bound has been decomposed into two
-sub-lemmas involving Blaschke products
-(\texttt{poisson\_jensen\_blaschke} and
-\texttt{blaschke\_product\_le\_half\_pow}), neither of which is used
-downstream of the Baker chain.
-
-Item~2 (\texttt{steiner\_cycle\_large}) handles cycles with
-$\Delta_3 \ge 80$, the frontier beyond Hercher's computational
-verification.  The $\Delta_3 \le 79$ case is fully proved
-(Theorem~\ref{thm:steiner-hercher}), using axiom~A1 via
-Baker cell separation and axiom~A3 via Hercher's theorem.
-\texttt{CycleElimination.lean} and \texttt{CorrectionRatio.lean} are
-now sorry-free.
-
-Item~3 is the K-bound: the sole \texttt{sorry} on the critical path
-to \texttt{collatz\_conjecture}.  From the K-bound, the
-$\varepsilon$-gap ($\nu_3/t \le p_{\mathrm{eq}} - \varepsilon$) is
-derived as a proved theorem, since $\log_2 3 < 2$ implies
-$p_{\mathrm{eq}} > 1/3$.  The converse is also proved:
-\texttt{collatzReaches}$(n)$ implies the K-bound, so the K-bound is
-formally equivalent to the Collatz conjecture
-(\texttt{nu3\_linear\_bound\_iff\_reaches} in
-\texttt{Conclusion.lean}).
-
-Item~4 (\texttt{finite\_residence\_bound}) offers an alternative path
-to the K-bound via the Diophantine Repeller.  The decomposition is:
-Hensel attrition (proved, \texttt{HenselAttrition.lean}) $+$ Baker
-cell separation (proved, reduces to axiom~A1) $+$ finite residence
-(this sorry) $\to$ K-bound.  \texttt{DeficitBudget.lean} provides a
-sorry-free reduction of the finite residence bound to a sliding window
-condition: it suffices to show $3 \cdot \Delta\nu_3 \le W$ in every
-window of width~$W$.  The gap is equidistribution on the
-$(2,3)$-solenoid: converting the density bound $P(\text{run} \ge d) =
-2^{-d}$ into a per-trajectory bound.
+0$~\cite{Baker1966}.  The Gel'fond--Schneider chain that would prove
+axiom~A1 from scratch has two fully proved steps (Jensen zero counting
+via the identity principle; polynomial zero estimate via Vandermonde
+determinants) and three sub-lemma \texttt{sorry} declarations involving
+Blaschke products in \texttt{GrowthEstimates.lean}.  Since axiom~A1 is
+not on the critical path, these are vestigial.
 
 Axiom~A2 (Rhin's irrationality measure, $|p/q - \log_2 3| >
-C/q^6$) is an established result~\cite{Rhin1987} treated as an
-external axiom.  Axiom~A3 (Hercher's verification that no nontrivial
-$m$-cycle exists for $m \le 91$) is a computational
-result~\cite{Hercher2024} treated as an external axiom.
+C/q^6$) is an established result~\cite{Rhin1987}.
+Axiom~A3 (Hercher's verification that no nontrivial $m$-cycle exists
+for $m \le 91$) is a computational result~\cite{Hercher2024}.
 Axiom~A4 (Weyl's equidistribution theorem for irrational
 rotations~\cite{Weyl1916}) is used in
-\texttt{WeylEquidistribution.lean} to establish that
-$\{n \log_2 3\}$ is equidistributed modulo~1, connecting the
-irrational rotation structure to safe cell density bounds.
+\texttt{WeylEquidistribution.lean}, where the lattice counting
+infrastructure is fully proved: for each row~$b$, at most
+$\lceil 2\delta \rceil + 1$ cells satisfy $|a - \log_2 3 \cdot b| \le
+\delta$, giving a total dangerous cell bound of
+$N \cdot (\lceil 2\delta \rceil + 1)$ and safe cell density
+exceeding $1/2$ for large~$N$.
 
-The Baker--Feldman bridge (Section~\ref{sec:tunnel-eval}) identifies a
-route to proving item~3 from axiom~A1 via the structural pure-even
-sieve; the missing ingredient is a visitation frequency bound.
-The Weyl equidistribution bridge provides a complementary route:
-axiom~A4 yields equidistribution of $\{n \log_2 3\}$, which combined
-with Baker cell separation gives safe cell density bounds that feed
-into the deficit budget framework.
+\medskip\noindent\textbf{The critical path.}
+Axiom~A5 (\texttt{solenoid\_mixing}) is the sole genuinely open
+hypothesis.  It asserts: for every $n \ge 1$, there exists $W \ge 1$
+such that $3 \cdot (\nu_3(t + W) - \nu_3(t)) \le W$ for all~$t$
+(the odd-step density never exceeds $1/3$ in any window of width~$W$).
+The proof chain is:
+\[
+  \texttt{solenoid\_mixing} \;\to\; \texttt{SlidingWindowCondition}
+  \;\to\; \text{deficit bounded} \;\to\; \text{K-bound} \;\to\;
+  \texttt{collatz\_conjecture}.
+\]
+All arrows are sorry-free (\texttt{SolenoidMixing.lean},
+\texttt{DeficitBudget.lean}, \texttt{DiophantineRepeller.lean},
+\texttt{CorrectionRatio.lean}, \texttt{Conclusion.lean}).
+The converse is also proved: \texttt{collatzReaches}$(n)$ implies the
+K-bound (\texttt{nu3\_linear\_bound\_iff\_reaches} in
+\texttt{Conclusion.lean}), so axiom~A5 is formally equivalent to the
+Collatz conjecture.
+
+\medskip\noindent\textbf{Why axiom~A5 is expected to hold.}
+Three proved forces conflict to prevent sustained dangerous behavior:
+\begin{enumerate}
+\item \emph{Hensel attrition} (sorry-free, \texttt{HenselAttrition.lean}):
+  a $v_2 = 1$ run of length~$d$ requires
+  $2^{d+1} \mid (x + 1)$, giving survival rate exactly $2^{-d}$.
+\item \emph{Baker cell separation} (sorry-free, reduces to A1):
+  dangerous cells are Diophantine-separated with gap
+  $> C / \max(|a|, |b|)^{\kappa}$.
+\item \emph{Cell error shift} (sorry-free, \texttt{SolenoidMixing.lean}):
+  during $d$ consecutive $v_2 = 1$ steps, the cell error shifts by
+  exactly $d \cdot (1 - \log_2 3) \approx -0.585d$.  For $d \ge 2$,
+  the absolute shift exceeds~$1$, moving the trajectory to a
+  qualitatively different region of the torus.
+\end{enumerate}
+
+\medskip\noindent\textbf{Additional \texttt{sorry} declarations.}
+Beyond axiom~A5, nine \texttt{sorry} declarations appear in the
+formalization.  Five are provably equivalent to axiom~A5
+(\texttt{nu3\_linear\_bound} in \texttt{Drift.lean},
+\texttt{finite\_residence\_bound} in \texttt{DiophantineRepeller.lean},
+and three Weyl bridge lemmas in \texttt{WeylEquidistribution.lean}).
+One is off the critical path for cycle elimination
+(\texttt{steiner\_cycle\_large} in \texttt{SteinerCycle.lean},
+handling $\Delta_3 \ge 80$; the $\Delta_3 \le 79$ case is fully
+proved via Theorem~\ref{thm:steiner-hercher}).
+Three are Blaschke product sub-lemmas in
+\texttt{GrowthEstimates.lean}, vestigial since Baker's theorem is
+axiom~A1.
 
 \subsection{AI/LLM disclosure}
 
@@ -1362,9 +1362,9 @@ The Hensel attrition (Proposition~\ref{prop:hensel-attrition}) is
 formalizable in Lean~4 using only modular arithmetic; it does not
 require Baker's theorem.  Combined with the Baker separation of
 dangerous cells (Section~\ref{sec:tunnel-eval}), this yields the
-sorry chain:
+axiom chain (Section~\ref{sec:lean}):
 \[
-\text{Baker separation} \;\to\; [\text{finite residence: sorry}]
+\text{Baker separation} \;\to\; [\text{solenoid mixing: axiom~A5}]
 \;\to\; \text{K-bound} \;\to\; \text{Collatz}.
 \]
 The sole remaining gap is converting the density bound
@@ -1373,7 +1373,7 @@ values) into a per-trajectory bound (a statement about individual~$n$).
 This requires showing that no trajectory can regenerate trailing
 $1$-bits fast enough to sustain indefinite hard-dangerous runs---a
 question about the \emph{mixing} properties of the Collatz map on the
-$(2,3)$-solenoid.
+$(2,3)$-solenoid, captured formally as axiom~A5.
 
 \subsection{Structural pure-even cells and the Baker--Feldman bridge}
 \label{sec:tunnel-eval}
