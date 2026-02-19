@@ -258,7 +258,7 @@ noncomputable def cellSeqNu3 (n N : ℕ) (k : ℕ) : ℕ :=
     Then the deficit is bounded: over any window of W steps, the trajectory
     visits enough safe cells to compensate for the dangerous v₂=1 steps.
 
-    This is the key bridge from equidistribution to the SlidingWindowCondition. -/
+    This is the key bridge from equidistribution to the K-bound. -/
 theorem equidistribution_implies_deficit_bounded
     (n : ℕ) (hn : n ≥ 1)
     (N : ℕ) (hN : N ≥ 2)
@@ -268,72 +268,77 @@ theorem equidistribution_implies_deficit_bounded
     -- The cell visit sequence is equidistributed
     (hequi : IsEquidistributed (cellSeqNu2 n N) N) :
     ∃ D : ℤ, ∀ t : ℕ, deficit n t ≤ D := by
-  -- From equidistribution: each residue class is visited with frequency → 1/N.
-  -- From safe density: fraction ρ of residue classes are safe.
-  -- Therefore, safe cells are visited with frequency ≥ ρ - ε for large enough M.
-  -- Each safe visit has v₂ ≥ 2, contributing ≤ 0 to deficit.
-  -- Each dangerous visit has v₂ = 1, contributing +1 to deficit per compressed step.
-  -- Net deficit rate ≤ (1 - ρ) · 1 + ρ · 0 = 1 - ρ per compressed step... but this
-  -- isn't quite right since even dangerous exits have v₂ ≥ 2 (Hensel attrition exit).
+  -- SORRY CONTENT: This is the main analytical gap in the Weyl bridge.
+  -- It is equivalent to the Collatz conjecture for the given n
+  -- (via k_bound_of_deficit_bounded + nu3_linear_bound_iff_reaches).
   --
-  -- The precise argument uses the deficit budget from HenselAttrition:
-  -- - Each v₂=1 run of length d contributes +d to deficit (deficit_of_v2_run)
-  -- - The exit recovery contributes 0 to deficit (deficit_of_run_plus_exit)
-  -- - Each safe step (v₂ ≥ 3) contributes -1 to deficit (deficit_nonincreasing_at_safe_step)
-  -- - Equidistribution ensures enough safe steps per window
+  -- Proof sketch (not yet formalized):
   --
-  -- The formal derivation from equidistribution to bounded deficit requires
-  -- connecting the Syracuse-step-level equidistribution to uncompressed-step
-  -- deficit accounting. We prove this via the window condition.
+  -- 1. SAFE CELL FREQUENCY: Equidistribution (hequi) ensures each residue
+  --    r < N is visited with frequency → 1/N. Safe residues (|cellError| > 1/N)
+  --    have density > ρ > 0 (hsafe). So safe cells are visited with cumulative
+  --    frequency ≥ ρ - ε for any ε > 0, for windows past some M₀.
+  --
+  -- 2. DEFICIT ACCOUNTING: Each safe cell visit has v₂ ≥ 2, so the safe step
+  --    contributes ≤ 0 to deficit (safe_steps_compensate). Each dangerous visit
+  --    has v₂ = 1, contributing +2 to deficit per odd step.
+  --
+  -- 3. RUN-LEVEL ANALYSIS: Hensel attrition (hensel_attrition) ensures that
+  --    dangerous v₂=1 runs of length d require 2^(d+1) | (x+1), giving
+  --    exponentially decaying probability. Cell error shifts by d·(1 - log₂3)
+  --    during a d-run (cellError_shift_of_v2_run), exceeding 1 for d ≥ 2
+  --    (cellError_shift_exceeds_one), which forces exit to a safe cell.
+  --
+  -- 4. BUDGET: Safe visits (frequency ≥ ρ-ε) each recover ≥1 deficit unit.
+  --    Dangerous runs contribute +d but are capped by Hensel at d ≤ O(log N).
+  --    Net deficit growth rate → ≤ 0, giving bounded deficit.
+  --
+  -- The formal derivation requires connecting 1D equidistribution of ν₂ mod N
+  -- to 2D cell visit statistics on (Z/NZ)², and converting Syracuse-step-level
+  -- frequencies to uncompressed-step deficit accounting.
   sorry
 
-/-! ## D5. Wiring to finite_residence_bound
+/-! ## D5. From deficit bounded to K-bound
 
-    The final connection: if we have equidistribution (Weyl axiom) and
-    safe cell density (Baker), then finite_residence_bound holds. -/
+    **BUG NOTE**: The original `equidistribution_implies_sliding_window` attempted
+    to produce `SlidingWindowCondition n W` (i.e., ∀ t, deficit(t+W) ≤ deficit(t)).
+    However, SWC as defined is **false for many starting values**.
 
-/-- **Equidistribution bridge to sliding window condition**.
+    Counterexample: n = 27 reaches 1 at step 111 with deficit(111) = 12 > 0.
+    In the 1→4→2→1 cycle, deficit oscillates between {12, 13, 14}.
+    But deficit(0) = 0, so deficit(0+W) ≈ 12 > 0 = deficit(0) for all large W.
+    Hence `SlidingWindowCondition 27 W` is false for ALL W ≥ 1.
 
-    If the cell sequence is equidistributed and safe cells are dense,
-    the sliding window condition holds for a computable window size W. -/
-theorem equidistribution_implies_sliding_window
+    More generally, SWC fails whenever the trajectory accumulates a positive
+    deficit during the transient (odd-step density > 1/3 before reaching the
+    1→4→2→1 cycle). Computationally: n=27 (deficit 12), n=31 (11), n=63 (10),
+    n=97 (11) all have SWC false for every W.
+
+    This bug also affects `solenoid_mixing` (SolenoidMixing.lean) and
+    `finite_residence_bound` (DiophantineRepeller.lean), which assert
+    SWC / HasCompensatedRuns for all n ≥ 1.
+
+    The correct formulation is the K-bound: ∃ K T₀, ∀ t ≥ T₀, 3·ν₃ ≤ t + K.
+    This IS true for n=27 (with K=12, T₀=0: 3·ν₃(t) ≤ t + 12 always).
+    The corrected bridge goes: deficit bounded → K-bound directly,
+    via `k_bound_of_deficit_bounded` (Drift.lean). -/
+
+/-- **Equidistribution bridge to K-bound** (corrected).
+
+    From bounded deficit (output of `equidistribution_implies_deficit_bounded`),
+    the K-bound follows directly via `k_bound_of_deficit_bounded`.
+
+    This replaces the original `equidistribution_implies_sliding_window` which
+    incorrectly targeted `SlidingWindowCondition` (see bug note above). -/
+theorem equidistribution_implies_k_bound
     (n : ℕ) (hn : n ≥ 1)
-    (N : ℕ) (hN : N ≥ 2)
-    (ρ : ℝ) (hρ : ρ > 0)
-    (hsafe : safeCellDensity N (1 / ↑N) > ρ)
-    (hequi : IsEquidistributed (cellSeqNu2 n N) N)
+    (N : ℕ) (_hN : N ≥ 2)
+    (ρ : ℝ) (_hρ : ρ > 0)
+    (_hsafe : safeCellDensity N (1 / ↑N) > ρ)
+    (_hequi : IsEquidistributed (cellSeqNu2 n N) N)
     (hdef : ∃ D : ℤ, ∀ t : ℕ, deficit n t ≤ D) :
-    ∃ W : ℕ, W ≥ 1 ∧ SlidingWindowCondition n W := by
-  -- From deficit bounded, we know ∃ D, ∀ t, deficit n t ≤ D.
-  -- We need: ∃ W ≥ 1, ∀ t, deficit(t+W) ≤ deficit(t).
-  --
-  -- The window condition is STRONGER than deficit-bounded.
-  -- However, equidistribution gives us more: the deficit oscillates
-  -- with bounded amplitude (not just bounded above).
-  --
-  -- Key insight: deficit is bounded BELOW by -t (trivially, since ν₃ ≥ 0)
-  -- and bounded ABOVE by D. Over long enough windows, the equidistribution
-  -- forces the deficit to not grow on average.
-  --
-  -- Formally: if deficit could grow by δ > 0 over some window position t,
-  -- then the fraction of odd steps in [t, t+W) exceeds 1/3 + δ/(3W).
-  -- But equidistribution forces the odd-step fraction to approach 1/(1+log₂3)
-  -- ≈ 0.387 < 1/3 + ε for appropriate ε... wait, 0.387 > 1/3.
-  --
-  -- The correct argument: deficit(t+W) - deficit(t) = 3·(ν₃(t+W) - ν₃(t)) - W.
-  -- For deficit to be non-increasing: 3·Δν₃ ≤ W, i.e., Δν₃/W ≤ 1/3.
-  -- The equilibrium odd-step ratio is 1/(1+log₂3) ≈ 0.387 > 1/3.
-  -- So actually, the window condition requires the odd-step ratio to be
-  -- AT MOST 1/3 over every window. This is stronger than the average.
-  --
-  -- This is precisely what the Diophantine repeller guarantees:
-  -- equidistribution ensures that over windows of size W, enough safe
-  -- cells (v₂ ≥ 3, i.e., one odd step producing ≥3 halvings) are visited
-  -- to keep the compressed odd-step fraction ≤ 1/3.
-  --
-  -- The derivation requires careful accounting that we defer to the
-  -- equidistribution_implies_deficit_bounded result above.
-  sorry
+    ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K :=
+  k_bound_of_deficit_bounded n hn hdef
 
 /-- **The full bridge**: Weyl equidistribution + Baker separation + Hensel attrition
     together imply that the K-bound holds for every n ≥ 1.
@@ -342,16 +347,28 @@ theorem equidistribution_implies_sliding_window
       weyl_equidistribution_of_irrational_rotation [axiom, this file]
         + irrational_logb_two_three [proved, Baker.lean]
         + baker_cell_separation [proved, DiophantineRepeller.lean]
-        → equidistribution_implies_sliding_window
-        → k_bound_from_repeller [proved, DiophantineRepeller.lean]
-        = nu3_linear_bound -/
+        → equidistribution_implies_deficit_bounded [sorry, this file]
+        → k_bound_of_deficit_bounded [proved, Drift.lean]
+        = nu3_linear_bound
+
+    Two gaps remain:
+    (a) Weyl gives equidistribution of ⌊k·log₂3⌋ mod N, but we need
+        equidistribution of cellSeqNu2 (the Collatz trajectory's ν₂ residues).
+        These are different sequences; the connection requires showing the
+        Collatz trajectory approximates an irrational rotation on the
+        (2,3)-solenoid. This is the content of the solenoid mixing axiom (A5).
+    (b) The deficit accounting in equidistribution_implies_deficit_bounded:
+        converting cell-visit equidistribution into a bound on deficit growth. -/
 theorem nu3_linear_bound_from_weyl (n : ℕ) (hn : n ≥ 1) :
     ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K := by
-  -- Step 1: Pick a scale N ≥ 2
-  -- Step 2: Get equidistribution from Weyl + irrationality of log₂3
-  -- Step 3: Get safe cell density from Baker separation
-  -- Step 4: Get sliding window from equidistribution bridge
-  -- Step 5: Get K-bound from k_bound_from_repeller
+  -- The proof chain would be:
+  -- 1. Pick scale N large enough: safe_density_positive_of_irrational gives N₀
+  -- 2. Establish cellSeqNu2 equidistribution [GAP (a): rotation ≠ trajectory]
+  --    Weyl gives: IsEquidistributed (fun k => Int.toNat ⌊logb 2 3 * ↑k⌋) N
+  --    We need:    IsEquidistributed (cellSeqNu2 n N) N
+  --    The connection requires solenoid mixing (not available in this import chain).
+  -- 3. Apply equidistribution_implies_deficit_bounded [sorry — GAP (b)]
+  -- 4. Apply k_bound_of_deficit_bounded [proved, Drift.lean]
   sorry
 
 /-! ## Summary of the equidistribution bridge
@@ -369,30 +386,33 @@ theorem nu3_linear_bound_from_weyl (n : ℕ) (hn : n ≥ 1) :
       → total_dangerous_cells_bound [proved, this file]
       → safe_density_positive_of_irrational [proved, this file]
     equidistribution_implies_deficit_bounded [sorry — accounting bridge]
-      → equidistribution_implies_sliding_window [sorry — deficit→window]
-      → k_bound_from_repeller [proved, DiophantineRepeller.lean]
-      → nu3_linear_bound_from_weyl [sorry — assembly]
+      → k_bound_of_deficit_bounded [proved, Drift.lean]
+      = nu3_linear_bound_from_weyl [sorry — needs cellSeq equidistribution]
 
-  Key insight: The Collatz cell visits on (Z/3^k Z)² are driven by an
-  irrational rotation (log₂3 is irrational), so by Weyl they are
-  equidistributed. Combined with Baker's separation of dangerous cells,
-  this ensures enough safe cell visits to prevent deficit growth.
-
-  Remaining sorry gaps (3, down from 6):
+  Remaining sorry gaps (2, down from the original 3):
   1. equidistribution_implies_deficit_bounded — connects equidistribution
-     to bounded deficit via safe/dangerous cell accounting
-  2. equidistribution_implies_sliding_window — upgrades bounded deficit
-     to the sliding window condition (stronger, per-window bound)
-  3. nu3_linear_bound_from_weyl — assembly of 1+2 with existing K-bound
+     of cell visits to bounded deficit via safe/dangerous cell accounting.
+     This is equivalent to the Collatz conjecture for the given n.
+  2. nu3_linear_bound_from_weyl — assembly; needs to bridge the gap
+     between Weyl's ⌊k·log₂3⌋ equidistribution and the actual Collatz
+     cell visit sequence (cellSeqNu2). This gap is the solenoid mixing
+     content (axiom A5 in SolenoidMixing.lean).
 
-  Closed sorrys (3):
+  Closed sorrys (4, up from 3):
   - dangerous_cells_per_row_bound — interval ⊆ Icc proof, card ≤ ⌈2δ⌉₊+1
   - total_dangerous_cells_bound — biUnion decomposition over b coordinate
   - safe_density_positive_of_irrational — complement counting + N > 2M
+  - equidistribution_implies_k_bound — deficit bounded → K-bound
+    (was equidistribution_implies_sliding_window [BUG: conclusion was false])
 
-  The ONLY new axiom is weyl_equidistribution_of_irrational_rotation.
-  Items 1-2 represent genuine analytical content connecting equidistribution
-  theory to the deficit budget accounting framework.
+  BUG FOUND (SlidingWindowCondition is too strong):
+    The original `equidistribution_implies_sliding_window` tried to produce
+    `SlidingWindowCondition n W` (∀ t, deficit(t+W) ≤ deficit(t)).
+    This condition is FALSE for n=27 and all W: deficit(0)=0 but the
+    trajectory accumulates deficit(111)=12 > 0 in the transient, which
+    persists in the 1→4→2→1 cycle. Same for n=31,63,97.
+    The bug also affects `solenoid_mixing` and `finite_residence_bound`.
+    The correct target is the K-bound: ∃ K T₀, ∀ t ≥ T₀, 3·ν₃ ≤ t + K.
 -/
 
 end Collatz

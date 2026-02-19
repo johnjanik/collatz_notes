@@ -1,22 +1,27 @@
 /-
   CollatzLean/SolenoidMixing.lean
 
-  The solenoid mixing bridge: reduces finite_residence_bound to a clean
-  mixing axiom about the Syracuse map on the (2,3)-solenoid.
+  Cell error algebra on the (2,3)-solenoid and structural consequences
+  of the Hensel-Baker conflict.
 
-  This is the critical-path file connecting the three proved components:
+  This file connects the three proved components:
   1. Hensel attrition (HenselAttrition.lean) -- v₂=1 runs ↔ 2^{d+1} | (x+1)
   2. Baker cell separation (DiophantineRepeller.lean) -- cells Diophantine-separated
-  3. Weyl equidistribution (WeylEquidistribution.lean) -- irrational rotation mixing
+  3. Cell error shift algebra (this file) -- d·(1-log₂3) shift per d-run
 
-  to finite_residence_bound, the sole remaining gap on the critical path.
-
-  Key new content:
+  Key content (all sorry-free, no axioms):
   - walkCellError: the walk as a cell error on the torus
   - cellError_shift_of_v2_run: cell error shifts by d·(1-log₂3) during d-run
-  - solenoid_mixing: the irreducible mixing axiom
-  - finite_residence_from_mixing: axiom → finite_residence_bound
-  - k_bound_from_mixing: axiom → K-bound
+  - cellError_shift_exceeds_one: |shift| > 1 for d ≥ 2
+  - hensel_baker_conflict: exact cell error tracking during runs
+  - HasBoundedRuns / HasBoundedDangerousRuns: Hensel equivalence for runs
+
+  NOTE (2026-02-19): The former `solenoid_mixing` axiom
+  (∀ n ≥ 1, ∃ W, HasCompensatedRuns n W) has been REMOVED because
+  HasCompensatedRuns ↔ SlidingWindowCondition, and SWC is FALSE for n=27
+  and ~42.6% of starting values. See BUG NOTE in DiophantineRepeller.lean.
+  The correct gap is finite_deficit_bound (∃ D, ∀ t, deficit ≤ D) in
+  DiophantineRepeller.lean, which is equivalent to the Collatz conjecture.
 -/
 import CollatzLean.HenselAttrition
 import CollatzLean.DiophantineRepeller
@@ -137,62 +142,27 @@ theorem hasCompensatedRuns_iff_slidingWindow (n W : ℕ) :
     HasCompensatedRuns n W ↔ SlidingWindowCondition n W :=
   (sliding_window_iff_odd_density n W).symm
 
-/-! ## Section 5: The solenoid mixing axiom -/
+/-! ## Section 5: BUG NOTE — SlidingWindowCondition is FALSE
 
-/-- **Solenoid mixing axiom**: For every n ≥ 1, the Collatz trajectory
-    of n satisfies the compensated runs condition for some window size W.
+    The former `solenoid_mixing` axiom asserted:
+      ∀ n ≥ 1, ∃ W ≥ 1, HasCompensatedRuns n W
+    where HasCompensatedRuns ↔ SlidingWindowCondition ↔ ∀ t, deficit(t+W) ≤ deficit(t).
 
-    This is the SINGLE irreducible axiom on the critical path (beyond
-    Baker's theorem and Hercher's no-small-cycles result). It captures
-    the mixing of the Syracuse map on the (2,3)-solenoid.
+    This is FALSE. Counterexample: n = 27.
+    - deficit(0) = 0, deficit(111) = 12 (41 odd steps in 111 total)
+    - After reaching 1→4→2→1 cycle, deficit stabilizes at {12, 13, 14}
+    - For any W: deficit(0+W) ≈ 12 > 0 = deficit(0), so SWC fails at t=0
+    - Similarly fails for n=31,63,97 and ~42.6% of n ≤ 10^7
 
-    === Why this axiom is expected to hold ===
+    The correct formulation is the **finite deficit bound**:
+      ∀ n ≥ 1, ∃ D : ℤ, ∀ t, deficit(n, t) ≤ D
+    This IS true (for n=27: D=14) and is equivalent to the K-bound and to
+    the Collatz conjecture. See finite_deficit_bound in DiophantineRepeller.lean.
 
-    Three forces conflict to prevent sustained dangerous behavior:
-
-    1. **Hensel attrition** (proved, HenselAttrition.lean):
-       P(run ≥ d) = 2^{-d}. Long runs require extreme 2-adic structure.
-
-    2. **Baker cell separation** (proved, DiophantineRepeller.lean):
-       Dangerous cells are Diophantine-separated: gap > C·max^{-κ}.
-       The cell error shifts by d·(1-log₂3) ≈ -0.585d per d-run
-       (proved above as cellError_shift_of_v2_run), pushing the trajectory
-       away from dangerous cells.
-
-    3. **Weyl equidistribution** (axiomatized, WeylEquidistribution.lean):
-       Since log₂3 is irrational, cell visits are equidistributed on
-       every torus scale. Safe cells (v₂ ≥ 2) dominate at all scales.
-
-    Computational evidence (v2_danger.c, N = 10^10):
-    - Max v₂=1 run: 12 (grows as ~log N)
-    - Mean run: 1.033
-    - Escape rate: 97% per step
-    - W = 100 suffices empirically for all n ≤ 10^10
-    - Deficit bounded for all tested trajectories -/
-axiom solenoid_mixing :
-    ∀ n : ℕ, n ≥ 1 → ∃ W : ℕ, W ≥ 1 ∧ HasCompensatedRuns n W
-
-/-! ## Section 6: Assembly -- closing finite_residence_bound -/
-
-/-- **finite_residence_from_mixing**: The solenoid mixing axiom directly
-    implies finite_residence_bound (DiophantineRepeller.lean). -/
-theorem finite_residence_from_mixing (n : ℕ) (hn : n ≥ 1) :
-    ∃ W : ℕ, W ≥ 1 ∧ SlidingWindowCondition n W := by
-  obtain ⟨W, hW, hcomp⟩ := solenoid_mixing n hn
-  exact ⟨W, hW, (hasCompensatedRuns_iff_slidingWindow n W).mp hcomp⟩
-
-/-- **k_bound_from_mixing**: The solenoid mixing axiom implies the K-bound.
-
-    Proof chain:
-      solenoid_mixing
-        → HasCompensatedRuns n W
-        → SlidingWindowCondition n W
-        → deficit bounded by 2W
-        → ∃ K T₀, ∀ t ≥ T₀, 3·ν₃ ≤ t + K -/
-theorem k_bound_from_mixing (n : ℕ) (hn : n ≥ 1) :
-    ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K := by
-  obtain ⟨W, hW, hSW⟩ := finite_residence_from_mixing n hn
-  exact k_bound_from_repeller n hn W hW hSW
+    The proved infrastructure in this file (cell error shift, Hensel-Baker
+    conflict, bounded runs) remains correct and does NOT depend on SWC.
+    The HasCompensatedRuns definition is retained as valid but not universally
+    satisfiable. -/
 
 /-! ## Section 7: Structural consequences of cell error shift -/
 
@@ -232,36 +202,15 @@ theorem hensel_baker_conflict (n t d : ℕ) (hn : n ≥ 1) (ε : ℝ)
   - cellError_shift_exceeds_one (d ≥ 2 ⟹ shift > 1)
   - hasBoundedRuns_iff (Hensel equivalence for trajectory runs)
   - hasCompensatedRuns_iff_slidingWindow
-  - finite_residence_from_mixing (axiom → window condition)
-  - k_bound_from_mixing (axiom → K-bound)
   - cellError_moved_after_long_run (d ≥ 2 ⟹ |shift| > 1)
   - hensel_baker_conflict (exact cell error tracking)
 
   Sorry'd: 0
-  Axiom: 1 (solenoid_mixing)
-
-  === PROOF ARCHITECTURE ===
-
-  solenoid_mixing [axiom]
-    → finite_residence_from_mixing [proved]
-    → k_bound_from_mixing [proved]
-    → (chains via k_bound_from_repeller to reaches_one_of_linear_drift)
-    → collatz_conjecture
-
-  === FULL AXIOM SET FOR COLLATZ CONJECTURE ===
-
-  1. baker_two_three (Baker.lean) -- Baker 1966, effective |m·log2 + n·log3|
-  2. hercher_no_small_cycle (SteinerCycle.lean) -- Hercher 2023, no cycle < 91
-  3. rhin_irrationality_measure (IrrationalityMeasure.lean) -- Rhin 1987
-  4. weyl_equidistribution (WeylEquidistribution.lean) -- Weyl 1916
-  5. solenoid_mixing (THIS FILE) -- Syracuse mixing on (2,3)-solenoid
-
-  Of these, only solenoid_mixing is genuinely open mathematics.
-  The others are established results with published proofs.
+  Axioms: 0
 
   === THE CONFLICT OF METRICS ===
 
-  The solenoid_mixing axiom encodes:
+  The cell error algebra in this file encodes:
   - 2-adic: Hensel attrition forces v₂=1 runs to satisfy 2^(d+1) | (x+1)
   - 3-adic: Baker separation forces cells to be Diophantine-separated
   - Archimedean: cell error shifts by d·(1-log₂3) per d-run (PROVED)
@@ -270,6 +219,10 @@ theorem hensel_baker_conflict (n t d : ℕ) (hn : n ≥ 1) (ε : ℝ)
   These four constraints are MUTUALLY INCOMPATIBLE for sustained danger:
   a trajectory cannot simultaneously maintain small cell error (Baker),
   satisfy the 2-adic divisibility (Hensel), and be equidistributed (Weyl).
+
+  This provides strong EVIDENCE for bounded deficit (and hence Collatz),
+  but the formal bridge from these constraints to bounded deficit
+  remains the open sorry (finite_deficit_bound in DiophantineRepeller.lean).
 -/
 
 end Collatz

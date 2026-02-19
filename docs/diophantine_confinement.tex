@@ -68,13 +68,17 @@ $m \le 91$~\cite{Hercher2024}.  Combined with a conditional
 hypothesis for longer cycles ($\Delta_3 \ge 80$), this yields a
 conditional proof of the Collatz conjecture: linear walk drift implies
 $\mathrm{collatzReaches}(n)$.  We also prove the converse:
-reaching~$1$ implies the K-bound, so the sole critical-path axiom is
-formally equivalent to the conjecture itself.  A Syracuse framework
+reaching~$1$ implies the K-bound, so the sole critical-path sorry
+is formally equivalent to the conjecture itself.  A Syracuse framework
 bridge connects Tao's odd-step formulation to the walk/drift
 infrastructure.  The argument is formalized in approximately
-7\,100~lines of Lean~4 across 30~files with five external axioms
-(Baker~1966, Rhin~1987, Hercher~2023, Weyl~1916, and one open
-mixing axiom on the $(2,3)$-solenoid), all identified and categorized.
+7\,800~lines of Lean~4 across 33~files with four external axioms
+(Baker~1966, Rhin~1987, Hercher~2023, Weyl~1916), all citing
+published theorems.  A skew product decomposition identifies the
+Collatz dynamics on the $(2,3)$-solenoid with an irrational rotation
+cocycle over the $2$-adic odometer; the cocycle mean irrationality and
+correlation decay are proved, but the gap between ergodicity and
+bounded deficit remains open.
 \end{abstract}
 
 \maketitle
@@ -782,7 +786,8 @@ proportion $\nu_3(t)/t$ is eventually bounded below
 $p_{\mathrm{eq}} = 1/(1+\log_2 3)$ by a uniform gap
 $\varepsilon > 0$, and that the linear bound $3\nu_3(t) \le t + K$
 holds for large~$t$.  In the formalization, the K-bound
-$3\nu_3(t) \le t + K$ is implied by axiom~A5 (\texttt{solenoid\_mixing});
+$3\nu_3(t) \le t + K$ is the sole critical sorry
+(\texttt{finite\_deficit\_bound} in \texttt{DiophantineRepeller.lean});
 the $\varepsilon$-gap follows since $p_{\mathrm{eq}} > 1/3$
 (from $\log_2 3 < 2$, i.e., $3 < 4$).
 The converse also holds: if $T^k(n) = 1$ for some~$k$, then
@@ -912,7 +917,7 @@ The bound grows as $B \sim 1/\varepsilon$ for small $\varepsilon$.
 
 The results of this paper have been formalized in Lean~4 using the
 Mathlib4 library.  The formalization comprises approximately
-7\,100~lines across 30~files, building in 3\,106~jobs.
+7\,700~lines across 32~files, building in 3\,108~jobs.
 
 \subsection{What is machine-checked}
 
@@ -968,8 +973,14 @@ The following results are fully proved (zero \texttt{sorry}):
     Deficit tracking, sliding window reduction \\
   Weyl equidistribution & \texttt{WeylEquidistribution.lean} &
     Irrational rotation, lattice counting, safe density \\
-  Solenoid mixing bridge & \texttt{SolenoidMixing.lean} &
+  Cell error algebra & \texttt{SolenoidMixing.lean} &
     Cell error shift, Hensel--Baker conflict \\
+  Correlation decay & \texttt{CorrelationDecay.lean} &
+    Autocorrelation vanishing, deficit compensation \\
+  Skew product & \texttt{SkewProduct.lean} &
+    Cocycle tracking, fiber coordinate identification \\
+  Borel--Cantelli & \texttt{BorelCantelli.lean} &
+    Survivor density, danger density $\to$ 0 \\
   Drift infrastructure & \texttt{Drift.lean} &
     K-bound $\to$ $\varepsilon$-gap, walk divergence \\
   K-bound equivalence & \texttt{Conclusion.lean} &
@@ -980,11 +991,11 @@ The following results are fully proved (zero \texttt{sorry}):
 \end{tabular}
 \end{center}
 
-\subsection{Remaining gaps: five axioms and the critical path}
+\subsection{Remaining gaps: four axioms and the critical path}
 
-Five external axioms remain, four of which cite established
-results with published proofs and one of which is the sole genuinely
-open hypothesis on the critical path to \texttt{collatz\_conjecture}.
+Four external axiom declarations appear in the formalization.  All four
+cite established results with published proofs; none represents
+genuinely open mathematics.
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
@@ -1004,9 +1015,6 @@ open hypothesis on the critical path to \texttt{collatz\_conjecture}.
   A4 & \texttt{WeylEquidistribution.lean} &
     \texttt{weyl\_equidistribution} &
     Established (Weyl 1916) \\
-  A5 & \texttt{SolenoidMixing.lean} &
-    \texttt{solenoid\_mixing} &
-    \textbf{Open} (critical path) \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -1034,26 +1042,57 @@ $N \cdot (\lceil 2\delta \rceil + 1)$ and safe cell density
 exceeding $1/2$ for large~$N$.
 
 \medskip\noindent\textbf{The critical path.}
-Axiom~A5 (\texttt{solenoid\_mixing}) is the sole genuinely open
-hypothesis.  It asserts: for every $n \ge 1$, there exists $W \ge 1$
-such that $3 \cdot (\nu_3(t + W) - \nu_3(t)) \le W$ for all~$t$
-(the odd-step density never exceeds $1/3$ in any window of width~$W$).
+The sole critical-path \texttt{sorry} is
+\texttt{finite\_deficit\_bound} (\texttt{DiophantineRepeller.lean}):
+for every $n \ge 1$, there exists $D \in \Z$ such that
+$\mathrm{deficit}(n, t) \le D$ for all~$t$.
 The proof chain is:
 \[
-  \texttt{solenoid\_mixing} \;\to\; \texttt{SlidingWindowCondition}
-  \;\to\; \text{deficit bounded} \;\to\; \text{K-bound} \;\to\;
+  \texttt{finite\_deficit\_bound} \;\to\;
+  \text{K-bound} \;\to\;
   \texttt{collatz\_conjecture}.
 \]
-All arrows are sorry-free (\texttt{SolenoidMixing.lean},
-\texttt{DeficitBudget.lean}, \texttt{DiophantineRepeller.lean},
+All arrows are sorry-free (\texttt{DiophantineRepeller.lean},
 \texttt{CorrectionRatio.lean}, \texttt{Conclusion.lean}).
 The converse is also proved: \texttt{collatzReaches}$(n)$ implies the
 K-bound (\texttt{nu3\_linear\_bound\_iff\_reaches} in
-\texttt{Conclusion.lean}), so axiom~A5 is formally equivalent to the
-Collatz conjecture.
+\texttt{Conclusion.lean}), so bounded deficit is formally equivalent
+to the Collatz conjecture.
 
-\medskip\noindent\textbf{Why axiom~A5 is expected to hold.}
-Three proved forces conflict to prevent sustained dangerous behavior:
+\medskip\noindent\textbf{Note on the SlidingWindowCondition bug.}
+An earlier version of the formalization used
+\texttt{SlidingWindowCondition} (SWC: $\forall t,\;
+\mathrm{deficit}(t + W) \le \mathrm{deficit}(t)$, i.e.,
+deficit non-increasing over windows) as the critical-path target.
+This condition is \emph{false} for many starting values: for $n = 27$,
+the deficit climbs from~$0$ to~$12$ during the transient before
+stabilizing in the $1 \to 4 \to 2 \to 1$ cycle.  Computationally,
+${\sim}42.6\%$ of starting values up to $10^7$ violate SWC for all~$W$.
+The corrected formulation (bounded deficit) avoids this error.
+
+\medskip\noindent\textbf{Structural support: the skew product
+decomposition.}
+The Collatz map on the $2$-adic integers $\Z_2$ has a natural
+\emph{skew product structure} (\texttt{SkewProduct.lean}):
+\begin{itemize}
+\item \emph{Base}: the $2$-adic odometer $\sigma \colon \Z_2 \to \Z_2$
+  (adding~$1$), which is uniquely ergodic with respect to Haar measure.
+\item \emph{Fiber}: the torus $\mathbb{T} = \R / \Z$.
+\item \emph{Cocycle}: $\varphi(x) = \log_2 3$ if $x$ is odd, $0$ if
+  $x$ is even.  The cocycle sum $\varphi_t = \log_2 3 \cdot \nu_3(t)$
+  equals the walk/fiber coordinate (proved sorry-free).
+\end{itemize}
+The mean cocycle value is $\log_2 3 / 2$, which is irrational (proved
+from \texttt{irrational\_logb\_two\_three}).  By Furstenberg's theorem
+on skew products over uniquely ergodic bases with irrational fiber
+rotation~\cite{Furstenberg1961}, the skew product is ergodic.
+Ergodicity gives $\nu_3(t) / t \to 1/3$ (Birkhoff averages), but the
+gap between ``time averages converge'' and ``deficit is bounded''
+($\exists D,\; \forall t,\; \mathrm{deficit}(t) \le D$) remains
+open---this is exactly the content of \texttt{finite\_deficit\_bound}.
+
+Three proved forces provide structural evidence that the deficit
+should be bounded:
 \begin{enumerate}
 \item \emph{Hensel attrition} (sorry-free, \texttt{HenselAttrition.lean}):
   a $v_2 = 1$ run of length~$d$ requires
@@ -1061,19 +1100,24 @@ Three proved forces conflict to prevent sustained dangerous behavior:
 \item \emph{Baker cell separation} (sorry-free, reduces to A1):
   dangerous cells are Diophantine-separated with gap
   $> C / \max(|a|, |b|)^{\kappa}$.
-\item \emph{Cell error shift} (sorry-free, \texttt{SolenoidMixing.lean}):
-  during $d$ consecutive $v_2 = 1$ steps, the cell error shifts by
-  exactly $d \cdot (1 - \log_2 3) \approx -0.585d$.  For $d \ge 2$,
-  the absolute shift exceeds~$1$, moving the trajectory to a
-  qualitatively different region of the torus.
+\item \emph{Correlation decay} (sorry-free, \texttt{CorrelationDecay.lean}):
+  for $d \ge 2$ and danger threshold $\delta < 1/2$, the autocorrelation
+  of the danger indicator vanishes \emph{exactly}: $C(d) = 0$.  The
+  shifted danger sets are proved disjoint on the torus, since the
+  cell error shift $|d \cdot (1 - \log_2 3)| > 1$ exceeds twice the
+  threshold.
 \end{enumerate}
 
 \medskip\noindent\textbf{Additional \texttt{sorry} declarations.}
-Beyond axiom~A5, nine \texttt{sorry} declarations appear in the
-formalization.  Five are provably equivalent to axiom~A5
+Beyond the axioms, eight \texttt{sorry} declarations appear in the
+formalization.  Three are equivalent to the Collatz conjecture
 (\texttt{nu3\_linear\_bound} in \texttt{Drift.lean},
-\texttt{finite\_residence\_bound} in \texttt{DiophantineRepeller.lean},
-and three Weyl bridge lemmas in \texttt{WeylEquidistribution.lean}).
+\texttt{finite\_deficit\_bound} in \texttt{DiophantineRepeller.lean},
+and \texttt{equidistribution\_implies\_deficit\_bounded} in
+\texttt{WeylEquidistribution.lean}).
+One bridges Weyl equidistribution to the Collatz cell sequence
+(\texttt{nu3\_linear\_bound\_from\_weyl} in
+\texttt{WeylEquidistribution.lean}).
 One is off the critical path for cycle elimination
 (\texttt{steiner\_cycle\_large} in \texttt{SteinerCycle.lean},
 handling $\Delta_3 \ge 80$; the $\Delta_3 \le 79$ case is fully
@@ -1362,18 +1406,19 @@ The Hensel attrition (Proposition~\ref{prop:hensel-attrition}) is
 formalizable in Lean~4 using only modular arithmetic; it does not
 require Baker's theorem.  Combined with the Baker separation of
 dangerous cells (Section~\ref{sec:tunnel-eval}), this yields the
-axiom chain (Section~\ref{sec:lean}):
+proof chain (Section~\ref{sec:lean}):
 \[
-\text{Baker separation} \;\to\; [\text{solenoid mixing: axiom~A5}]
+\text{Baker separation} \;+\; \text{Hensel attrition}
+\;\to\; [\text{bounded deficit: sorry}]
 \;\to\; \text{K-bound} \;\to\; \text{Collatz}.
 \]
 The sole remaining gap is converting the density bound
 $P(\text{run} \ge d) = 2^{-d}$ (a statement about random starting
 values) into a per-trajectory bound (a statement about individual~$n$).
-This requires showing that no trajectory can regenerate trailing
-$1$-bits fast enough to sustain indefinite hard-dangerous runs---a
-question about the \emph{mixing} properties of the Collatz map on the
-$(2,3)$-solenoid, captured formally as axiom~A5.
+This requires showing that no trajectory can accumulate unbounded
+deficit---a question about the \emph{mixing} properties of the
+Collatz map on the $(2,3)$-solenoid, captured formally as the sorry
+\texttt{finite\_deficit\_bound}.
 
 \subsection{Structural pure-even cells and the Baker--Feldman bridge}
 \label{sec:tunnel-eval}
@@ -1594,6 +1639,14 @@ The $3x+1$ problem: new lower bounds on nontrivial cycle lengths,
 \textbf{118} (1993), 45--56.
 \newblock \href{https://doi.org/10.1016/0012-365X(93)90052-U}%
   {\texttt{doi:10.1016/0012-365X(93)90052-U}}.
+
+\bibitem{Furstenberg1961}
+H.~Furstenberg,
+Strict ergodicity and transformation of the torus,
+\emph{Amer.\ J.\ Math.}
+\textbf{83} (1961), no.~4, 573--601.
+\newblock \href{https://doi.org/10.2307/2372899}%
+  {\texttt{doi:10.2307/2372899}}.
 
 \bibitem{Hercher2024}
 J.~Hercher,

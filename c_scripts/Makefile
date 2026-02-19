@@ -3,7 +3,7 @@ CFLAGS  = -O3 -march=native -Wall
 CAIRO   = $(shell pkg-config --cflags --libs cairo)
 LIBS    = -lm
 
-all: collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger
+all: collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger deficit_analysis
 
 collatz_tree: collatz_tree.c
 	$(CC) $(CFLAGS) -o $@ $< $(CAIRO) $(LIBS)
@@ -47,6 +47,15 @@ resume-branch-100B: branch_locus
 v2_danger: v2_danger.c
 	$(CC) $(CFLAGS) -fopenmp -o $@ $< $(LIBS)
 
+deficit_analysis: deficit_analysis.c
+	$(CC) $(CFLAGS) -fopenmp -o $@ $< $(LIBS)
+
+run-deficit-1B: deficit_analysis
+	./deficit_analysis 1000000000
+
+run-deficit-10B: deficit_analysis
+	./deficit_analysis 10000000000
+
 gpu_branch: gpu_branch_host.c gpu_branch_kernel.cl
 	$(CC) $(CFLAGS) -o $@ gpu_branch_host.c -lOpenCL $(LIBS)
 
@@ -72,6 +81,6 @@ run-v2danger-10M: v2_danger
 	./v2_danger --N 10000000 --k 7
 
 clean:
-	rm -f collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger *.png *.csv
+	rm -f collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger deficit_analysis *.png *.csv
 
-.PHONY: all clean run-tree run-scatter run-sft run-profinite run-branch run-branch-10B run-branch-100B resume-branch-100B run-v2danger run-v2danger-1M run-v2danger-10M run-gpu-compare run-gpu-branch run-gpu-fast run-gpu-verify
+.PHONY: all clean run-tree run-scatter run-sft run-profinite run-branch run-branch-10B run-branch-100B resume-branch-100B run-v2danger run-v2danger-1M run-v2danger-10M run-gpu-compare run-gpu-branch run-gpu-fast run-gpu-verify run-deficit-1B run-deficit-10B

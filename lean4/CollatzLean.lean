@@ -28,3 +28,6 @@ import CollatzLean.SyracuseDrift
 import CollatzLean.WeylEquidistribution
 import CollatzLean.DeficitBudget
 import CollatzLean.SolenoidMixing
+import CollatzLean.SkewProduct
+import CollatzLean.CorrelationDecay
+import CollatzLean.BorelCantelli

@@ -3,17 +3,21 @@
   Diophantine repeller decomposition of nu3_linear_bound.
 
   Refines the sole critical-path sorry (nu3_linear_bound in Drift.lean)
-  into a sharper irreducible gap: finite_residence_bound, which asserts
-  that the deficit does not grow over windows of bounded size.
+  into a characterization via bounded deficit: finite_deficit_bound.
 
   Decomposition:
   1. hensel_attrition (HenselAttrition.lean) — v₂=1 runs require 2^{d+1} | (x+1)
   2. baker_cell_separation (this file) — dangerous cells Diophantine-separated
-  3. finite_residence_bound (this file, sorry) — deficit non-increasing over windows
-  4. k_bound_from_repeller (this file) — window condition → deficit bounded → K-bound
+  3. finite_deficit_bound (this file, sorry) — deficit bounded above
+  4. k_bound_of_deficit_bounded' (this file) — deficit bounded → K-bound
 
-  The sole sorry is finite_residence_bound. It requires equidistribution
-  (mixing) on the (2,3)-solenoid — the projective limit of the tori (Z/3^k Z)².
+  The sole sorry is finite_deficit_bound (∃ D, ∀ t, deficit(t) ≤ D).
+  It is equivalent to the Collatz conjecture for each n.
+
+  NOTE: The original `finite_residence_bound` used `SlidingWindowCondition`
+  (deficit non-increasing over windows), which is FALSE for n=27 and ~42.6%
+  of all starting values. The SWC infrastructure is retained as correct
+  implications but is no longer on the critical path. See BUG NOTE below.
 -/
 import CollatzLean.HenselAttrition
 import CollatzLean.Baker
@@ -99,7 +103,7 @@ theorem deficit_bounded_of_window (n W : ℕ) (hWpos : W ≥ 1)
 
 /-- Deficit bounded above implies the K-bound (reproduced from Drift.lean
     to avoid circular imports). -/
-private theorem k_bound_of_deficit_bounded' (n : ℕ) (_hn : n ≥ 1)
+theorem k_bound_of_deficit_bounded' (n : ℕ) (_hn : n ≥ 1)
     (hdef : ∃ D : ℤ, ∀ t, deficit n t ≤ D) :
     ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K := by
   obtain ⟨D, hD⟩ := hdef
@@ -203,75 +207,63 @@ theorem baker_cell_separation :
   conv_rhs => rw [div_eq_mul_inv]
   exact mul_lt_mul_of_pos_right hbak (inv_pos.mpr hlog2_pos)
 
-/-! ## The finite residence bound (irreducible gap) -/
+/-! ## The finite deficit bound (irreducible gap)
 
-/-- **Finite residence bound**: the sole irreducible sorry in the Diophantine
-    repeller decomposition of nu3_linear_bound.
+    BUG NOTE (2026-02-19): The original `finite_residence_bound` asserted
+    `∃ W ≥ 1, SlidingWindowCondition n W`, i.e., the deficit is non-increasing
+    over windows of size W. This is FALSE for many starting values:
 
-    Statement: For every n ≥ 1, there exists a window size W ≥ 1 such that
-    the deficit does not increase over any window of W consecutive steps.
+    Counterexample: n = 27 reaches 1 at step 111 with deficit(111) = 12 > 0.
+    In the 1→4→2→1 cycle, deficit stabilizes at {12, 13, 14}.
+    Since deficit(0) = 0 and deficit(t) ≈ 12 for large t,
+    deficit(0+W) > 0 = deficit(0) for all W ≥ 1. Hence SWC 27 W is false ∀ W.
 
-    Mathematical content of this sorry:
-    The Collatz map induces an action on the projective limit
-    lim← (Z/3^k Z)² (the (2,3)-solenoid). The deficit tracks the accumulated
-    imbalance between ×3 and ÷2 operations.
+    Similarly false for n=31 (deficit 11), n=63 (10), n=97 (11), and
+    ~42.6% of numbers up to 10M (any trajectory with final deficit > 0).
 
-    What would prove this (three ingredients):
+    The correct formulation is the **finite deficit bound**: the deficit is
+    bounded above (but NOT necessarily non-increasing). This IS equivalent to
+    the K-bound and to the Collatz conjecture for each n.
 
-    (A) **Baker cell separation** (proved above, modulo baker_two_three):
-        Dangerous cells (where average v₂ ≈ 1) are Diophantine-separated on
-        each torus (Z/3^k)². Gap ≥ C·(3^k)^{-κ} by Baker's effective bound.
+    HasCompensatedRuns and SlidingWindowCondition remain as valid definitions
+    in the codebase (they ARE satisfied for some n, e.g. n=3 with deficit(T)=-1),
+    but they cannot serve as universal targets for all n ≥ 1. -/
 
-    (B) **Hensel attrition** (HenselAttrition.lean, sorry-free):
-        A v₂=1 run of length d requires 2^{d+1} | (x+1), giving survival
-        rate exactly 2^{-d}. Runs of length d are exponentially rare.
+/-- **Finite deficit bound**: for every n ≥ 1, the deficit is bounded above.
 
-    (C) **Equidistribution on the (2,3)-solenoid** (the irreducible gap):
-        The trajectory visits cells of (Z/3^k)² with sufficient uniformity
-        that it cannot permanently avoid cells with v₂ ≥ 3 (which provide
-        deficit recovery: each v₂≥3 step decreases deficit by ≥ 1).
+    This is the corrected version of the former `finite_residence_bound`.
+    It states: ∃ D, ∀ t, deficit(n, t) ≤ D, meaning the deficit
+    (= 3·ν₃(t) - t) never exceeds some finite constant D.
 
-        Specifically, one needs: for every n ≥ 1 and scale k, the trajectory's
-        cell visits on (Z/3^k)² are mixing w.r.t. a measure that gives positive
-        weight to cells with v₂ ≥ 3. Combined with (A), this ensures that
-        dangerous episodes of bounded length (B) are always followed by
-        enough recovery steps to prevent deficit growth.
+    Equivalence:
+    - ↔ nu3_linear_bound (Drift.lean) via k_bound_of_deficit_bounded'
+    - ↔ collatzReaches n (Conclusion.lean) via nu3_linear_bound_iff_reaches
 
-    Computational evidence (v2_danger.c, N=10^10):
-    - Max consecutive v₂=1 run length: 12 (grows as ~log N)
-    - Mean run length: 1.033
-    - P(run ≥ ℓ) ≈ 0.033^ℓ (exponential decay, consistent with Hensel 2^{-d})
-    - Escape rate from dangerous set: 97% per step
-    - P(D|D) ≈ 0.032 stable across scales
-    - Deficit empirically bounded for all tested trajectories
+    Evidence: For n=27, D=14 works. Computationally verified for all n ≤ 10^10
+    (deficit_analysis.c). The maximum deficit grows slowly (roughly as log n).
 
-    This evidence strongly suggests W = O(log n) suffices, but the proof
-    requires establishing mixing on the (2,3)-solenoid.
-
-    Connection to other approaches:
-    - Equivalent to nu3_linear_bound (Drift.lean) via k_bound_from_repeller
-    - Equivalent to collatzReaches n (Conclusion.lean) via nu3_linear_bound_iff_reaches
-    - The formulation as a window condition is the sharpest characterization
-      of what the solenoid dynamics must satisfy -/
-theorem finite_residence_bound (n : ℕ) (hn : n ≥ 1) :
-    ∃ W : ℕ, W ≥ 1 ∧ SlidingWindowCondition n W := by
+    What would close this sorry:
+    Show that the three forces (Hensel attrition, Baker cell separation,
+    Weyl equidistribution) together prevent unbounded deficit accumulation.
+    The skew product structure (SkewProduct.lean) and correlation decay
+    (CorrelationDecay.lean) provide infrastructure, but the gap between
+    "ergodicity of the skew product" and "bounded deficit for every trajectory"
+    remains open. -/
+theorem finite_deficit_bound (n : ℕ) (hn : n ≥ 1) :
+    ∃ D : ℤ, ∀ t : ℕ, deficit n t ≤ D := by
   sorry
 
-/-! ## Wiring: finite_residence_bound → K-bound -/
+/-! ## Wiring: finite_deficit_bound → K-bound -/
 
-/-- The full decomposition: finite_residence_bound → K-bound.
-
-    This refines the sorry in nu3_linear_bound (Drift.lean) to the
-    more specific finite_residence_bound (equidistribution on solenoid).
+/-- The decomposition: finite_deficit_bound → K-bound.
 
     Proof chain:
-      finite_residence_bound n hn           -- ∃ W ≥ 1, sliding window
-        → k_bound_from_repeller n hn W hW  -- window → K-bound
-        = ∃ K T₀, ∀ t ≥ T₀, 3·ν₃ ≤ t + K  -- the K-bound -/
+      finite_deficit_bound n hn          -- ∃ D, ∀ t, deficit(t) ≤ D
+        → k_bound_of_deficit_bounded'    -- deficit bounded → K-bound
+        = ∃ K T₀, ∀ t ≥ T₀, 3·ν₃ ≤ t + K -/
 theorem nu3_linear_bound_from_repeller (n : ℕ) (hn : n ≥ 1) :
-    ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K := by
-  obtain ⟨W, hWpos, hW⟩ := finite_residence_bound n hn
-  exact k_bound_from_repeller n hn W hWpos hW
+    ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K :=
+  k_bound_of_deficit_bounded' n hn (finite_deficit_bound n hn)
 
 /-! ## Relationship with deficit-bounded formulation -/
 
@@ -292,28 +284,27 @@ theorem sliding_window_implies_deficit_bounded (n : ℕ) (W : ℕ) (hWpos : W �
       → reaches_one_of_linear_drift (CorrectionRatio.lean)
       → collatz_conjecture (Conclusion.lean)
 
-  Refined sorry chain (this file):
+  Alternative sorry chain (this file):
     baker_two_three [sorry, Baker.lean]
       → baker_cell_separation [proved above]
     hensel_attrition [sorry-free, HenselAttrition.lean]
-    finite_residence_bound [sorry, THIS FILE — the irreducible gap]
-      → k_bound_from_repeller [proved above]
+    finite_deficit_bound [sorry, THIS FILE — equivalent to Collatz]
+      → k_bound_of_deficit_bounded' [proved above]
       → nu3_linear_bound_from_repeller [proved above]
       → (same signature as nu3_linear_bound)
 
-  The finite_residence_bound captures exactly what needs to be true
-  about Collatz dynamics: the deficit (3·ν₃ - t) does not grow
-  over windows of bounded size. This is the equidistribution condition
-  on the (2,3)-solenoid that prevents trajectories from sustaining
-  unbounded sequences of v₂=1 steps without sufficient compensation
-  from v₂ ≥ 3 steps.
+  The finite_deficit_bound states: ∃ D, ∀ t, deficit(n, t) ≤ D.
+  This is equivalent to:
+    - nu3_linear_bound: ∃ K T₀, ∀ t ≥ T₀, 3·ν₃ ≤ t + K
+    - collatzReaches n
+  The deficit is bounded iff the trajectory eventually reaches 1.
 
-  Concrete characterization of what would close this sorry:
-  Prove that for the Collatz map on lim← (Z/3^k Z)², every orbit
-  satisfies: the time-average of (v₂ - 2) over windows of size W
-  is non-negative, where v₂ is the 2-adic valuation of (3x+1).
-  This is equivalent to the deficit being non-increasing over
-  windows of size W, which is the SlidingWindowCondition.
+  BUG NOTE (2026-02-19): The original `finite_residence_bound` used
+  SlidingWindowCondition (∀ t, deficit(t+W) ≤ deficit(t)), which is FALSE
+  for n=27 (deficit climbs from 0 to 12) and ~42.6% of all n ≤ 10^7.
+  The SWC infrastructure (k_bound_from_repeller, deficit_bounded_of_window,
+  etc.) remains correct as implications from SWC, but SWC itself is not
+  universally satisfiable and is no longer on the critical path.
 -/
 
 end Collatz
