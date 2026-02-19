@@ -25,10 +25,13 @@ import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Data.Finset.Basic
 import Mathlib.NumberTheory.Real.Irrational
 import Mathlib.LinearAlgebra.Vandermonde
+import Mathlib.Analysis.Analytic.IsolatedZeros
+import Mathlib.Analysis.Complex.CauchyIntegral
+import Mathlib.Topology.Sequences
 
 namespace Collatz
 
-open Complex Real
+open Complex Real Filter Topology
 
 noncomputable section
 
@@ -223,7 +226,47 @@ theorem jensen_zero_count
     (hsmall : ∀ z : ℂ, ‖z‖ ≤ R → ‖f z‖ ≤ ε) :
     ∃ N : ℕ, ∀ (S : Finset ℂ),
       (∀ z ∈ S, f z = 0 ∧ ‖z‖ ≤ R / 2) → S.card ≤ N := by
-  sorry
+  -- Reduce to finiteness of the zero set in the ball
+  set Z := {z : ℂ | f z = 0 ∧ ‖z‖ ≤ R / 2}
+  suffices hfin : Z.Finite by
+    exact ⟨hfin.toFinset.card, fun S hS =>
+      Finset.card_le_card fun z hz => hfin.mem_toFinset.mpr (hS z hz)⟩
+  -- f is analytic on ℂ (complex differentiable → analytic)
+  have hfU : AnalyticOnNhd ℂ f Set.univ := fun w _ => hf.analyticAt w
+  -- No accumulation of zeros (identity principle + f(0) ≠ 0)
+  have hiso : ∀ z : ℂ, ¬ (∃ᶠ w in 𝓝[≠] z, f w = 0) := by
+    intro z hfreq
+    exact hf0 ((hfU.eqOn_zero_of_preconnected_of_frequently_eq_zero
+      isPreconnected_univ (Set.mem_univ z) hfreq) (Set.mem_univ 0))
+  -- By contradiction: if Z is infinite, derive accumulation of zeros
+  by_contra hinf
+  haveI : Infinite Z := Set.infinite_coe_iff.mpr hinf
+  -- Extract an injective sequence of zeros
+  let emb := Infinite.natEmbedding Z
+  let x : ℕ → ℂ := fun n => (emb n).val
+  have hx_zero : ∀ n, f (x n) = 0 := fun n => (emb n).prop.1
+  have hx_inj : Function.Injective x :=
+    Subtype.val_injective.comp emb.injective
+  have hx_ball : ∀ n, x n ∈ Metric.closedBall (0 : ℂ) (R / 2) := fun n => by
+    simp only [Metric.mem_closedBall, dist_zero_right]; exact (emb n).prop.2
+  -- Extract convergent subsequence by compactness
+  obtain ⟨z₀, -, φ, hφ, hconv⟩ :=
+    (isCompact_closedBall (0 : ℂ) (R / 2)).tendsto_subseq hx_ball
+  -- The subsequence is injective, so eventually ≠ z₀
+  have hxφ_inj : Function.Injective (x ∘ φ) := hx_inj.comp hφ.injective
+  have hne : ∀ᶠ n in Filter.atTop, (x ∘ φ) n ≠ z₀ := by
+    rw [Filter.eventually_atTop]
+    by_cases h : ∃ n₀, (x ∘ φ) n₀ = z₀
+    · obtain ⟨n₀, hn₀⟩ := h
+      exact ⟨n₀ + 1, fun n hn he => absurd (hxφ_inj (he.trans hn₀.symm)) (by omega)⟩
+    · push_neg at h; exact ⟨0, fun n _ => h n⟩
+  -- Convergence in punctured neighborhood
+  have hconv_punct : Filter.Tendsto (x ∘ φ) Filter.atTop (𝓝[≠] z₀) :=
+    Filter.tendsto_inf.mpr ⟨hconv, Filter.tendsto_principal.mpr hne⟩
+  -- Contradiction: sequence of zeros provides frequent zeros, but hiso forbids them
+  exact hiso z₀ fun hev => by
+    obtain ⟨N, hN⟩ := Filter.eventually_atTop.mp (hconv_punct.eventually hev)
+    exact hN N le_rfl (hx_zero (φ N))
 
 /-! ## Polynomial zero estimate
 
