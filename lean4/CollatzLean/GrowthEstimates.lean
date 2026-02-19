@@ -123,31 +123,64 @@ The core analytical step in the Gel'fond-Schneider proof.
 
 If F is an entire function of exponential type σ that vanishes at the
 integer points z = 0, 1, ..., T, then F is "exponentially small" on
-compact subsets of the complex plane. Specifically, for |z| ≤ R ≤ T:
+compact subsets of the complex plane.
 
-|F(z)| ≤ C · exp(σ(2T+1)) · ∏_{t=0}^{T} |z-t|/(2T+1)
+The proof uses the Poisson-Jensen formula on a disk of radius R = 2T+1:
 
-Since the product captures T+1 factors each ≤ 1/2 for |z| ≤ T/2,
-this gives |F(z)| ≤ C · exp(σ(2T+1)) · (1/2)^{T+1}, which is
-exponentially small in T when T >> σ.
+  |F(z)| ≤ C · exp(σR) · ∏_{t=0}^{T} B_R(z, t)
 
-This combines:
-- Schwarz lemma (Mathlib.Analysis.Complex.Schwarz): dist bound from
-  mapping balls to balls
-- Maximum modulus principle (Mathlib.Analysis.Complex.AbsMax): if |F|
-  achieves maximum on interior, F is constant
+where B_R(z, t) = R|z-t|/|R²-tz| is the Blaschke factor for zero at t
+in the disk of radius R. On |z| = R, each |B_R| = 1; for |z| ≤ T/2,
+the product of Blaschke factors is at most (1/2)^{T+1}.
 
-The Schwarz-type bound is the "engine" that makes the Gel'fond-Schneider
-extrapolation work: many vanishing points + moderate growth → very small values.
+Note: the naive polynomial division approach (dividing f by ∏(z-k) and
+applying maximum modulus) does NOT yield (1/2)^{T+1}, because the ratio
+∏|z-k|/∏(R-k) exceeds (1/2)^{T+1} at z = -T/2 for T ≥ 4. The Blaschke
+factorization is essential: Blaschke factors have modulus exactly 1 on
+the boundary circle, giving tighter interior bounds.
+
+The decomposition isolates two sorry'd components:
+1. `poisson_jensen_blaschke`: the Poisson-Jensen inequality
+2. `blaschke_product_le_half_pow`: the Blaschke product bound
+
+References: Boas "Entire Functions" (1954) §2.10, Conway "Functions of
+One Complex Variable II" (1995) §XII.1.
 -/
+
+/-- Blaschke product for zeros at 0, 1, ..., T in the disk of radius R = 2T+1.
+    Each factor R·‖z-k‖/‖R²-kz‖ has modulus 1 on |z| = R and < 1 for |z| < R. -/
+noncomputable def blaschkeProduct (T : ℕ) (z : ℂ) : ℝ :=
+  ∏ k ∈ Finset.range (T + 1),
+    ((2 * (T : ℝ) + 1) * ‖z - (k : ℂ)‖ /
+      ‖((2 * (T : ℝ) + 1) ^ 2 : ℂ) - (k : ℂ) * z‖)
+
+/-- Poisson-Jensen inequality: an entire function with growth bound and
+    integer zeros satisfies |f(z)| ≤ C·exp(σR) · blaschkeProduct.
+    Requires extending Mathlib's Jensen formula to pointwise Poisson-Jensen. -/
+private lemma poisson_jensen_blaschke
+    (f : ℂ → ℂ) (_hf : Differentiable ℂ f)
+    (C σ : ℝ) (_hC : C > 0) (_hσ : σ > 0)
+    (_hgrowth : ∀ z : ℂ, ‖f z‖ ≤ C * Real.exp (σ * ‖z‖))
+    (T : ℕ) (_hT : T ≥ 2)
+    (_hvanish : ∀ t : ℕ, t ≤ T → f (t : ℂ) = 0)
+    (z : ℂ) (_hz : ‖z‖ ≤ ↑T / 2) :
+    ‖f z‖ ≤ C * Real.exp (σ * (2 * ↑T + 1)) * blaschkeProduct T z := by
+  sorry
+
+/-- The Blaschke product is at most (1/2)^(T+1) for |z| ≤ T/2, R = 2T+1.
+    Individual factors can exceed 1/2 for k near T, but factors for small k
+    are of order k/(2T), making the product geometrically small. -/
+private lemma blaschke_product_le_half_pow
+    (T : ℕ) (_hT : T ≥ 2) (z : ℂ) (_hz : ‖z‖ ≤ ↑T / 2) :
+    blaschkeProduct T z ≤ (1 / 2) ^ (T + 1) := by
+  sorry
 
 /-- Schwarz-type vanishing extrapolation for entire functions of exponential type.
 
     If F is entire with growth |F(z)| ≤ C·exp(σ|z|), and F vanishes at
-    all integers 0, 1, ..., T, then F is exponentially small on the disk |z| ≤ T/2.
+    all integers 0, 1, ..., T, then F is exponentially small on |z| ≤ T/2.
 
-    This is the analytical core of Steps 3-4 in Siu's Gel'fond-Schneider proof.
-    The proof uses the Schwarz lemma applied to F(z) / ∏(z - t) on a large disk. -/
+    Combines `poisson_jensen_blaschke` and `blaschke_product_le_half_pow`. -/
 theorem schwarz_vanishing_bound
     (f : ℂ → ℂ) (hf : Differentiable ℂ f)
     (C σ : ℝ) (hC : C > 0) (hσ : σ > 0)
@@ -156,7 +189,14 @@ theorem schwarz_vanishing_bound
     (hvanish : ∀ t : ℕ, t ≤ T → f (t : ℂ) = 0) :
     ∀ z : ℂ, ‖z‖ ≤ T / 2 →
       ‖f z‖ ≤ C * Real.exp (σ * (2 * T + 1)) * (1 / 2) ^ (T + 1) := by
-  sorry
+  intro z hz
+  have h1 := poisson_jensen_blaschke f hf C σ hC hσ hgrowth T hT hvanish z hz
+  have h2 := blaschke_product_le_half_pow T hT z hz
+  calc ‖f z‖
+      ≤ C * Real.exp (σ * (2 * ↑T + 1)) * blaschkeProduct T z := h1
+    _ ≤ C * Real.exp (σ * (2 * ↑T + 1)) * (1 / 2) ^ (T + 1) := by
+        apply mul_le_mul_of_nonneg_left h2
+        exact mul_nonneg (le_of_lt hC) (le_of_lt (Real.exp_pos _))
 
 /-! ## Jensen zero counting
 
