@@ -1,31 +1,32 @@
 /-
   CollatzLean/CycleElimination.lean
 
-  Cycle elimination via the Rhin irrationality measure.
+  Cycle elimination: analytical infrastructure + main theorem.
 
-  Architecture: Baker.lean's `cycle_no_nontrivial_solution` sorry says that
-  no c₀ ≥ 2 satisfies the Steiner cycle equation. IrrationalityMeasure.lean
-  provides `linearFormLog_lower_bound_of_rhin`, a polynomial lower bound
-  on |ν₂·log 2 - ν₃·log 3|. This file connects them:
+  Architecture:
+  - cycle_lower_bound: polynomial lower bound on |Λ| from Rhin's irrationality
+    measure (proved, uses IrrationalityMeasure.lean)
+  - cycle_upper_bound: log(1+x) < x upper bound on Λ from cycle equation
+    (proved, pure analysis)
+  - cycleLinearForm_pos: positivity of the linear form (proved)
+  - cycle_elim_from_rhin: main cycle elimination theorem, delegates to
+    SteinerCycle.lean's baker_no_balanced_cycle which decomposes into:
+    * Δ₃ ≤ 79: proved via K-bound + Hercher's theorem (no m-cycle for m ≤ 91)
+    * Δ₃ ≥ 80: sorry (frontier — requires extending Hercher beyond m = 91)
 
-  LOWER BOUND (from Rhin):
-    |Λ| = |ν₂·log 2 - ν₃·log 3| > C·log2 / ν₃⁵    (polynomial in ν₃)
-
-  UPPER BOUND (from cycle equation):
-    2^ν₂ = 3^ν₃ · (1 + corr/(c₀·3^ν₃))
-    ⟹ Λ = log(1 + corr/(c₀·3^ν₃)) < corr/(c₀·3^ν₃)
-    ⟹ Λ < (2^ν₂ - 3^ν₃)/3^ν₃                        (exponential decay)
-
-  CONTRADICTION: polynomial > exponential is impossible for large ν₃.
-  Small ν₃ cases (ν₃ ≤ threshold) are eliminated computationally.
+  The analytical bounds (cycle_lower_bound, cycle_upper_bound) are kept as
+  sorry-free infrastructure for future work on the Δ₃ ≥ 80 case, where a
+  tighter correction-based upper bound could replace the naive log(1+x) < x.
 
   References:
+  - Rhin (1987), effective irrationality measure for log₂3
   - Steiner (1977), cycle equation structure
   - Simons & de Weger (2005), computational cycle elimination
-  - Hercher (2024), extended computations using irrationality measures
+  - Hercher (2024), extended to m ≤ 91
 -/
 import CollatzLean.Baker
 import CollatzLean.IrrationalityMeasure
+import CollatzLean.SteinerCycle
 
 namespace Collatz
 
@@ -77,19 +78,15 @@ theorem cycle_lower_bound :
     gives 2^ν₂/3^ν₃ = 1 + corr/(c₀ · 3^ν₃), so
     Λ = ν₂·log 2 - ν₃·log 3 = log(2^ν₂/3^ν₃) = log(1 + corr/(c₀·3^ν₃)).
 
-    Since log(1+x) < x for x > 0, we get Λ < corr/(c₀·3^ν₃).
-    Using the cycle equation corr = c₀·(2^ν₂ - 3^ν₃):
-    Λ < (2^ν₂ - 3^ν₃)/3^ν₃
+    Since log(x) < x - 1 for x > 0, x ≠ 1 (Mathlib: Real.log_lt_sub_one_of_pos),
+    we get Λ < (2^ν₂ - 3^ν₃)/3^ν₃.
 
-    This exponential upper bound (which shrinks as 3^{-ν₃} · something)
-    will contradict the polynomial lower bound from Rhin for large ν₃.
-
-    The proof requires passage between ℕ arithmetic (cycle_equation)
-    and ℝ analysis (log, exp). This is the analytically non-trivial step. -/
+    This bound is available as sorry-free infrastructure for future work on
+    tighter cycle elimination. -/
 theorem cycle_upper_bound (c₀ p : ℕ)
-    (hc : c₀ ≥ 2)
-    (hcycle : collatzStep^[p] c₀ = c₀)
-    (hν₃ : cycleNu3 c₀ p ≥ 1)
+    (_hc : c₀ ≥ 2)
+    (_hcycle : collatzStep^[p] c₀ = c₀)
+    (_hν₃ : cycleNu3 c₀ p ≥ 1)
     (hexp : 2 ^ cycleNu2 c₀ p > 3 ^ cycleNu3 c₀ p) :
     cycleLinearForm c₀ p <
       ((2 : ℝ) ^ cycleNu2 c₀ p - (3 : ℝ) ^ cycleNu3 c₀ p) /
@@ -137,112 +134,22 @@ theorem cycleLinearForm_pos (c₀ p : ℕ)
   rw [Real.log_pow, Real.log_pow] at h2
   linarith
 
-/-! ## Large ν₃ contradiction -/
+/-! ## Main theorem: cycle elimination -/
 
-/-- For sufficiently large ν₃, the polynomial lower bound from Rhin
-    contradicts the exponential upper bound from the cycle equation.
-
-    Specifically: C·log2/ν₃⁵ < (2^ν₂ - 3^ν₃)/3^ν₃ requires
-    C·log2·3^ν₃ < ν₃⁵·(2^ν₂ - 3^ν₃).
-
-    But 2^ν₂ < 2·3^ν₃ (from ν₂ < 2ν₃, which holds for any cycle with
-    ν₃ ≥ 2 since log₂3 < 2), so the RHS grows polynomially in ν₃
-    while the LHS grows exponentially — contradiction for large ν₃.
-
-    This is sorry'd because the quantitative analysis requires careful
-    bounds on ν₂/ν₃ and the exponential-polynomial comparison. -/
-theorem cycle_large_nu3_contradiction (c₀ p : ℕ)
-    (hc : c₀ ≥ 2)
-    (hcycle : collatzStep^[p] c₀ = c₀)
-    (hν₃ : cycleNu3 c₀ p ≥ 1)
-    (hexp : 2 ^ cycleNu2 c₀ p > 3 ^ cycleNu3 c₀ p)
-    (hceq : c₀ * (2 ^ cycleNu2 c₀ p - 3 ^ cycleNu3 c₀ p) = cycleCorrection c₀ p)
-    (hlarge : cycleNu3 c₀ p ≥ 68) :
-    False := by
-  sorry
-
-/-! ## Small ν₃ computational elimination -/
-
-/-- For small ν₃ (say ν₃ < 68), computational verification shows that
-    no non-trivial cycle exists. This uses the fact that the cycle equation
-    c₀ · (2^ν₂ - 3^ν₃) = correction, combined with the constraint
-    ν₂ + ν₃ = p and the structure of the correction sum, leaves no
-    solutions with c₀ ≥ 2.
-
-    The threshold 68 comes from Steiner's original analysis, later
-    extended by Simons & de Weger (2005) to ν₃ < 68 and further by
-    Hercher (2024). In principle this could be replaced by native_decide
-    for small cases, but the correction term structure makes direct
-    computation complex.
-
-    This is sorry'd as computational verification of cycle nonexistence
-    for small parameters. -/
-theorem cycle_small_nu3_elim (c₀ p : ℕ)
-    (hc : c₀ ≥ 2)
-    (hcycle : collatzStep^[p] c₀ = c₀)
-    (hν₃ : cycleNu3 c₀ p ≥ 1)
-    (hexp : 2 ^ cycleNu2 c₀ p > 3 ^ cycleNu3 c₀ p)
-    (hceq : c₀ * (2 ^ cycleNu2 c₀ p - 3 ^ cycleNu3 c₀ p) = cycleCorrection c₀ p)
-    (hsmall : cycleNu3 c₀ p < 68) :
-    ∃ t, t < p ∧ collatzStep^[t] c₀ = 1 := by
-  sorry
-
-/-! ## Main theorem: cycle elimination from Rhin bound -/
-
-/-- Cycle elimination via Rhin's irrationality measure.
+/-- Cycle elimination via Steiner/Hercher analysis.
 
     No non-trivial Collatz cycle exists with period p = 3·Δ₃ for Δ₃ ≥ 2.
     Any such cycle must pass through 1.
 
-    This is the same conclusion as Baker.lean's `baker_no_balanced_cycle`,
-    but with a sharper decomposition of the sorry into two focused gaps:
-    1. `cycle_large_nu3_contradiction`: exponential-polynomial comparison
-    2. `cycle_small_nu3_elim`: computational verification for small ν₃
+    Delegates to SteinerCycle.lean's baker_no_balanced_cycle, which decomposes:
+    - Δ₃ ≤ 79: proved (K-bound gives ν₃ ≤ 91, then Hercher eliminates)
+    - Δ₃ ≥ 80: sorry (frontier — requires extending Hercher beyond m = 91)
 
-    The proof structure:
-    - From periodicity, derive c₀ ≥ 2 (or c₀ = 1, done) and ν₃ ≥ 1
-    - Establish 2^ν₂ > 3^ν₃ and the cycle equation
-    - Case split: ν₃ ≥ 68 (large, Rhin contradiction) vs ν₃ < 68 (small, computation) -/
+    References: Steiner (1977), Simons & de Weger (2005), Hercher (2024). -/
 theorem cycle_elim_from_rhin (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 2)
     (c₀ : ℕ) (hc : c₀ ≥ 1)
     (hcycle : collatzStep^[3 * Δ₃] c₀ = c₀) :
-    ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 := by
-  -- Trivial case: c₀ = 1
-  by_cases hc1 : c₀ = 1
-  · exact ⟨0, by omega, by simp [hc1]⟩
-  -- Nontrivial: c₀ ≥ 2
-  have hc2 : c₀ ≥ 2 := by omega
-  set p := 3 * Δ₃ with hp
-  -- At least one odd step
-  have hν₃ : cycleNu3 c₀ p ≥ 1 := by
-    by_contra hlt
-    push_neg at hlt
-    have hv3 : cycleNu3 c₀ p = 0 := by omega
-    have hcorr0 := correction_zero_of_nu3_zero c₀ p hv3
-    have hnu2 : cycleNu2 c₀ p = p := by unfold cycleNu2; omega
-    have hident := cycle_identity c₀ p
-    rw [hcycle, hv3, hcorr0, hnu2] at hident; simp at hident
-    have h2p : 2 ≤ 2 ^ p := by
-      change 2 ^ 1 ≤ 2 ^ p
-      apply Nat.pow_le_pow_right <;> omega
-    linarith [Nat.mul_le_mul_left c₀ h2p]
-  -- Exponent ordering: 2^ν₂ > 3^ν₃
-  have hexp : 2 ^ cycleNu2 c₀ p > 3 ^ cycleNu3 c₀ p := by
-    by_contra hle
-    push_neg at hle
-    have hident := cycle_identity c₀ p
-    rw [hcycle] at hident
-    have hcorr_pos := cycleCorrection_pos c₀ p hν₃
-    have := Nat.mul_le_mul_left c₀ hle
-    omega
-  -- Cycle equation
-  have hceq := cycle_equation c₀ p hcycle hexp
-  -- Case split on ν₃
-  by_cases hlarge : cycleNu3 c₀ p ≥ 68
-  · -- Large ν₃: Rhin bound contradicts cycle equation
-    exact absurd (cycle_large_nu3_contradiction c₀ p hc2 hcycle hν₃ hexp hceq hlarge) id
-  · -- Small ν₃: computational elimination
-    push_neg at hlarge
-    exact cycle_small_nu3_elim c₀ p hc2 hcycle hν₃ hexp hceq hlarge
+    ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 :=
+  baker_no_balanced_cycle Δ₃ hΔ c₀ hc hcycle
 
 end Collatz

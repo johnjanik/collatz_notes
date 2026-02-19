@@ -54,7 +54,7 @@ def auxEntireFunc (a : ℤ × ℤ → ℂ) (supp : Finset (ℤ × ℤ)) (β : �
 theorem auxEntireFunc_differentiable (a : ℤ × ℤ → ℂ) (supp : Finset (ℤ × ℤ)) (β : ℝ) :
     Differentiable ℂ (auxEntireFunc a supp β) := by
   intro z
-  show DifferentiableAt ℂ (fun z => ∑ p ∈ supp, a p * exp (((p.1 : ℂ) + (p.2 : ℂ) * (β : ℂ)) * z)) z
+  change DifferentiableAt ℂ (fun z => ∑ p ∈ supp, a p * exp (((p.1 : ℂ) + (p.2 : ℂ) * (β : ℂ)) * z)) z
   apply DifferentiableAt.fun_sum
   intro p _
   apply DifferentiableAt.mul (differentiableAt_const _)
@@ -79,7 +79,41 @@ theorem auxEntireFunc_growth (a : ℤ × ℤ → ℂ) (supp : Finset (ℤ × ℤ
     ∃ σ : ℝ, σ > 0 ∧
       ∀ z : ℂ, ‖auxEntireFunc a supp β z‖ ≤
         supp.card * B * Real.exp (σ * ‖z‖) := by
-  sorry
+  -- Choose σ = 1 + Σ_{p ∈ supp} ‖weight(p)‖. This ensures σ > 0
+  -- and σ ≥ ‖weight(p)‖ for every p ∈ supp (since norms are nonneg).
+  refine ⟨1 + ∑ p ∈ supp, ‖((p.1 : ℤ) : ℂ) + ((p.2 : ℤ) : ℂ) * (β : ℂ)‖,
+    by positivity, fun z => ?_⟩
+  set σ := 1 + ∑ p ∈ supp, ‖((p.1 : ℤ) : ℂ) + ((p.2 : ℤ) : ℂ) * (β : ℂ)‖
+  -- Triangle inequality on the sum
+  have h1 : ‖auxEntireFunc a supp β z‖ ≤
+      ∑ p ∈ supp, ‖a p * exp (((p.1 : ℂ) + (p.2 : ℂ) * (β : ℂ)) * z)‖ := by
+    exact norm_sum_le supp _
+  -- Bound each summand: ‖a p · exp(w·z)‖ ≤ B · exp(σ·‖z‖)
+  have h2 : ∑ p ∈ supp, ‖a p * exp (((p.1 : ℂ) + (p.2 : ℂ) * (β : ℂ)) * z)‖ ≤
+      ∑ p ∈ supp, B * Real.exp (σ * ‖z‖) := by
+    apply Finset.sum_le_sum
+    intro p hp
+    -- Split norm of product
+    rw [norm_mul, Complex.norm_exp]
+    -- ‖a p‖ ≤ B and exp(Re(w·z)) ≤ exp(σ·‖z‖)
+    apply mul_le_mul (hBound p hp) _ (Real.exp_nonneg _) hB
+    apply Real.exp_le_exp.mpr
+    -- Re(w·z) ≤ ‖w·z‖ = ‖w‖·‖z‖ ≤ σ·‖z‖
+    calc (((↑(p.1 : ℤ) : ℂ) + ↑(p.2 : ℤ) * ↑β) * z).re
+        ≤ ‖((↑(p.1 : ℤ) : ℂ) + ↑(p.2 : ℤ) * ↑β) * z‖ :=
+          Complex.re_le_norm _
+      _ = ‖(↑(p.1 : ℤ) : ℂ) + ↑(p.2 : ℤ) * ↑β‖ * ‖z‖ := norm_mul _ z
+      _ ≤ σ * ‖z‖ := by
+          apply mul_le_mul_of_nonneg_right _ (norm_nonneg z)
+          have hsingle := Finset.single_le_sum
+            (f := fun p => ‖((p.1 : ℤ) : ℂ) + ((p.2 : ℤ) : ℂ) * (β : ℂ)‖)
+            (fun _ _ => norm_nonneg _) hp
+          linarith
+  -- Constant sum = card * constant
+  have h3 : ∑ _ ∈ supp, B * Real.exp (σ * ‖z‖) =
+      ↑supp.card * B * Real.exp (σ * ‖z‖) := by
+    rw [Finset.sum_const, nsmul_eq_mul, mul_assoc]
+  linarith
 
 /-! ## Schwarz-type extrapolation
 

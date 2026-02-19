@@ -81,6 +81,91 @@ theorem cycle_c0_bound (c₀ p : ℕ)
   -- hcub: 2 * correction + 2^L ≤ 3^K * 2^L
   nlinarith
 
+/-! ## Correction lower bound
+
+The correction term also has a lower bound independent of the trajectory:
+  correction ≥ (3^K - 1)/2
+since each odd step contributes at least 3^{K-i} · 2^0 = 3^{K-i}.
+Equivalently: 2·correction + 1 ≥ 3^K (avoids nat division). -/
+
+/-- The correction is bounded below: 2·correction + 1 ≥ 3^K.
+    Equivalent to correction ≥ (3^K − 1)/2 but stated without division.
+    Proved by induction on t, mirroring correction_upper_bound. -/
+theorem correction_lower_bound (c₀ t : ℕ) :
+    2 * cycleCorrection c₀ t + 1 ≥ 3 ^ cycleNu3 c₀ t := by
+  induction t with
+  | zero => simp [cycleCorrection, cycleNu3]
+  | succ t ih =>
+    by_cases hodd : (collatzStep^[t] c₀) % 2 = 1
+    · -- Odd step: correction(t+1) = 3·corr + 2^L, K→K+1, L unchanged
+      -- Need: 2·(3·corr + 2^L) + 1 ≥ 3^(K+1) = 3·3^K
+      -- From IH: 2·corr + 1 ≥ 3^K, so 2·corr ≥ 3^K - 1
+      -- LHS = 6·corr + 2·2^L + 1 ≥ 3·(3^K - 1) + 2 + 1 = 3^(K+1)
+      rw [cycleCorrection_succ_odd c₀ t hodd,
+          cycleNu3_succ_odd c₀ t hodd, pow_succ]
+      nlinarith [ih, Nat.one_le_pow (cycleNu2 c₀ t) 2 (by omega)]
+    · -- Even step: correction unchanged, K unchanged
+      have heven : (collatzStep^[t] c₀) % 2 = 0 := by omega
+      rw [cycleCorrection_succ_even c₀ t heven,
+          cycleNu3_succ_even c₀ t heven]
+      exact ih
+
+/-! ## Cycle c₀ lower bound
+
+From the cycle equation c₀·(2^L - 3^K) = correction and the correction
+lower bound 2·correction + 1 ≥ 3^K, we get:
+  2·c₀·(2^L - 3^K) + 1 ≥ 3^K
+
+This bounds c₀ from below. Combined with the upper bound, c₀ is squeezed. -/
+
+/-- For a cycle: the correction lower bound constrains c₀ from below.
+    Specifically: 2·c₀·(2^L − 3^K) + 1 ≥ 3^K. -/
+theorem cycle_c0_lower_bound (c₀ p : ℕ)
+    (hcycle : collatzStep^[p] c₀ = c₀)
+    (hexp : 2 ^ cycleNu2 c₀ p > 3 ^ cycleNu3 c₀ p) :
+    2 * c₀ * (2 ^ cycleNu2 c₀ p - 3 ^ cycleNu3 c₀ p) + 1 ≥
+      3 ^ cycleNu3 c₀ p := by
+  have hceq := cycle_equation c₀ p hcycle hexp
+  have hclb := correction_lower_bound c₀ p
+  nlinarith
+
+/-- c₀ lower bound in division-free form:
+    c₀ · 2 · (2^L − 3^K) ≥ 3^K − 1. -/
+theorem cycle_c0_explicit_lower (c₀ p : ℕ)
+    (hcycle : collatzStep^[p] c₀ = c₀)
+    (hexp : 2 ^ cycleNu2 c₀ p > 3 ^ cycleNu3 c₀ p)
+    (_hK_pos : cycleNu3 c₀ p ≥ 1) :
+    c₀ * (2 * (2 ^ cycleNu2 c₀ p - 3 ^ cycleNu3 c₀ p)) ≥
+      3 ^ cycleNu3 c₀ p - 1 := by
+  have h := cycle_c0_lower_bound c₀ p hcycle hexp
+  -- h : 2 * c₀ * (2^L - 3^K) + 1 ≥ 3^K
+  -- Rewrite: c₀ * (2 * x) = 2 * c₀ * x
+  have hrw : c₀ * (2 * (2 ^ cycleNu2 c₀ p - 3 ^ cycleNu3 c₀ p)) =
+    2 * c₀ * (2 ^ cycleNu2 c₀ p - 3 ^ cycleNu3 c₀ p) := by ring
+  rw [hrw]
+  omega
+
+/-! ## Cycle c₀ squeeze: upper and lower bounds combined
+
+For a cycle with K ≥ 1 odd steps, L even steps, 2^L > 3^K, c₀ ≥ 2:
+  (3^K - 1) / (2·(2^L - 3^K)) ≤ c₀ ≤ (3^K - 1)·2^L / (2·(2^L - 3^K))
+
+Stated in ℕ without division:
+  Lower: c₀ · 2 · (2^L - 3^K) ≥ 3^K - 1
+  Upper: 2·c₀·(2^L - 3^K) + 2^L ≤ 3^K · 2^L -/
+
+/-- Cycle c₀ squeeze: both bounds together. -/
+theorem cycle_c0_squeeze (c₀ p : ℕ)
+    (hcycle : collatzStep^[p] c₀ = c₀)
+    (hexp : 2 ^ cycleNu2 c₀ p > 3 ^ cycleNu3 c₀ p)
+    (hK_pos : cycleNu3 c₀ p ≥ 1) :
+    c₀ * (2 * (2 ^ cycleNu2 c₀ p - 3 ^ cycleNu3 c₀ p)) ≥
+      3 ^ cycleNu3 c₀ p - 1 ∧
+    2 * c₀ * (2 ^ cycleNu2 c₀ p - 3 ^ cycleNu3 c₀ p) + 2 ^ cycleNu2 c₀ p ≤
+      3 ^ cycleNu3 c₀ p * 2 ^ cycleNu2 c₀ p :=
+  ⟨cycle_c0_explicit_lower c₀ p hcycle hexp hK_pos,
+   cycle_c0_bound c₀ p hcycle hexp⟩
+
 /-! ## K-bound for small Δ₃
 
 For Δ₃ ≤ 79 (period p = 3·Δ₃ ≤ 237):
