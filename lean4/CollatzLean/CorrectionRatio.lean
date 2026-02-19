@@ -13,6 +13,7 @@ import CollatzLean.Identity
 import CollatzLean.Drift
 import CollatzLean.CollatzSFT
 import CollatzLean.Baker
+import CollatzLean.SteinerCycle
 import Mathlib.Data.Fintype.Pigeonhole
 
 namespace Collatz

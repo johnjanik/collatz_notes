@@ -161,4 +161,66 @@ theorem steiner_cycle_large (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 80)
     ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 := by
   sorry
 
+/-! ## Main cycle elimination (moved from Baker.lean)
+
+Decomposed into:
+- c₀ = 1: trivial
+- c₀ ≥ 2, Δ₃ ≤ 79: proved via steiner_K_bound_79 + hercher_no_small_cycle
+- c₀ ≥ 2, Δ₃ ≥ 80: sorry (open — requires extending Hercher beyond m = 91) -/
+
+/-- No non-trivial cycle satisfies the Steiner equation.
+    For Δ₃ ≤ 79: proved via Hercher's theorem (no m-cycle for m ≤ 91).
+    For Δ₃ ≥ 80: sorry (open frontier).
+
+    References: Steiner (1977), Simons & de Weger (2005), Hercher (2024). -/
+private theorem cycle_no_nontrivial_solution (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 2)
+    (c₀ : ℕ) (hc : c₀ ≥ 1)
+    (hcycle : collatzStep^[3 * Δ₃] c₀ = c₀)
+    (hident : c₀ * 2 ^ cycleNu2 c₀ (3 * Δ₃) =
+      c₀ * 3 ^ cycleNu3 c₀ (3 * Δ₃) + cycleCorrection c₀ (3 * Δ₃)) :
+    ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 := by
+  -- Trivial case: c₀ = 1
+  by_cases hc1 : c₀ = 1
+  · exact ⟨0, by omega, by simp [hc1]⟩
+  -- Nontrivial case: c₀ ≥ 2
+  have hc2 : c₀ ≥ 2 := by omega
+  -- At least one odd step (all-even gives c₀·2^p = c₀, impossible)
+  have hnu3_pos : cycleNu3 c₀ (3 * Δ₃) ≥ 1 := by
+    by_contra hlt
+    push_neg at hlt
+    have hv3 : cycleNu3 c₀ (3 * Δ₃) = 0 := by omega
+    have hcorr0 := correction_zero_of_nu3_zero c₀ (3 * Δ₃) hv3
+    have hnu2 : cycleNu2 c₀ (3 * Δ₃) = 3 * Δ₃ := by unfold cycleNu2; omega
+    rw [hv3, hcorr0, hnu2] at hident
+    simp only [pow_zero, mul_one, add_zero] at hident
+    have h2p : 2 ≤ 2 ^ (3 * Δ₃) := by
+      calc 2 = 2 ^ 1 := by ring
+        _ ≤ 2 ^ (3 * Δ₃) := Nat.pow_le_pow_right (by omega) (by omega)
+    nlinarith
+  -- Exponent ordering: 2^ν₂ > 3^ν₃
+  have hexp : 2 ^ cycleNu2 c₀ (3 * Δ₃) > 3 ^ cycleNu3 c₀ (3 * Δ₃) := by
+    by_contra hle
+    push_neg at hle
+    have := Nat.mul_le_mul_left c₀ hle
+    have := cycleCorrection_pos c₀ (3 * Δ₃) hnu3_pos
+    omega
+  -- Case split: Δ₃ ≤ 79 (proved) vs Δ₃ ≥ 80 (sorry)
+  by_cases hΔ_small : Δ₃ ≤ 79
+  · exact steiner_cycle_elimination Δ₃ hΔ hΔ_small c₀ hc2 hcycle hexp
+  · push_neg at hΔ_small
+    exact steiner_cycle_large Δ₃ (by omega) c₀ hc2 hcycle hexp
+
+/-- Baker-Steiner-Hercher cycle theorem: no non-trivial Collatz cycle has
+    period p = 3·Δ₃ for any Δ₃ ≥ 2. Any such cycle must contain 1.
+
+    For Δ₃ ≤ 79: proved via correction bound + Hercher's theorem.
+    For Δ₃ ≥ 80: sorry (requires extending Hercher beyond m = 91). -/
+theorem baker_no_balanced_cycle (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 2)
+    (c₀ : ℕ) (hc : c₀ ≥ 1)
+    (hcycle : collatzStep^[3 * Δ₃] c₀ = c₀) :
+    ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 := by
+  have hident := cycle_identity c₀ (3 * Δ₃)
+  rw [hcycle] at hident
+  exact cycle_no_nontrivial_solution Δ₃ hΔ c₀ hc hcycle hident
+
 end Collatz

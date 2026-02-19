@@ -94,7 +94,30 @@ theorem cycle_upper_bound (c₀ p : ℕ)
     cycleLinearForm c₀ p <
       ((2 : ℝ) ^ cycleNu2 c₀ p - (3 : ℝ) ^ cycleNu3 c₀ p) /
         (3 : ℝ) ^ cycleNu3 c₀ p := by
-  sorry
+  rw [cycleLinearForm_eq]
+  -- Positivity facts
+  have h3pos : (0 : ℝ) < (3 : ℝ) ^ cycleNu3 c₀ p := by positivity
+  have h2pos : (0 : ℝ) < (2 : ℝ) ^ cycleNu2 c₀ p := by positivity
+  have h3ne : (3 : ℝ) ^ cycleNu3 c₀ p ≠ 0 := ne_of_gt h3pos
+  have h2ne : (2 : ℝ) ^ cycleNu2 c₀ p ≠ 0 := ne_of_gt h2pos
+  -- Rewrite LHS as log(2^ν₂ / 3^ν₃)
+  have hlhs : (↑(cycleNu2 c₀ p) : ℝ) * Real.log 2 - (↑(cycleNu3 c₀ p) : ℝ) * Real.log 3 =
+      Real.log ((2 : ℝ) ^ cycleNu2 c₀ p / (3 : ℝ) ^ cycleNu3 c₀ p) := by
+    rw [Real.log_div h2ne h3ne, Real.log_pow, Real.log_pow]
+  rw [hlhs]
+  -- Set x = 2^ν₂ / 3^ν₃, show x > 1
+  set x := (2 : ℝ) ^ cycleNu2 c₀ p / (3 : ℝ) ^ cycleNu3 c₀ p with hx_def
+  have hx_pos : 0 < x := div_pos h2pos h3pos
+  have hx_gt1 : x > 1 := by
+    rw [hx_def, gt_iff_lt, one_lt_div h3pos]
+    exact_mod_cast hexp
+  -- log(x) < x - 1 for x > 0, x ≠ 1
+  have hlog_lt := Real.log_lt_sub_one_of_pos hx_pos (ne_of_gt hx_gt1)
+  -- x - 1 = (2^ν₂ - 3^ν₃) / 3^ν₃
+  have hx_sub : x - 1 = ((2 : ℝ) ^ cycleNu2 c₀ p - (3 : ℝ) ^ cycleNu3 c₀ p) /
+      (3 : ℝ) ^ cycleNu3 c₀ p := by
+    rw [hx_def, div_sub_one h3ne]
+  linarith
 
 /-! ## Positivity of cycle linear form -/
 

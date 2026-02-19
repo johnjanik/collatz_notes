@@ -399,70 +399,15 @@ theorem cycleCorrection_pos (c₀ p : ℕ)
       have := cycleNu3_succ_even c₀ t heven
       omega
 
-/-! ## Cycle elimination (Baker-Steiner) -/
+/-! ## Cycle elimination (Steiner-Hercher)
 
-/-- No non-trivial cycle satisfies the Steiner equation.
-    Uses Baker's effective bound on linear forms in log 2, log 3
-    to show the Diophantine constraint
-    c₀ · (2^ν₂ − 3^ν₃) = correction
-    has no solution with c₀ ≥ 2, eliminating all non-trivial cycles.
-
-    The cycle_identity provides:
-    c₀ · 2^ν₂ = c₀ · 3^ν₃ + correction
-    and periodicity (hcycle) makes this a closed Diophantine equation.
-
-    References: Steiner (1977), Simons & de Weger (2005). -/
-private theorem cycle_no_nontrivial_solution (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 2)
-    (c₀ : ℕ) (hc : c₀ ≥ 1)
-    (hcycle : collatzStep^[3 * Δ₃] c₀ = c₀)
-    (hident : c₀ * 2 ^ cycleNu2 c₀ (3 * Δ₃) =
-      c₀ * 3 ^ cycleNu3 c₀ (3 * Δ₃) + cycleCorrection c₀ (3 * Δ₃)) :
-    ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 := by
-  -- Trivial case: c₀ = 1
-  by_cases hc1 : c₀ = 1
-  · exact ⟨0, by omega, by simp [hc1]⟩
-  -- Nontrivial case: c₀ ≥ 2
-  have hc2 : c₀ ≥ 2 := by omega
-  -- At least one odd step (all-even gives c₀·2^p = c₀, impossible)
-  have hnu3_pos : cycleNu3 c₀ (3 * Δ₃) ≥ 1 := by
-    by_contra hlt
-    push_neg at hlt
-    have hv3 : cycleNu3 c₀ (3 * Δ₃) = 0 := by omega
-    have hcorr0 := correction_zero_of_nu3_zero c₀ (3 * Δ₃) hv3
-    have hnu2 : cycleNu2 c₀ (3 * Δ₃) = 3 * Δ₃ := by unfold cycleNu2; omega
-    rw [hv3, hcorr0, hnu2] at hident; simp at hident
-    -- hident : c₀ * 2 ^ (3 * Δ₃) = c₀, contradicts c₀ ≥ 1 and 2^p ≥ 2
-    have h2p : 2 ≤ 2 ^ (3 * Δ₃) := by
-      show 2 ^ 1 ≤ 2 ^ (3 * Δ₃)
-      apply Nat.pow_le_pow_right <;> omega
-    linarith [Nat.mul_le_mul_left c₀ h2p]
-  -- Correction is positive
-  have hcorr_pos := cycleCorrection_pos c₀ (3 * Δ₃) hnu3_pos
-  -- Exponent ordering: 2^ν₂ > 3^ν₃
-  have hexp : 2 ^ cycleNu2 c₀ (3 * Δ₃) > 3 ^ cycleNu3 c₀ (3 * Δ₃) := by
-    by_contra hle
-    push_neg at hle
-    have := Nat.mul_le_mul_left c₀ hle
-    omega
-  -- Cycle equation: c₀ · (2^ν₂ − 3^ν₃) = correction
-  have _hceq := cycle_equation c₀ (3 * Δ₃) hcycle hexp
-  -- Steiner's argument: no c₀ ≥ 2 satisfies the cycle equation.
-  -- This is the residual sorry — requires Steiner-type analysis of the
-  -- correction sum structure to eliminate non-trivial balanced cycles.
-  sorry
-
-/-- Baker-Steiner cycle theorem: no non-trivial Collatz cycle has period
-    p = 3·Δ₃ for any Δ₃ ≥ 2. Any such cycle must contain 1.
-
-    Proved by combining the sorry-free cycle multiplicative identity
-    with cycle_no_nontrivial_solution (which uses Baker's bound). -/
-theorem baker_no_balanced_cycle (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 2)
-    (c₀ : ℕ) (hc : c₀ ≥ 1)
-    (hcycle : collatzStep^[3 * Δ₃] c₀ = c₀) :
-    ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 := by
-  have hident := cycle_identity c₀ (3 * Δ₃)
-  rw [hcycle] at hident
-  exact cycle_no_nontrivial_solution Δ₃ hΔ c₀ hc hcycle hident
+The cycle elimination theorems (`cycle_no_nontrivial_solution` and
+`baker_no_balanced_cycle`) have been moved to `SteinerCycle.lean`,
+which imports this file and provides:
+- `correction_upper_bound`: 2·correction + 2^L ≤ 3^K·2^L
+- `steiner_K_bound_79`: for Δ₃ ≤ 79, cycleNu3 ≤ 91
+- `hercher_no_small_cycle`: axiom — no m-cycle for m ≤ 91 (Hercher 2024)
+- `baker_no_balanced_cycle`: the main theorem, using the above -/
 
 /-! ## Evaluation -/
 
