@@ -23,4 +23,5 @@ import CollatzLean.HenselAttrition
 import CollatzLean.DiophantineRepeller
 import CollatzLean.Syracuse
 import CollatzLean.SteinerCycle
+import CollatzLean.ContinuedFraction
 import CollatzLean.SyracuseDrift

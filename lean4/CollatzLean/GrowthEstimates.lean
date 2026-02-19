@@ -55,7 +55,8 @@ def auxEntireFunc (a : ℤ × ℤ → ℂ) (supp : Finset (ℤ × ℤ)) (β : �
 theorem auxEntireFunc_differentiable (a : ℤ × ℤ → ℂ) (supp : Finset (ℤ × ℤ)) (β : ℝ) :
     Differentiable ℂ (auxEntireFunc a supp β) := by
   intro z
-  change DifferentiableAt ℂ (fun z => ∑ p ∈ supp, a p * exp (((p.1 : ℂ) + (p.2 : ℂ) * (β : ℂ)) * z)) z
+  change DifferentiableAt ℂ
+    (fun z => ∑ p ∈ supp, a p * exp (((p.1 : ℂ) + (p.2 : ℂ) * (β : ℂ)) * z)) z
   apply DifferentiableAt.fun_sum
   intro p _
   apply DifferentiableAt.mul (differentiableAt_const _)
@@ -248,6 +249,11 @@ theorem polynomial_zero_estimate
     (hP : ∃ i j : ℤ, 0 ≤ i ∧ i ≤ L ∧ 0 ≤ j ∧ j ≤ L ∧ P i j ≠ 0)
     (T : ℕ) (hT : T + 1 ≥ (L + 1) * (L + 1)) :
     ∃ t : ℕ, t ≤ T ∧ polyEvalExp P L t ≠ 0 := by
+  -- Proof strategy: by contradiction via Vandermonde determinant.
+  -- The bases 2^i·3^j are distinct (two_pow_mul_three_pow_injective),
+  -- so a non-zero linear combination can't vanish at (L+1)² points.
+  -- Infrastructure: finProdFinEquiv, Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero
+  -- TODO: fix Equiv.sum_comp reindexing between Fin M and range sums
   sorry
 
 /-! ## Combined extrapolation-contradiction
