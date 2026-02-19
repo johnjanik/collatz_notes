@@ -196,6 +196,40 @@ theorem steiner_K_bound_79 (Δ₃ : ℕ) (hΔ_le : Δ₃ ≤ 79) (c₀ : ℕ)
   -- 2^ν₂ ≤ 2^145 < 3^92 ≤ 3^ν₃, contradicting hexp
   omega
 
+/-! ## Generalized K-bound
+
+The proof of steiner_K_bound_79 generalizes: for ANY Hercher threshold M
+and period bound D satisfying 2^{3D-(M+1)} < 3^{M+1}, cycles with
+Δ₃ ≤ D have at most M odd steps.
+
+The maximum D for given M is approximately (M+1) · log₂3 / 3 ≈ 0.528·(M+1).
+See ContinuedFraction.lean for verified boundary values. -/
+
+/-- Generalized K-bound: if 2^{3D-(M+1)} < 3^{M+1}, then for any cycle
+    with Δ₃ ≤ D, the number of odd steps is at most M.
+    Specializes to steiner_K_bound_79 when M=91, D=79. -/
+theorem steiner_K_bound_general (M D : ℕ)
+    (hpow : 2 ^ (3 * D - (M + 1)) < 3 ^ (M + 1))
+    (c₀ Δ₃ : ℕ) (hΔ : Δ₃ ≤ D)
+    (hexp : 2 ^ cycleNu2 c₀ (3 * Δ₃) > 3 ^ cycleNu3 c₀ (3 * Δ₃)) :
+    cycleNu3 c₀ (3 * Δ₃) ≤ M := by
+  by_contra h
+  push_neg at h
+  have hK : cycleNu3 c₀ (3 * Δ₃) ≥ M + 1 := by omega
+  -- ν₂ = 3Δ₃ - ν₃ ≤ 3D - (M+1)
+  have hL : cycleNu2 c₀ (3 * Δ₃) ≤ 3 * D - (M + 1) := by
+    unfold cycleNu2
+    have := cycleNu3_le c₀ (3 * Δ₃)
+    omega
+  -- 2^ν₂ ≤ 2^(3D-(M+1))
+  have h2L : 2 ^ cycleNu2 c₀ (3 * Δ₃) ≤ 2 ^ (3 * D - (M + 1)) :=
+    Nat.pow_le_pow_right (by omega) hL
+  -- 3^(M+1) ≤ 3^ν₃
+  have h3K : 3 ^ (M + 1) ≤ 3 ^ cycleNu3 c₀ (3 * Δ₃) :=
+    Nat.pow_le_pow_right (by omega) hK
+  -- Chain: 2^ν₂ ≤ 2^(3D-(M+1)) < 3^(M+1) ≤ 3^ν₃, contradicting hexp
+  omega
+
 /-! ## Hercher's theorem (axiom)
 
 Hercher (2024) proved: there is no non-trivial Collatz cycle with
@@ -229,16 +263,47 @@ theorem steiner_cycle_elimination (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 2) (hΔ_le : Δ
   have hK_le := steiner_K_bound_79 Δ₃ hΔ_le c₀ hexp
   exact hercher_no_small_cycle c₀ (3 * Δ₃) hc (by omega) hcycle hK_le
 
+/-- Generalized cycle elimination: given a Hercher-type result for m ≤ M
+    and a power comparison 2^{3D-(M+1)} < 3^{M+1}, all cycles with
+    Δ₃ ≤ D are trivial. Takes the Hercher result as a hypothesis rather
+    than relying on the axiom, making extensions modular.
+
+    To extend cycle elimination to Δ₃ ≤ D for a new threshold M:
+    1. Prove the power comparison `2^{3D-(M+1)} < 3^{M+1}` via native_decide
+       (see ContinuedFraction.steinerWorks for verified boundaries)
+    2. Extend the Hercher axiom to m ≤ M
+    3. Apply this theorem -/
+theorem steiner_cycle_elimination_general (M D : ℕ)
+    (hpow : 2 ^ (3 * D - (M + 1)) < 3 ^ (M + 1))
+    (hercher : ∀ c₀ p, c₀ ≥ 2 → p ≥ 1 → collatzStep^[p] c₀ = c₀ →
+               cycleNu3 c₀ p ≤ M → ∃ t, t < p ∧ collatzStep^[t] c₀ = 1)
+    (Δ₃ : ℕ) (_hΔ : Δ₃ ≥ 2) (hΔ_le : Δ₃ ≤ D)
+    (c₀ : ℕ) (hc : c₀ ≥ 2)
+    (hcycle : collatzStep^[3 * Δ₃] c₀ = c₀)
+    (hexp : 2 ^ cycleNu2 c₀ (3 * Δ₃) > 3 ^ cycleNu3 c₀ (3 * Δ₃)) :
+    ∃ t, t < 3 * Δ₃ ∧ collatzStep^[t] c₀ = 1 := by
+  have hK_le := steiner_K_bound_general M D hpow c₀ Δ₃ hΔ_le hexp
+  exact hercher c₀ (3 * Δ₃) hc (by omega) hcycle hK_le
+
 /-! ## Large Δ₃ case: focused sorry
 
 For Δ₃ ≥ 80, the number of odd steps K could exceed 91.
-This is the frontier of current mathematical knowledge.
-Extending Hercher's computational verification to m > 91 would
-close this sorry. -/
+The c₀ squeeze (cycle_c0_squeeze) cannot close this gap: for
+Δ₃ = 80 and ν₃ = 92, min c₀ ≈ 0.14 (far below 2), so the
+squeeze alone cannot force a contradiction.
 
-/-- For Δ₃ ≥ 80: cycle elimination. This remains open — extending
-    Hercher's method to m > 91 requires larger computational verification
-    thresholds and/or improved irrationality measures for log₂3. -/
+The limitation is structural: max D ≈ 0.528·(M+1) where M is
+the Hercher threshold. With M = 91, max D = 79 is optimal.
+Each unit increase in M gains ~0.86 units of Δ₃ coverage.
+See ContinuedFraction.lean for the full boundary analysis.
+
+Closing this sorry requires extending Hercher's computational
+verification to m > 91, then applying steiner_cycle_elimination_general. -/
+
+/-- For Δ₃ ≥ 80: cycle elimination. This remains open.
+    The c₀ squeeze is too weak (ratio of 2^{ν₂} between upper and lower
+    bounds). Closing requires extending Hercher beyond m = 91, then using
+    steiner_cycle_elimination_general with the new threshold. -/
 theorem steiner_cycle_large (Δ₃ : ℕ) (hΔ : Δ₃ ≥ 80)
     (c₀ : ℕ) (hc : c₀ ≥ 2)
     (hcycle : collatzStep^[3 * Δ₃] c₀ = c₀)

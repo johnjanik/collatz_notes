@@ -244,17 +244,55 @@ private lemma two_pow_mul_three_pow_injective :
 
     Uses `eq_zero_of_forall_pow_sum_mul_pow_eq_zero` from Mathlib. -/
 theorem polynomial_zero_estimate
-    (P : ℤ → ℤ → ℤ) (L : ℕ) (hL : L ≥ 1)
-    (hsupp : ∀ i j : ℤ, (i < 0 ∨ i > L ∨ j < 0 ∨ j > L) → P i j = 0)
+    (P : ℤ → ℤ → ℤ) (L : ℕ) (_hL : L ≥ 1)
+    (_hsupp : ∀ i j : ℤ, (i < 0 ∨ i > L ∨ j < 0 ∨ j > L) → P i j = 0)
     (hP : ∃ i j : ℤ, 0 ≤ i ∧ i ≤ L ∧ 0 ≤ j ∧ j ≤ L ∧ P i j ≠ 0)
     (T : ℕ) (hT : T + 1 ≥ (L + 1) * (L + 1)) :
     ∃ t : ℕ, t ≤ T ∧ polyEvalExp P L t ≠ 0 := by
-  -- Proof strategy: by contradiction via Vandermonde determinant.
-  -- The bases 2^i·3^j are distinct (two_pow_mul_three_pow_injective),
-  -- so a non-zero linear combination can't vanish at (L+1)² points.
-  -- Infrastructure: finProdFinEquiv, Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero
-  -- TODO: fix Equiv.sum_comp reindexing between Fin M and range sums
-  sorry
+  by_contra hall
+  push_neg at hall
+  -- hall : ∀ t, t ≤ T → polyEvalExp P L t = 0
+  set M := (L + 1) * (L + 1) with hM_def
+  -- Map between Fin M and pairs (Fin(L+1), Fin(L+1))
+  let e := finProdFinEquiv (m := L + 1) (n := L + 1)
+  -- Coefficient vector and evaluation bases
+  let v : Fin M → ℤ := fun k => P ↑(e.symm k).1 ↑(e.symm k).2
+  let f : Fin M → ℤ := fun k => 2 ^ (e.symm k).1.val * 3 ^ (e.symm k).2.val
+  -- Step 1: f is injective (multiplicative independence of 2 and 3)
+  have hf_inj : Function.Injective f := by
+    intro k₁ k₂ hfk
+    have h := two_pow_mul_three_pow_injective _ _ _ _ hfk
+    exact e.symm.injective (Prod.ext (Fin.ext h.1) (Fin.ext h.2))
+  -- Step 2: Vandermonde vanishing condition
+  have hfv : ∀ i : Fin M, (∑ j : Fin M, v j * f j ^ (i : ℕ)) = 0 := by
+    intro i
+    have hi_le : (i : ℕ) ≤ T := by omega
+    -- The Fin M sum equals polyEvalExp P L i
+    suffices hsuff : (∑ j : Fin M, v j * f j ^ (i : ℕ)) = polyEvalExp P L (i : ℕ) by
+      rw [hsuff]; exact hall (i : ℕ) hi_le
+    -- Reindex from Fin M to Fin(L+1) × Fin(L+1), then to range sums
+    trans (∑ p : Fin (L + 1) × Fin (L + 1),
+      P ↑p.1 ↑p.2 * (2 : ℤ) ^ (p.1.val * (i : ℕ)) * 3 ^ (p.2.val * (i : ℕ)))
+    · apply Fintype.sum_equiv e.symm
+      intro k
+      simp only [v, f, mul_pow, ← pow_mul]
+      ring
+    · unfold polyEvalExp
+      simp only [← Fin.sum_univ_eq_sum_range]
+      rw [← Finset.sum_product']
+      rfl
+  -- Step 3: Vandermonde determinant → v = 0
+  have hv_zero := Matrix.eq_zero_of_forall_pow_sum_mul_pow_eq_zero hf_inj hfv
+  -- Step 4: But P is not identically zero → contradiction
+  obtain ⟨i₀, j₀, hi₀, hi₀L, hj₀, hj₀L, hPne⟩ := hP
+  apply hPne
+  have key : v (e (⟨i₀.toNat, by omega⟩, ⟨j₀.toNat, by omega⟩)) = 0 :=
+    congr_fun hv_zero _
+  simp only [v, Equiv.symm_apply_apply] at key
+  rwa [show (↑(Fin.mk i₀.toNat (by omega : i₀.toNat < L + 1)) : ℤ) = i₀ from by
+        simp [Int.toNat_of_nonneg hi₀],
+       show (↑(Fin.mk j₀.toNat (by omega : j₀.toNat < L + 1)) : ℤ) = j₀ from by
+        simp [Int.toNat_of_nonneg hj₀]] at key
 
 /-! ## Combined extrapolation-contradiction
 
