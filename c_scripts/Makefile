@@ -47,6 +47,21 @@ resume-branch-100B: branch_locus
 v2_danger: v2_danger.c
 	$(CC) $(CFLAGS) -fopenmp -o $@ $< $(LIBS)
 
+gpu_branch: gpu_branch_host.c gpu_branch_kernel.cl
+	$(CC) $(CFLAGS) -o $@ gpu_branch_host.c -lOpenCL $(LIBS)
+
+run-gpu-compare: gpu_branch
+	./gpu_branch --compare 1000000
+
+run-gpu-branch: gpu_branch
+	./gpu_branch --branch 100000000
+
+run-gpu-fast: gpu_branch
+	./gpu_branch --fast 1000000000
+
+run-gpu-verify: gpu_branch
+	./gpu_branch --verify 1000000000
+
 run-v2danger: v2_danger
 	./v2_danger --N 100000 --k 5
 
@@ -59,4 +74,4 @@ run-v2danger-10M: v2_danger
 clean:
 	rm -f collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger *.png *.csv
 
-.PHONY: all clean run-tree run-scatter run-sft run-profinite run-branch run-branch-10B run-branch-100B resume-branch-100B run-v2danger run-v2danger-1M run-v2danger-10M
+.PHONY: all clean run-tree run-scatter run-sft run-profinite run-branch run-branch-10B run-branch-100B resume-branch-100B run-v2danger run-v2danger-1M run-v2danger-10M run-gpu-compare run-gpu-branch run-gpu-fast run-gpu-verify

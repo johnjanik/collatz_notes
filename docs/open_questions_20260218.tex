@@ -1,0 +1,70 @@
+Open questions from the manuscript                                                 
+                                                                                                                                                          
+  These are the specific mathematical questions the proof depends on, ordered by logical dependency. The 9 Lean sorry statements reduce to two independent
+   problems on the critical path and one off-critical-path cluster.
+
+  ---
+  Critical path (both required)
+
+  1. The K-bound: Does 3·ν₃(n,t) ≤ t + K hold eventually for every n ≥ 1?
+
+  nu3_linear_bound in Drift.lean. This is equivalent to the Collatz conjecture for n (if the trajectory reaches 1 at time T, the 1→4→2→1 cycle has exactly
+   1 odd step per 3 steps, so ν₃(t) → t/3 and K is finite). The manuscript identifies several potential approaches but commits to none:
+
+  - (1a) Ergodic/spectral gap. Does the Collatz transfer operator on the torus (Z/kZ)² have a spectral gap? If the transition matrix at k=144 (~17,000
+  occupied cells) has second eigenvalue λ₂ < 1, does mixing on the finite quotient imply that ν₃(n,t)/t converges to the stationary mean (~0.332) for
+  every individual trajectory — not just almost all?
+  - (1b) Reflecting boundary → drift. The pure-even tunnel walls force walk increment +1 at every visit (proved). Does every trajectory visit pure-even
+  cells with positive asymptotic frequency? If so, does this positive-frequency contact with the walls create enough upward pressure on the walk to
+  establish the K-bound? (This is the missing link between the tunnel narrative and the critical path — currently the tunnel infrastructure is proved but
+  disconnected from nu3_linear_bound.)
+  - (1c) Per-trajectory SFT bound. The golden mean shift gives ν₃(t)/t ≤ 1/2 for all finite t (at most ⌈t/2⌉ odd steps). The Parry measure gives 1/φ² ≈
+  0.382 as the density under the maximal-entropy measure. But: can individual Collatz trajectories achieve ν₃(t)/t arbitrarily close to 1/2 for finite t?
+  If so, the SFT bound alone is insufficient and we need an additional mechanism (spectral gap, reflecting boundary, or 2-adic structure) to pull the
+  proportion below 1/3.
+  - (1d) 2-adic approach. The Collatz map has a natural inverse in Z₂. Can the 2-adic structure constrain which parity sequences actually arise?
+  Specifically: among all sequences in the golden mean shift, which ones correspond to actual Collatz orbits of positive integers? Is this subset
+  restricted enough that ν₃/t < 1/3 + O(1/t)?
+
+  2. Cycle elimination for p = 3Δ₃ with Δ₃ ≥ 2: Does the cycle equation c₀ = S/(4^{Δ₃} - 3^{Δ₃}) have no positive integer solutions?
+
+  no_cycle_equality_case in CorrectionRatio.lean. The strict case (3Δ₃ < p) is proved. What remains is the equality case where the period is exactly 3Δ₃
+  (meaning 2Δ₃ even steps and Δ₃ odd steps per period). This decomposes into:
+
+  - (2a) Baker for large Δ₃. Baker's theorem gives |4^{Δ₃} - 3^{Δ₃}| > C · 3^{Δ₃}/Δ₃^{1+δ}. Combined with the upper bound S < 3^{Δ₃} · 4^{Δ₃}, this forces
+   c₀ < Δ₃^{1+δ} · 4^{Δ₃}/C, which is effective and excludes large Δ₃. Is the Baker bound tight enough that "large" starts at some computationally
+  reachable threshold?
+  - (2b) Computational verification for small Δ₃. Eliahou proved no nontrivial cycles with period ≤ 17,087,915. Does this cover all Δ₃ below the threshold
+   from (2a)? The equality case has p = 3Δ₃, so Eliahou's bound covers Δ₃ ≤ ~5.7M. Is this sufficient?
+
+  ---
+  Off critical path (tunnel width narrative — not used by current proof chain)
+
+  3. Geometric bridge: Does the Diophantine quality of log₂3 at scale 3^b force pure-even cells to exist?
+
+  tunnel_walls_positive_of_baker in TunnelWidth.lean. The Baker bound gives |diophError(b)| > C'/(3^b)^{1+ε}. Concretely: if the fractional part {log₂3 ·
+  3^b} is bounded away from 0 and 1, does this guarantee that certain residue classes on the torus have no odd-step visits? What is the exact geometric
+  mechanism linking rational approximation quality to cell classification?
+
+  4. Weyl equidistribution: Does every Collatz trajectory visit tunnel walls at every scale?
+
+  tunnel_foliation_intersection in TunnelWidth.lean. The trajectory traces a path on the torus (Z/3^b Z)². Does equidistribution of {ν₂ mod 3^b, ν₃ mod
+  3^b} along this path guarantee intersection with the pure-even wall cells? Standard Weyl equidistribution applies to irrational rotations, but the
+  Collatz walk is not a rotation — does the irrationality of log₂3 still force equidistribution of the residue pairs?
+
+  5. Baker's theorem formalization: Can the Gel'fond-Schneider proof be formalized in Lean 4?
+
+  5 sorry stubs in Baker.lean (Siegel's lemma, Schwarz/analytic continuation, interpolation determinant, effective bound composition, specialization to
+  α₁=2, α₂=3). This is established mathematics — the question is purely about formalization feasibility. Mathlib has zero precedent for
+  Gel'fond-Schneider. Is there a shorter path (e.g., direct Laurent–Mignotte–Nesterenko bounds specialized to log 2 and log 3)?
+
+  ---
+  The meta-question
+
+  6. Can the tunnel narrative be connected to the critical path?
+
+  Currently the tunnel infrastructure (sorrys #3-#5 above, plus the proved walk machinery) is disconnected from nu3_linear_bound. The manuscript has two
+  independent pillars: the K-bound (assumed) and the tunnel width (proved given Baker). If we could show that reflecting boundary + Baker persistence
+  implies the K-bound, the two pillars would merge and the proof would be complete. What is the precise theorem that bridges them? Is it: "if every
+  trajectory visits pure-even cells with frequency ≥ f > 0, and each visit contributes walk increment +1, then the walk has positive linear drift, hence
+  3ν₃ ≤ t + K"?

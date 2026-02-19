@@ -9,6 +9,19 @@ c_scripts/collatz_tree_anim
 c_scripts/collatz_scatter
 c_scripts/profinite_compat
 c_scripts/branch_locus
+c_scripts/branch_locus_sieved
+c_scripts/v2_danger
+c_scripts/gen_sieve
+c_scripts/analyze_sieve
+c_scripts/sieve_bench
+c_scripts/gpu_branch
+
+# Binary data files
+c_scripts/branch_state.bin
+c_scripts/sieve_k*.bin
+
+# External repos
+c_scripts/xbarina/
 
 # Video output
 c_scripts/frames/output.mp4

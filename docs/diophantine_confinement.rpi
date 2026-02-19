@@ -1,0 +1,14 @@
+%authors=John A.\ Janik
+%authors.information={author=John A.\ Janik;}
+%title=Diophantine Confinement of the Branch Locus\\in Syracuse Dynamics
+%year=XXXX
+%volume=00
+%issue=0
+%paper=0000
+%startpage=1
+%endpage=19
+%doi=10.4007/annals.XXXX.00.0.0000
+%subjects=Primary ; Secondary: 
+%keywords=Collatz conjecture, correction ratio, golden mean shift, subshift of finite type, cycle elimination, Lean\nonbreakingspace 4 formalization
+%abstract=<begin abstract english> We prove that if the transverse walk associated to a Collatz trajectory has eventually linear drift, then the trajectory is eventually bounded and periodic. The key tool is a geometric series bound on the correction ratio $r(t) = C(t)/2^{\nu _2(t)}$, which satisfies a Collatz-like recurrence driven by the trajectory's parity sequence. We show that the parity sequence of every Collatz orbit lies in the golden mean shift (no two consecutive odd steps), implying $p_{\mathrm  {odd}} \le 1/\varphi ^2 \approx 0.382$, within $0.005$ of the equilibrium threshold $p_{\mathrm  {eq}} \approx 0.387$. Combined with cycle elimination---proved here for all cycle lengths, delegating longer cycles ($\Delta _3 \ge 2$) to Baker--Steiner estimates---this yields a conditional proof of the Collatz conjecture: linear walk drift implies $\mathrm  {collatzReaches}(n)$. We also prove the converse: reaching\nonbreakingspace $1$ implies the K-bound, so the sole critical-path axiom is formally equivalent to the conjecture itself. The argument is formalized in approximately 2800 lines of Lean\nonbreakingspace 4 with seven explicit \texttt  {sorry} axioms, all identified and categorized. <end abstract english>
+%articlelanguage=english

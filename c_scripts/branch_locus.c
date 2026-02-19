@@ -35,6 +35,8 @@
 #include <math.h>
 #include <stdint.h>
 #include <time.h>
+#include <unistd.h>
+#include <omp.h>
 
 /* ── Constants ──────────────────────────────────────────────────────── */
 
@@ -43,6 +45,13 @@
 #define MAX_LEVELS   32     /* room for extra Diophantine levels */
 #define LOG2_3       1.58496250072115618
 #define INV_LOG2_3   (1.0 / LOG2_3)   /* ~ 0.63093 */
+
+/* Levels with k <= this threshold use per-thread private grids (no atomics).
+ * Levels above use shared grids with atomic updates.
+ * Threshold=162: per-thread ~2.3 MB (fits in L2 cache ~3.3 MB/core).
+ * Atomic levels k>=216 benefit from shared L3 cache (36 MB).
+ * Transition targets k=81,108,144 are private (no atomics). */
+#define PRIVATE_K_THRESHOLD 162
 
 /* Diophantine best-approximant levels: 3^k where p/3^k is a record
  * approximation to log_3(2).  See docs/diophantine_terms.md.
@@ -102,6 +111,15 @@ static int      n_ckpts;
 static int      next_ckpt;
 static FILE    *ckpt_fp;
 
+/* ── Binary state checkpoint (resume support) ─────────────────────── */
+
+#define STATE_MAGIC    0x4B4C5242   /* "BRLK" */
+#define STATE_VERSION  1
+#define STATE_FILE     "branch_state.bin"
+#define STATE_TMP      "branch_state.bin.tmp"
+
+static int resume_mode = 0;
+
 /* ── Timer utility ─────────────────────────────────────────────────── */
 
 static struct timespec _ts;
@@ -148,18 +166,31 @@ static void checkpoint_init(int64_t max_N)
             ckpt_Ns[n_ckpts++] = max_N;
     }
 
-    next_ckpt = 0;
+    if (resume_mode) {
+        /* In resume mode, next_ckpt was set by load_binary_state().
+         * Open CSV in append mode to preserve existing checkpoint data. */
+        ckpt_fp = fopen("branch_checkpoints.csv", "a");
+        if (!ckpt_fp) {
+            perror("branch_checkpoints.csv (append)");
+            return;
+        }
+        printf("  Checkpoints: %d total, resuming from index %d\n",
+               n_ckpts, next_ckpt);
+    } else {
+        next_ckpt = 0;
 
-    ckpt_fp = fopen("branch_checkpoints.csv", "w");
-    if (!ckpt_fp) {
-        perror("branch_checkpoints.csv");
-        return;
+        ckpt_fp = fopen("branch_checkpoints.csv", "w");
+        if (!ckpt_fp) {
+            perror("branch_checkpoints.csv");
+            return;
+        }
+        fprintf(ckpt_fp,
+                "checkpoint_N,k,a,b,branch,pure_even,pure_odd,empty\n");
+        fflush(ckpt_fp);
+
+        printf("  Checkpoints: %d snapshots from N=%ld to N=%ld\n",
+               n_ckpts, (long)ckpt_Ns[0], (long)ckpt_Ns[n_ckpts - 1]);
     }
-    fprintf(ckpt_fp, "checkpoint_N,k,a,b,branch,pure_even,pure_odd,empty\n");
-    fflush(ckpt_fp);
-
-    printf("  Checkpoints: %d snapshots from N=%ld to N=%ld\n",
-           n_ckpts, (long)ckpt_Ns[0], (long)ckpt_Ns[n_ckpts - 1]);
 }
 
 static void checkpoint_snapshot(int64_t current_n)
@@ -188,6 +219,150 @@ static void checkpoint_snapshot(int64_t current_n)
     }
 
     fflush(ckpt_fp);
+}
+
+/* ── Binary state save/load for crash recovery ─────────────────────── */
+
+static void save_binary_state(int64_t current_n)
+{
+    struct timespec t0;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+
+    FILE *f = fopen(STATE_TMP, "wb");
+    if (!f) { perror("save_binary_state: open"); return; }
+
+    uint32_t magic = STATE_MAGIC, version = STATE_VERSION;
+    fwrite(&magic, 4, 1, f);
+    fwrite(&version, 4, 1, f);
+    fwrite(&N, 8, 1, f);
+    fwrite(&current_n, 8, 1, f);
+
+    int32_t nc = next_ckpt, nl = num_levels;
+    fwrite(&nc, 4, 1, f);
+    fwrite(&nl, 4, 1, f);
+    fwrite(&total_trajs, 8, 1, f);
+    fwrite(&total_even_steps, 8, 1, f);
+    fwrite(&total_odd_steps, 8, 1, f);
+
+    for (int lev = 0; lev < num_levels; lev++) {
+        int32_t k  = levels[lev].k;
+        int32_t a  = levels[lev].a;
+        int32_t b  = levels[lev].b;
+        int32_t tt = levels[lev].track_trans;
+        fwrite(&k, 4, 1, f);
+        fwrite(&a, 4, 1, f);
+        fwrite(&b, 4, 1, f);
+        fwrite(&tt, 4, 1, f);
+
+        int64_t sz = (int64_t)k * k;
+        fwrite(levels[lev].even_grid, 8, sz, f);
+        fwrite(levels[lev].odd_grid,  8, sz, f);
+        if (tt) {
+            fwrite(levels[lev].trans_ee,  8, sz, f);
+            fwrite(levels[lev].trans_eo,  8, sz, f);
+            fwrite(levels[lev].trans_oe,  8, sz, f);
+        }
+    }
+
+    fflush(f);
+    fsync(fileno(f));
+    fclose(f);
+
+    /* Atomic replace */
+    if (rename(STATE_TMP, STATE_FILE) != 0)
+        perror("save_binary_state: rename");
+
+    struct timespec t1;
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    double dt = (t1.tv_sec - t0.tv_sec) + 1e-9 * (t1.tv_nsec - t0.tv_nsec);
+    printf("\n  [checkpoint] saved binary state at n=%ld (%.1fs)\n",
+           (long)current_n, dt);
+}
+
+static int load_binary_state(int64_t *resume_n)
+{
+    FILE *f = fopen(STATE_FILE, "rb");
+    if (!f) {
+        printf("  No state file found (%s)\n", STATE_FILE);
+        return 0;
+    }
+
+    /* Helper: abort on short read */
+    #define RD(ptr, sz, n, fp) do { \
+        if (fread((ptr), (sz), (n), (fp)) != (size_t)(n)) { \
+            fprintf(stderr, "  State file: unexpected EOF\n"); \
+            fclose(fp); return 0; \
+        } \
+    } while (0)
+
+    uint32_t magic, version;
+    RD(&magic, 4, 1, f);
+    RD(&version, 4, 1, f);
+    if (magic != STATE_MAGIC) {
+        fprintf(stderr, "  State file: bad magic (0x%08X)\n", magic);
+        fclose(f); return 0;
+    }
+    if (version != STATE_VERSION) {
+        fprintf(stderr, "  State file: unknown version %u\n", version);
+        fclose(f); return 0;
+    }
+
+    int64_t saved_N;
+    RD(&saved_N, 8, 1, f);
+    RD(resume_n, 8, 1, f);
+
+    int32_t nc, nl;
+    RD(&nc, 4, 1, f);
+    RD(&nl, 4, 1, f);
+    RD(&total_trajs, 8, 1, f);
+    RD(&total_even_steps, 8, 1, f);
+    RD(&total_odd_steps, 8, 1, f);
+
+    if (saved_N != N) {
+        fprintf(stderr, "  State file: N mismatch (state=%ld, expected=%ld)\n",
+                (long)saved_N, (long)N);
+        fclose(f); return 0;
+    }
+    if (nl != num_levels) {
+        fprintf(stderr, "  State file: level count mismatch (%d vs %d)\n",
+                nl, num_levels);
+        fclose(f); return 0;
+    }
+
+    for (int lev = 0; lev < num_levels; lev++) {
+        int32_t k, a, b, tt;
+        RD(&k, 4, 1, f);
+        RD(&a, 4, 1, f);
+        RD(&b, 4, 1, f);
+        RD(&tt, 4, 1, f);
+
+        if (k != levels[lev].k || a != levels[lev].a || b != levels[lev].b) {
+            fprintf(stderr, "  State file: level mismatch at index %d "
+                    "(k=%d vs %d)\n", lev, k, levels[lev].k);
+            fclose(f); return 0;
+        }
+
+        int64_t sz = (int64_t)k * k;
+        RD(levels[lev].even_grid, 8, sz, f);
+        RD(levels[lev].odd_grid,  8, sz, f);
+        if (tt) {
+            RD(levels[lev].trans_ee, 8, sz, f);
+            RD(levels[lev].trans_eo, 8, sz, f);
+            RD(levels[lev].trans_oe, 8, sz, f);
+        }
+    }
+
+    #undef RD
+
+    next_ckpt = nc;
+    fclose(f);
+
+    total_steps = total_even_steps + total_odd_steps;
+
+    printf("  Restored state from n=%ld (%ld trajectories, %ld steps)\n",
+           (long)*resume_n, (long)total_trajs, (long)total_steps);
+
+    return 1;
 }
 
 /* ── Helper: check if k is a transition-tracking target ────────────── */
@@ -301,38 +476,48 @@ static void init_levels(void)
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
- * Step 2: Compute branch data (per-step streaming accumulation)
+ * Step 2: Compute branch data (OpenMP parallel, per-step accumulation)
  *
  * For each trajectory n, at each Collatz step:
  *   - the running residues (r2 mod k, r3 mod k) identify a torus cell
  *   - the parity of x determines which grid to increment
  *   - the appropriate running residue advances by 1 (mod k)
  *   - for target levels, track parity transitions (prev -> current)
+ *
+ * Parallelism strategy:
+ *   - Levels with k <= PRIVATE_K_THRESHOLD (72): per-thread private grids,
+ *     merged into global grids at each checkpoint boundary.  No atomics.
+ *   - Levels with k > PRIVATE_K_THRESHOLD (81+): shared grids with relaxed
+ *     atomic increments.  Contention is negligible (6561+ cells, 24 threads).
+ *   - Work is chunked between checkpoints; implicit barrier at each boundary
+ *     ensures global grids are consistent before snapshot + binary save.
  * ═══════════════════════════════════════════════════════════════════════ */
 
-static void compute_branch_data(void)
+static void compute_branch_data(int64_t start_n)
 {
-    printf("\nComputing per-step branch data for n in [2, %ld]...\n", (long)N);
+    printf("\nComputing per-step branch data for n in [%ld, %ld]...\n",
+           (long)start_n, (long)N);
     tic();
 
-    total_trajs = 0;
-    total_steps = 0;
-    total_even_steps = 0;
-    total_odd_steps  = 0;
+    if (start_n <= 2) {
+        total_trajs = 0;
+        total_steps = 0;
+        total_even_steps = 0;
+        total_odd_steps  = 0;
+        start_n = 2;
+    }
+    /* else: counters already loaded from binary state */
 
-    /* Progress: time-based reporting with ETA */
-    int64_t check_every = 100000;    /* poll clock every 100K trajectories */
-    if (check_every > N / 100) check_every = N / 100;
-    if (check_every < 1000) check_every = 1000;
-    int64_t next_check = check_every;
-    double  next_report = 3.0;       /* first report after 3s */
-    double  report_dt   = 15.0;      /* then every 15s */
+    /* Determine split: levels[0..split-1] are private, [split..num_levels-1] atomic */
+    int split = 0;
+    while (split < num_levels && levels[split].k <= PRIVATE_K_THRESHOLD)
+        split++;
 
     /* Cache grid pointers and k values for inner-loop performance */
     int64_t *eg[MAX_LEVELS], *og[MAX_LEVELS];
     int64_t *te[MAX_LEVELS], *teo_arr[MAX_LEVELS], *toe_arr[MAX_LEVELS];
     int      ks[MAX_LEVELS];
-    int      tt[MAX_LEVELS];  /* track_trans flags */
+    int      tt[MAX_LEVELS];
     for (int lev = 0; lev < num_levels; lev++) {
         eg[lev]      = levels[lev].even_grid;
         og[lev]      = levels[lev].odd_grid;
@@ -343,111 +528,240 @@ static void compute_branch_data(void)
         tt[lev]      = levels[lev].track_trans;
     }
 
-    int r2[MAX_LEVELS], r3[MAX_LEVELS];
-    int prev_parity[MAX_LEVELS];  /* -1 = first step, 0 = even, 1 = odd */
+    int nthreads = omp_get_max_threads();
+    printf("  OpenMP: %d threads, %d private levels (k<=%d), "
+           "%d atomic levels (k>=%d)\n",
+           nthreads, split, PRIVATE_K_THRESHOLD,
+           num_levels - split,
+           split < num_levels ? ks[split] : 0);
 
-    for (int64_t n = 2; n <= N; n++) {
-        /* Reset running residues and parity tracking */
-        for (int lev = 0; lev < num_levels; lev++) {
-            r2[lev] = 0;
-            r3[lev] = 0;
-            prev_parity[lev] = -1;
-        }
+    /* Compute total private grid cells per thread (for reporting) */
+    int64_t priv_cells = 0;
+    for (int lev = 0; lev < split; lev++)
+        priv_cells += (int64_t)ks[lev] * ks[lev];
 
-        uint64_t x = (uint64_t)n;
+    /* Count transition cells in private levels */
+    int64_t priv_trans_cells = 0;
+    for (int lev = 0; lev < split; lev++)
+        if (tt[lev])
+            priv_trans_cells += (int64_t)ks[lev] * ks[lev];
 
-        while (x != 1) {
-            int is_odd = x & 1;
+    int64_t per_thread_bytes = (2 * priv_cells + 3 * priv_trans_cells) * 8;
+    printf("  Per-thread private grids: %.1f MB (%d threads = %.1f MB total)\n",
+           per_thread_bytes / (1024.0 * 1024),
+           nthreads,
+           (double)per_thread_bytes * nthreads / (1024.0 * 1024));
 
-            for (int lev = 0; lev < num_levels; lev++) {
-                int k = ks[lev];
-                int idx = r2[lev] * k + r3[lev];
-                if (is_odd) {
-                    og[lev][idx]++;
-                    r3[lev]++;
-                    if (r3[lev] == k) r3[lev] = 0;
-                } else {
-                    eg[lev][idx]++;
-                    r2[lev]++;
-                    if (r2[lev] == k) r2[lev] = 0;
-                }
+    /* ── Pre-allocate per-thread private grids ─────────────────────── */
 
-                /* Track parity transitions for target levels */
-                if (tt[lev] && prev_parity[lev] >= 0) {
-                    int prev = prev_parity[lev];
-                    if (prev == 0) {
-                        if (!is_odd) te[lev][idx]++;
-                        else         teo_arr[lev][idx]++;
-                    } else {
-                        /* prev == 1: odd->even (odd->odd impossible by
-                         * Collatz structure: 3x+1 is always even) */
-                        toe_arr[lev][idx]++;
-                    }
-                }
-                prev_parity[lev] = is_odd;
+    int64_t **thr_pe, **thr_po;           /* [thread][level] */
+    int64_t **thr_te, **thr_teo, **thr_toe;
+    thr_pe  = (int64_t **)calloc(nthreads * split, sizeof(int64_t *));
+    thr_po  = (int64_t **)calloc(nthreads * split, sizeof(int64_t *));
+    thr_te  = (int64_t **)calloc(nthreads * split, sizeof(int64_t *));
+    thr_teo = (int64_t **)calloc(nthreads * split, sizeof(int64_t *));
+    thr_toe = (int64_t **)calloc(nthreads * split, sizeof(int64_t *));
+
+    for (int t = 0; t < nthreads; t++) {
+        for (int lev = 0; lev < split; lev++) {
+            int64_t sz = (int64_t)ks[lev] * ks[lev];
+            thr_pe[t * split + lev] = (int64_t *)calloc(sz, sizeof(int64_t));
+            thr_po[t * split + lev] = (int64_t *)calloc(sz, sizeof(int64_t));
+            if (tt[lev]) {
+                thr_te [t * split + lev] = (int64_t *)calloc(sz, sizeof(int64_t));
+                thr_teo[t * split + lev] = (int64_t *)calloc(sz, sizeof(int64_t));
+                thr_toe[t * split + lev] = (int64_t *)calloc(sz, sizeof(int64_t));
             }
-
-            if (is_odd) {
-                x = 3 * x + 1;
-                total_odd_steps++;
-            } else {
-                x >>= 1;
-                total_even_steps++;
-            }
-        }
-
-        total_trajs++;
-
-        /* Checkpoint snapshot */
-        if (next_ckpt < n_ckpts && n == ckpt_Ns[next_ckpt]) {
-            checkpoint_snapshot(n);
-            next_ckpt++;
-        }
-
-        /* Progress: time-based with in-place overwrite */
-        if (n >= next_check) {
-            double dt = toc();
-            if (dt >= next_report) {
-                double frac = (double)n / N;
-                double eta  = (frac > 0.001) ? dt * (1.0 - frac) / frac : 0;
-                int64_t steps_now = total_even_steps + total_odd_steps;
-                double p_now = (steps_now > 0)
-                    ? (double)total_odd_steps / steps_now : 0;
-
-                char el[32], et[32];
-                fmt_time(dt, el, sizeof(el));
-                fmt_time(eta, et, sizeof(et));
-
-                int bw = 30;
-                int filled = (int)(frac * bw + 0.5);
-                char bar[32];
-                for (int i = 0; i < bw; i++)
-                    bar[i] = (i < filled) ? '#' : '.';
-                bar[bw] = '\0';
-
-                printf("\r  [%s] %5.1f%% | %s elapsed | ETA %s | "
-                       "%.2fM traj/s | %.0fM step/s | p_odd %.4f   ",
-                       bar, 100.0 * frac, el, et,
-                       total_trajs / dt / 1e6,
-                       steps_now / dt / 1e6,
-                       p_now);
-                fflush(stdout);
-                next_report = dt + report_dt;
-            }
-            next_check += check_every;
         }
     }
+    printf("  Private grids allocated.\n");
+
+    /* ── Process in checkpoint-delimited chunks ────────────────────── */
+    int64_t chunk_start = start_n;
+    int64_t overall_start = start_n;
+
+    for (int ci = 0; ci < n_ckpts; ci++) {
+        int64_t chunk_end = ckpt_Ns[ci];
+        if (chunk_end < chunk_start) continue;
+
+        int64_t chunk_size = chunk_end - chunk_start + 1;
+        if (chunk_size <= 0) { chunk_start = chunk_end + 1; continue; }
+
+        #pragma omp parallel
+        {
+            int tid = omp_get_thread_num();
+
+            /* Per-thread grid pointers for this thread */
+            int64_t *pe[MAX_LEVELS], *po[MAX_LEVELS];
+            int64_t *pte[MAX_LEVELS], *pteo[MAX_LEVELS], *ptoe[MAX_LEVELS];
+            for (int lev = 0; lev < split; lev++) {
+                pe[lev]   = thr_pe [tid * split + lev];
+                po[lev]   = thr_po [tid * split + lev];
+                pte[lev]  = thr_te [tid * split + lev];
+                pteo[lev] = thr_teo[tid * split + lev];
+                ptoe[lev] = thr_toe[tid * split + lev];
+            }
+
+            int64_t my_trajs = 0, my_even = 0, my_odd = 0;
+
+            #pragma omp for schedule(dynamic, 256)
+            for (int64_t n = chunk_start; n <= chunk_end; n++) {
+                int r2[MAX_LEVELS], r3[MAX_LEVELS];
+                int pp[MAX_LEVELS];
+                for (int lev = 0; lev < num_levels; lev++) {
+                    r2[lev] = 0; r3[lev] = 0; pp[lev] = -1;
+                }
+
+                uint64_t x = (uint64_t)n;
+
+                while (x != 1) {
+                    int is_odd = x & 1;
+
+                    /* Private levels: thread-local, no atomics */
+                    for (int lev = 0; lev < split; lev++) {
+                        int k = ks[lev];
+                        int idx = r2[lev] * k + r3[lev];
+                        if (is_odd) {
+                            po[lev][idx]++;
+                            if (++r3[lev] == k) r3[lev] = 0;
+                        } else {
+                            pe[lev][idx]++;
+                            if (++r2[lev] == k) r2[lev] = 0;
+                        }
+                        if (tt[lev] && pp[lev] >= 0) {
+                            if (pp[lev] == 0) {
+                                if (!is_odd) pte[lev][idx]++;
+                                else         pteo[lev][idx]++;
+                            } else {
+                                ptoe[lev][idx]++;
+                            }
+                        }
+                        pp[lev] = is_odd;
+                    }
+
+                    /* Atomic levels: shared grids, relaxed atomics */
+                    for (int lev = split; lev < num_levels; lev++) {
+                        int k = ks[lev];
+                        int idx = r2[lev] * k + r3[lev];
+                        if (is_odd) {
+                            __atomic_fetch_add(&og[lev][idx], 1,
+                                               __ATOMIC_RELAXED);
+                            if (++r3[lev] == k) r3[lev] = 0;
+                        } else {
+                            __atomic_fetch_add(&eg[lev][idx], 1,
+                                               __ATOMIC_RELAXED);
+                            if (++r2[lev] == k) r2[lev] = 0;
+                        }
+                        if (tt[lev] && pp[lev] >= 0) {
+                            if (pp[lev] == 0) {
+                                if (!is_odd)
+                                    __atomic_fetch_add(&te[lev][idx], 1,
+                                                       __ATOMIC_RELAXED);
+                                else
+                                    __atomic_fetch_add(&teo_arr[lev][idx], 1,
+                                                       __ATOMIC_RELAXED);
+                            } else {
+                                __atomic_fetch_add(&toe_arr[lev][idx], 1,
+                                                   __ATOMIC_RELAXED);
+                            }
+                        }
+                        pp[lev] = is_odd;
+                    }
+
+                    if (is_odd) { x = 3 * x + 1; my_odd++; }
+                    else        { x >>= 1;        my_even++; }
+                }
+                my_trajs++;
+            }
+            /* implicit barrier: all threads finished this chunk */
+
+            /* Merge private grids into global and zero for next chunk */
+            #pragma omp critical
+            {
+                for (int lev = 0; lev < split; lev++) {
+                    int64_t sz = (int64_t)ks[lev] * ks[lev];
+                    for (int64_t c = 0; c < sz; c++) {
+                        eg[lev][c] += pe[lev][c];
+                        og[lev][c] += po[lev][c];
+                    }
+                    memset(pe[lev], 0, sz * sizeof(int64_t));
+                    memset(po[lev], 0, sz * sizeof(int64_t));
+                    if (tt[lev]) {
+                        for (int64_t c = 0; c < sz; c++) {
+                            te[lev][c]      += pte[lev][c];
+                            teo_arr[lev][c] += pteo[lev][c];
+                            toe_arr[lev][c] += ptoe[lev][c];
+                        }
+                        memset(pte[lev],  0, sz * sizeof(int64_t));
+                        memset(pteo[lev], 0, sz * sizeof(int64_t));
+                        memset(ptoe[lev], 0, sz * sizeof(int64_t));
+                    }
+                }
+                total_trajs      += my_trajs;
+                total_even_steps += my_even;
+                total_odd_steps  += my_odd;
+            }
+        }
+        /* end parallel region */
+
+        total_steps = total_even_steps + total_odd_steps;
+
+        /* Checkpoint */
+        checkpoint_snapshot(chunk_end);
+        next_ckpt = ci + 1;
+        save_binary_state(chunk_end);
+
+        /* Progress report at each checkpoint */
+        double dt = toc();
+        double frac = (double)(chunk_end - overall_start + 1)
+                    / (double)(N - overall_start + 1);
+        double eta = (frac > 0.001) ? dt * (1.0 - frac) / frac : 0;
+        double p_now = (total_steps > 0)
+            ? (double)total_odd_steps / total_steps : 0;
+
+        char el[32], et[32];
+        fmt_time(dt, el, sizeof(el));
+        fmt_time(eta, et, sizeof(et));
+
+        int bw = 30;
+        int filled = (int)(frac * bw + 0.5);
+        char bar[32];
+        for (int i = 0; i < bw; i++)
+            bar[i] = (i < filled) ? '#' : '.';
+        bar[bw] = '\0';
+
+        printf("  [%s] %5.1f%% | %s elapsed | ETA %s | "
+               "%.2fM traj/s | %.0fM step/s | p_odd %.4f\n",
+               bar, 100.0 * frac, el, et,
+               total_trajs / dt / 1e6,
+               total_steps / dt / 1e6,
+               p_now);
+        fflush(stdout);
+
+        chunk_start = chunk_end + 1;
+    }
+
+    /* Free per-thread grids */
+    for (int t = 0; t < nthreads; t++)
+        for (int lev = 0; lev < split; lev++) {
+            free(thr_pe[t * split + lev]);
+            free(thr_po[t * split + lev]);
+            free(thr_te[t * split + lev]);
+            free(thr_teo[t * split + lev]);
+            free(thr_toe[t * split + lev]);
+        }
+    free(thr_pe); free(thr_po);
+    free(thr_te); free(thr_teo); free(thr_toe);
 
     total_steps = total_even_steps + total_odd_steps;
     mean_traj_len = (double)total_steps / total_trajs;
     global_p_odd = (double)total_odd_steps / total_steps;
 
-    /* Final progress line */
+    /* Final summary */
     double dt = toc();
     char el[32];
     fmt_time(dt, el, sizeof(el));
-    printf("\r  [##############################] 100.0%% | %s elapsed"
-           "                                          \n", el);
+    printf("  [##############################] 100.0%% | %s elapsed\n", el);
     printf("  %ld trajectories, %ld steps\n",
            (long)total_trajs, (long)total_steps);
     printf("  Mean trajectory length: %.1f steps\n", mean_traj_len);
@@ -1072,14 +1386,22 @@ static void write_csv_files(void)
 
 int main(int argc, char **argv)
 {
-    N = (argc > 1) ? atol(argv[1]) : 10000000;
+    /* Parse arguments: ./branch_locus [N] or ./branch_locus --resume N */
+    resume_mode = 0;
+    int arg_idx = 1;
+    if (argc > 1 && strcmp(argv[1], "--resume") == 0) {
+        resume_mode = 1;
+        arg_idx = 2;
+    }
+    N = (argc > arg_idx) ? atol(argv[arg_idx]) : 10000000;
     if (N < 3) { fprintf(stderr, "N must be >= 3\n"); return 1; }
 
     struct timespec wall_start;
     clock_gettime(CLOCK_MONOTONIC, &wall_start);
 
     printf("========================================================================\n");
-    printf("BRANCH LOCUS ON FINITE TORI\n");
+    printf("BRANCH LOCUS ON FINITE TORI%s\n",
+           resume_mode ? "  [RESUMING]" : "");
     printf("========================================================================\n");
     printf("N = %ld\n", (long)N);
     printf("Levels: k = 2^a * 3^b  (0 <= a,b <= %d) + Diophantine levels\n\n",
@@ -1087,6 +1409,19 @@ int main(int argc, char **argv)
 
     printf("Initialising levels...\n");
     init_levels();
+
+    int64_t start_n = 2;
+
+    if (resume_mode) {
+        printf("\nLoading binary state...\n");
+        int64_t resume_n;
+        if (!load_binary_state(&resume_n)) {
+            fprintf(stderr, "Resume failed: no valid state file.\n");
+            return 1;
+        }
+        start_n = resume_n + 1;
+        printf("  Resuming computation from n=%ld\n", (long)start_n);
+    }
 
     printf("\nInitialising checkpoints...\n");
     checkpoint_init(N);
@@ -1103,7 +1438,7 @@ int main(int argc, char **argv)
     }
     printf("\n");
 
-    compute_branch_data();
+    compute_branch_data(start_n);
     compute_summaries();
     print_report();
     print_foliation_analysis();

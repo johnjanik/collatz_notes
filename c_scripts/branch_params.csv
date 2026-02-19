@@ -1,9 +1,9 @@
 key,value
-N,10000000000
-num_levels,26
-total_trajs,9999999999
-total_steps,2272503599733
-total_even_steps,1517161595669
-total_odd_steps,755342004064
-mean_traj_len,227.25
-global_p_odd,0.332383194
+N,5000000
+num_levels,27
+total_trajs,4999999
+total_steps,740438133
+total_even_steps,494678121
+total_odd_steps,245760012
+mean_traj_len,148.09
+global_p_odd,0.331911609
