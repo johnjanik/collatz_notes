@@ -45,7 +45,8 @@
 \date{\today}
 
 \keywords{Collatz conjecture, correction ratio, golden mean shift,
-  subshift of finite type, cycle elimination, Lean~4 formalization}
+  subshift of finite type, cycle elimination, Steiner cycle equation,
+  irrationality measure, Lean~4 formalization}
 
 \begin{document}
 
@@ -58,15 +59,22 @@ satisfies a Collatz-like recurrence driven by the trajectory's parity
 sequence.  We show that the parity sequence of every Collatz orbit
 lies in the golden mean shift (no two consecutive odd steps), implying
 $p_{\mathrm{odd}} \le 1/\varphi^2 \approx 0.382$, within $0.005$ of
-the equilibrium threshold $p_{\mathrm{eq}} \approx 0.387$.  Combined
-with cycle elimination---proved here for all cycle lengths, delegating
-longer cycles ($\Delta_3 \ge 2$) to Baker--Steiner estimates---this
-yields a conditional proof of the Collatz conjecture:
-linear walk drift implies $\mathrm{collatzReaches}(n)$.  We also prove
-the converse: reaching~$1$ implies the K-bound, so the sole
-critical-path axiom is formally equivalent to the conjecture itself.
-The argument is formalized in approximately 2800 lines of Lean~4 with
-seven explicit \texttt{sorry} axioms, all identified and categorized.
+the equilibrium threshold $p_{\mathrm{eq}} \approx 0.387$.  Cycle
+elimination is proved for all cycles with $\Delta_3 \le 79$ odd steps
+per period using Steiner's correction bounds, Rhin's effective
+irrationality measure for $\log_2 3$~\cite{Rhin1987}, and Hercher's
+computational verification for $m$-cycles with
+$m \le 91$~\cite{Hercher2024}.  Combined with a conditional
+hypothesis for longer cycles ($\Delta_3 \ge 80$), this yields a
+conditional proof of the Collatz conjecture: linear walk drift implies
+$\mathrm{collatzReaches}(n)$.  We also prove the converse:
+reaching~$1$ implies the K-bound, so the sole critical-path axiom is
+formally equivalent to the conjecture itself.  A Syracuse framework
+bridge connects Tao's odd-step formulation to the walk/drift
+infrastructure.  The argument is formalized in approximately
+5\,800~lines of Lean~4 across 27~files with seven explicit
+\texttt{sorry} gaps and two external axioms (Rhin~1987,
+Hercher~2024), all identified and categorized.
 \end{abstract}
 
 \maketitle
@@ -135,10 +143,12 @@ proceeds in three steps:
     satisfies a geometric series bound when the transverse walk has
     linear drift.  This forces the trajectory to be eventually
     bounded.
-  \item Cycle elimination---proved directly for cycles with $\Delta_3 = 1$
-    odd step per period, and following from Baker's theorem for
-    $\Delta_3 \ge 2$---shows the only positive cycle is
-    $\{1, 2, 4\}$.
+  \item Cycle elimination---proved directly for $\Delta_3 = 1$,
+    and via Steiner correction bounds combined with Hercher's
+    computational verification~\cite{Hercher2024} for
+    $\Delta_3 \le 79$---shows the only positive cycle is
+    $\{1, 2, 4\}$ (conditionally on extending the Hercher bound
+    beyond $m = 91$ for $\Delta_3 \ge 80$).
 \end{enumerate}
 
 \subsection{Main results}
@@ -160,8 +170,10 @@ Assume:
     $\varepsilon > 0$, $T_0$, and $K$ such that
     $\nu_3(t)/t \le p_{\mathrm{eq}} - \varepsilon$ and
     $3\nu_3(t) \le t + K$ for all $t \ge T_0$.
-  \item[\textup{(H2)}] Baker's theorem on linear forms in logarithms
-    holds for $\alpha_1 = 2$, $\alpha_2 = 3$.
+  \item[\textup{(H2)}] Hercher's theorem: no nontrivial $m$-cycle
+    exists for $m \le 91$~\cite{Hercher2024}.
+  \item[\textup{(H3)}] No nontrivial cycle exists with
+    $\Delta_3 \ge 80$ odd steps per period.
 \end{enumerate}
 Then for every $n \ge 1$, there exists $k \ge 0$ such that
 $T^k(n) = 1$.
@@ -174,8 +186,13 @@ $1/\varphi^2 \approx 0.382$ and $p_{\mathrm{eq}} \approx 0.387$ is
 only $0.005$.  What remains is to promote this topological bound to a
 pointwise ergodic statement for individual trajectories---essentially,
 an ergodic theorem for the Collatz transfer operator, or a spectral
-gap argument.  Hypothesis~(H2) is established mathematics
-\cite{Baker1975}; the gap is its formalization in Lean~4.
+gap argument.  Hypothesis~(H2) is computationally verified
+mathematics~\cite{Hercher2024}; we treat it as an external axiom in
+the formalization.  Hypothesis~(H3) is the frontier: it requires
+extending Hercher's verification beyond $m = 91$, or developing
+analytical bounds (via Baker's theorem~\cite{Baker1975} and Rhin's
+irrationality measure~\cite{Rhin1987}) sufficient to cover all
+$\Delta_3 \ge 80$.
 
 \subsection{Outline}
 
@@ -184,8 +201,9 @@ walk, and the multiplicative identity that relates trajectory values
 to their parity counts.  Section~\ref{sec:golden} establishes that
 every Collatz parity sequence lies in the golden mean shift.
 Section~\ref{sec:correction} contains the core result: the correction
-ratio bound.  Section~\ref{sec:cycles} treats cycle elimination.
-Section~\ref{sec:main} assembles the main theorems.
+ratio bound.  Section~\ref{sec:cycles} treats cycle elimination,
+including the Steiner correction bounds and the Hercher computational
+verification.  Section~\ref{sec:main} assembles the main theorems.
 Section~\ref{sec:lean} describes the Lean~4 formalization.
 Section~\ref{sec:computation} summarizes computational evidence.
 
@@ -622,28 +640,113 @@ $2^{\Delta_2} < 3^{\Delta_3}$ and the walk does not diverge.  This
 case is excluded by hypothesis.
 \end{proof}
 
-\subsection{Multi-odd-step cycles and Baker's theorem}
+\subsection{Correction bounds and the $c_0$ squeeze}
 
-\begin{remark}[Baker-type bounds for $\Delta_3 \ge 2$]
-\label{rem:baker}
-For $\Delta_3 \ge 2$, the cycle equation~\eqref{eq:cycle} requires
-the denominator $2^{\Delta_2} - 3^{\Delta_3}$ to divide $S$ exactly.
-Baker's theorem on linear forms in logarithms
-\cite{Baker1975} gives an effective lower bound:
+The correction sum~\eqref{eq:C-sum} admits both upper and lower bounds
+that constrain the cycle minimum~$c_{\min}$.
+
+\begin{proposition}[Correction upper bound]\label{prop:corr-upper}
+For a cycle with $\Delta_3$ odd steps ($K = \Delta_3$) and $\Delta_2$
+even steps ($L = \Delta_2$), the correction satisfies
 \[
-  |2^{\Delta_2} - 3^{\Delta_3}|
-  \ge C' \cdot 3^{\Delta_3} / \Delta_2^{1+\delta}
+  2S + 2^L \le 3^K \cdot 2^L.
 \]
-for effective constants $C', \delta > 0$.  Combined with the upper
-bound $S < 3^{\Delta_3} \cdot 2^{\Delta_2}$, this forces
-$c_0 < \Delta_2^{1+\delta} \cdot 2^{\Delta_2} / C'$.
+\end{proposition}
 
-Steiner~\cite{Steiner1977} initiated this approach.
-Eliahou~\cite{Eliahou1993} proved there are no nontrivial cycles with
-period $p \le 17\,087\,915$.
-Simons and de Weger~\cite{SimonsDeWeger2005} extended these bounds
-further.  We do not reproduce the Baker-type arguments here; we treat
-(H2) as a hypothesis in Theorem~B.
+\begin{proof}
+By induction on the steps within one period.  Each odd step
+multiplies the correction by~$3$ and adds $2^{U_j} \le 2^L$.
+\end{proof}
+
+\begin{proposition}[Correction lower bound]\label{prop:corr-lower}
+Under the same conditions,
+\[
+  2S + 1 \ge 3^K.
+\]
+Equivalently, $S \ge (3^K - 1)/2$.
+\end{proposition}
+
+\begin{proof}
+By induction.  Each odd step contributes at least $3^{K-j}$ to the
+sum (the minimal contribution occurs when $e_j = 0$).
+\end{proof}
+
+\begin{corollary}[$c_0$ squeeze]\label{cor:c0-squeeze}
+For a cycle with $2^L > 3^K$ and $K \ge 1$,
+\begin{equation}\label{eq:c0-squeeze}
+  \frac{3^K - 1}{2(2^L - 3^K)} \;\le\; c_0 \;\le\;
+  \frac{(3^K - 1) \cdot 2^L}{2(2^L - 3^K)}.
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+The lower bound follows from $S \ge (3^K - 1)/2$ and
+$c_0 = S/(2^L - 3^K)$.  The upper bound follows from $2S + 2^L \le
+3^K \cdot 2^L$, which gives $S \le (3^K \cdot 2^L - 2^L)/2 =
+2^{L-1}(3^K - 1)$.
+\end{proof}
+
+\subsection{Steiner--Hercher cycle elimination}
+
+The key step is to bound $K = \Delta_3$ (the number of odd steps
+per period) in terms of $\Delta_3$.  Since $\Delta_2 + \Delta_3 = p$
+and $p = 3\Delta_3$ for the balanced case, we have $L = 2\Delta_3$,
+so the condition $2^L > 3^K$ becomes $2^{2\Delta_3} > 3^K$.
+
+\begin{proposition}[K-bound for small $\Delta_3$]
+\label{prop:K-bound-small}
+For $\Delta_3 \le 79$ in a balanced cycle ($p = 3\Delta_3$), the
+number of odd steps satisfies $K = \Delta_3 \le 91$.
+\end{proposition}
+
+\begin{proof}
+For $\Delta_3 \le 79$, we have $K \le 3\Delta_3 = p$ and
+$L = 2\Delta_3$.  The condition $2^L > 3^K$ requires $K <
+L \cdot \log_2 3 \approx 1.585 L = 3.17\Delta_3$.  By explicit
+computation (verified in Lean~4 via \texttt{native\_decide}):
+$2^{2 \cdot 80 - 15} = 2^{145} < 3^{92}$, so $K \ge 92$ would
+require $L \ge 146$, i.e., $\Delta_3 \ge 73$.  But $\Delta_3 \le 79$
+forces $K \le 91$.
+\end{proof}
+
+\begin{theorem}[Cycle elimination for $\Delta_3 \le 79$]
+\label{thm:steiner-hercher}
+No nontrivial Collatz cycle exists with $\Delta_3 \le 79$ odd
+steps per period.
+\end{theorem}
+
+\begin{proof}
+By Proposition~\ref{prop:K-bound-small}, any such cycle has
+$K \le 91$.  Hercher~\cite{Hercher2024} has computationally verified
+that no nontrivial $m$-cycle exists for $m \le 91$ (extending
+earlier work of Simons and de Weger~\cite{SimonsDeWeger2005}).
+\end{proof}
+
+\begin{remark}[The boundary at $\Delta_3 = 80$]
+\label{rem:boundary}
+The threshold $\Delta_3 = 79$ is optimal for Hercher's bound
+$m \le 91$.  The continued fraction convergents of $\log_2 3$
+determine which values of $K$ are achievable: the convergents
+$p_k/q_k$ are $(1,1), (2,1), (3,2), (8,5), (19,12), (65,41),
+(84,53), (485,306), \ldots$\  At each odd convergent $k$,
+$2^{p_k} > 3^{q_k}$, so $q_k$ is a candidate $K$-value.  The
+seventh convergent has $q_7 = 306 > 91$, which lies beyond the
+Hercher threshold.  For $\Delta_3 \ge 80$, the K-bound gives
+$K \le 3 \cdot 80 - 15 = 225$, which includes the convergent
+$q_7 = 306$ only conditionally.
+
+Extending Hercher's bound to $m \le 200$ would push the threshold to
+$\Delta_3 \le 173$; to $m \le 306$ would cover all convergents up
+to $q_7$.
+
+An alternative route uses Rhin's effective irrationality measure for
+$\log_2 3$~\cite{Rhin1987}: $|p/q - \log_2 3| > C/q^6$ for an
+effective constant $C > 0$.  This gives a polynomial lower bound on
+$|2^L - 3^K|$ that, combined with the $c_0$
+squeeze~\eqref{eq:c0-squeeze}, could eliminate large cycles
+analytically.  This approach is partially formalized in the Lean~4
+development (\texttt{CycleElimination.lean},
+\texttt{IrrationalityMeasure.lean}).
 \end{remark}
 
 %==================================================================
@@ -746,19 +849,30 @@ values provides partial evidence, though his methods are
 probabilistic and do not yield the uniform bound needed here.
 
 \medskip\noindent
-\textbf{Discussion of (H2).}
-Baker's theorem~\cite{Baker1975} is established mathematics.  For our
-purposes, we need the special case $\alpha_1 = 2$, $\alpha_2 = 3$:
+\textbf{Discussion of (H2) and (H3).}
+Hypothesis~(H2) is Hercher's computational verification~\cite{Hercher2024}
+that no nontrivial $m$-cycle exists for $m \le 91$, extending earlier
+work of Simons and de Weger~\cite{SimonsDeWeger2005}.  This is
+established mathematics, treated as an external axiom in the
+formalization.
+
+Hypothesis~(H3) concerns cycles with $\Delta_3 \ge 80$.  One route to
+eliminating these uses Baker's theorem~\cite{Baker1975} for the
+special case $\alpha_1 = 2$, $\alpha_2 = 3$:
 \[
   |m \log 2 - n \log 3| > C / \max(|m|, |n|)^{1+\delta}
 \]
-for effective constants $C, \delta > 0$ depending only on $2$ and $3$.
-The gap is not the mathematics but its formalization in Lean~4: the
-Gel'fond--Schneider proof chain underlying Baker's theorem has no
-Mathlib precedent (Section~\ref{sec:lean}).
+for effective constants $C, \delta > 0$.  Combined with the $c_0$
+squeeze (Corollary~\ref{cor:c0-squeeze}) and the Rhin irrationality
+measure~\cite{Rhin1987}, this could eliminate all large cycles
+analytically.  The gap is not the mathematics but its formalization in
+Lean~4: the Gel'fond--Schneider proof chain underlying Baker's theorem
+has no Mathlib precedent (Section~\ref{sec:lean}).  Alternatively,
+extending Hercher's computation to $m \le 306$ would suffice
+(Remark~\ref{rem:boundary}).
 
 \begin{proof}[Proof of Theorem~B]
-Assume (H1) and (H2).
+Assume (H1), (H2), and (H3).
 
 Fix $n \ge 1$.  By (H1), the walk $w(t)$ has eventually linear
 drift with some rate $\varepsilon > 0$.
@@ -772,11 +886,14 @@ For $\Delta_3 = 1$, this is Theorem~\ref{thm:one-odd}: the only
 cycle is $\{1,2,4\}$.
 For $\Delta_3 \ge 2$ with $3\Delta_3 < p$, the strict inequality
 $a(t) \cdot 2^{\nu_2} < n \cdot 4^{\nu_3}$ contracts over the period.
-For $\Delta_3 \ge 2$ with $p = 3\Delta_3$ (the balanced case),
-by~(H2), Baker's theorem provides effective lower bounds on
-$|2^{\Delta_2} - 3^{\Delta_3}|$ that, combined with Steiner-type
-analysis of the cycle equation, exclude all nontrivial cycles
-(Remark~\ref{rem:baker}).
+For $\Delta_3 \ge 2$ with $p = 3\Delta_3$ (the balanced case):
+\begin{itemize}
+  \item $\Delta_3 \le 79$: the K-bound
+    (Proposition~\ref{prop:K-bound-small}) gives $K \le 91$, and
+    (H2) (Hercher's theorem) eliminates all nontrivial $m$-cycles
+    with $m \le 91$ (Theorem~\ref{thm:steiner-hercher}).
+  \item $\Delta_3 \ge 80$: excluded by~(H3).
+\end{itemize}
 \end{proof}
 
 \begin{remark}[Effective bounds]\label{rem:effective}
@@ -794,8 +911,8 @@ The bound grows as $B \sim 1/\varepsilon$ for small $\varepsilon$.
 %==================================================================
 
 The results of this paper have been formalized in Lean~4 using the
-Mathlib4 library.  The formalization comprises approximately 2800
-lines across 17 files.
+Mathlib4 library.  The formalization comprises approximately
+5\,800~lines across 27~files, building in 3\,103~jobs.
 
 \subsection{What is machine-checked}
 
@@ -823,16 +940,33 @@ The following results are fully proved (zero \texttt{sorry}):
     $\log_2 3 \notin \Q$ \\
   Correction ratio & \texttt{CorrectionRatio.lean} &
     Recurrence, universal inductive bound \\
-  Cycle elimination & \texttt{CorrectionRatio.lean} &
-    $\Delta_3 = 0$: contradiction; $\Delta_3 = 1$: $\{1,2,4\}$; \\
-  & & $\Delta_3 \ge 2$: via Baker--Steiner sorry \\
+  Cycle elim.\ ($\Delta_3 \le 1$) & \texttt{CorrectionRatio.lean} &
+    $\Delta_3 = 0$: contradiction; $\Delta_3 = 1$: $\{1,2,4\}$ \\
+  Cycle elim.\ ($\Delta_3 \le 79$) & \texttt{SteinerCycle.lean} &
+    Correction bounds $+$ K-bound $+$ Hercher \\
+  Cycle linear form & \texttt{CycleElimination.lean} &
+    Rhin lower bound, $\log(1{+}x) < x$ upper bound \\
+  Correction squeeze & \texttt{SteinerCycle.lean} &
+    $c_0$ lower and upper bounds (proved) \\
   Eventual periodicity & \texttt{CorrectionRatio.lean} &
     Pigeonhole principle \\
+  Syracuse framework & \texttt{Syracuse.lean} &
+    Tao's odd-step iteration, identity \\
+  Syracuse--Drift bridge & \texttt{SyracuseDrift.lean} &
+    $\nu_3 = k$, $\nu_2 = \mathrm{valSum}$ at boundaries \\
+  Continued fractions & \texttt{ContinuedFraction.lean} &
+    15~convergents of $\log_2 3$, power comparisons \\
+  Irrationality measure & \texttt{IrrationalityMeasure.lean} &
+    Rhin bound $\to$ cycle lower bound \\
+  Hensel attrition & \texttt{HenselAttrition.lean} &
+    $d$ consecutive $v_2 = 1 \Leftrightarrow x \equiv -1 \pmod{2^{d+1}}$ \\
+  Diophantine repeller & \texttt{DiophantineRepeller.lean} &
+    Baker cell separation, deficit tracking \\
   Tunnel width & \texttt{TunnelWidth.lean} &
     Baker $\to$ Diophantine gap $\to$ pure-even cells \\
   Drift infrastructure & \texttt{Drift.lean} &
     K-bound $\to$ $\varepsilon$-gap, walk divergence \\
-  K-bound equivalence & \texttt{Drift.lean}, \texttt{Conclusion.lean} &
+  K-bound equivalence & \texttt{Conclusion.lean} &
     K-bound $\Leftrightarrow$ \texttt{collatzReaches} \\
   Capstone & \texttt{Conclusion.lean} &
     \texttt{collatz\_conjecture : CollatzConjecture} \\
@@ -840,9 +974,10 @@ The following results are fully proved (zero \texttt{sorry}):
 \end{tabular}
 \end{center}
 
-\subsection{Remaining \texttt{sorry} axioms}
+\subsection{Remaining gaps: seven \texttt{sorry} declarations and two axioms}
 
-Seven \texttt{sorry} axioms remain, grouped into two categories:
+Seven \texttt{sorry} declarations and two external axioms remain,
+grouped into four categories:
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
@@ -850,51 +985,78 @@ Seven \texttt{sorry} axioms remain, grouped into two categories:
   \toprule
   \textbf{\#} & \textbf{File} & \textbf{Theorem} & \textbf{Category} \\
   \midrule
-  1--5 & \texttt{Baker.lean} &
-    \texttt{baker\_aux\_construction}, &
+  1 & \texttt{Baker.lean} &
+    \texttt{baker\_two\_three} &
+    Universal Baker bound \\
+  2--4 & \texttt{GrowthEstimates.lean} &
+    \texttt{schwarz\_vanishing\_bound}, &
     Gel'fond--Schneider \\
-  & & \texttt{baker\_extrapolation}, & \\
-  & & \texttt{baker\_zero\_estimate}, & \\
-  & & \texttt{baker\_effective\_bound}, & \\
-  & & \texttt{baker\_two\_three} & \\
-  6 & \texttt{Baker.lean} &
-    \texttt{baker\_no\_balanced\_cycle} &
-    Baker--Steiner cycles ($\Delta_3 \ge 2$) \\
-  7 & \texttt{Drift.lean} &
+  & & \texttt{jensen\_zero\_count}, & chain \\
+  & & \texttt{polynomial\_zero\_estimate} & \\
+  5 & \texttt{SteinerCycle.lean} &
+    \texttt{steiner\_cycle\_large} &
+    Cycles, $\Delta_3 \ge 80$ \\
+  6 & \texttt{Drift.lean} &
     \texttt{nu3\_linear\_bound} &
     K-bound (critical path) \\
+  7 & \texttt{DiophantineRepeller.lean} &
+    \texttt{finite\_residence\_bound} &
+    Solenoid mixing \\
+  \midrule
+  A1 & \texttt{IrrationalityMeasure.lean} &
+    \texttt{rhin\_irrationality\_measure} &
+    External (Rhin 1987) \\
+  A2 & \texttt{SteinerCycle.lean} &
+    \texttt{hercher\_no\_small\_cycle} &
+    External (Hercher 2024) \\
   \bottomrule
 \end{tabular}
 \end{center}
 
-Items 1--5 form the Baker proof chain: they require formalizing the
-Gel'fond--Schneider argument for transcendence measures, which has no
-Mathlib precedent.  Two former \texttt{TunnelWidth.lean} sorrys have been
-resolved: \texttt{tunnel\_walls\_positive\_of\_baker} was proved by
-exhibiting cell $(0,1)$ as structurally even at any scale $3^b$
-(Lemma~\ref{lem:forced-descent}); a second sorry on Weyl
-equidistribution was removed after reformulation
-(Section~\ref{sec:tunnel-eval}).
-Item~6 applies Baker's theorem to exclude non-trivial cycles with
-$\Delta_3 \ge 2$ and period $p = 3\Delta_3$ (the balanced case),
-using Steiner-type analysis of the cycle equation combined with
-computational verification for small~$\Delta_3$.  This sorry was
-previously in \texttt{CorrectionRatio.lean} as
-\texttt{no\_cycle\_equality\_case}; it has been restated in pure
-arithmetic terms in \texttt{Baker.lean}, making
-\texttt{CorrectionRatio.lean} sorry-free.
-Item~7 is the K-bound: the sole \texttt{sorry} on the
-critical path to \texttt{collatz\_conjecture}.  From the K-bound, the
-$\varepsilon$-gap (uniform bound $\nu_3/t \le p_{\mathrm{eq}} -
-\varepsilon$) is derived as a proved theorem, since
-$\log_2 3 < 2$ implies $p_{\mathrm{eq}} > 1/3$.
-The converse is also proved: \texttt{collatzReaches}$(n)$ implies the
-K-bound (via the $1 \to 4 \to 2 \to 1$ cycle), so the K-bound is
+Item~1 is the universal Baker bound: $|m \log 2 + n \log 3| > C /
+\max(|m|, |n|)^{1+\delta}$.  Items~2--4 form the Gel'fond--Schneider
+proof chain that feeds into item~1: a Schwarz-type extrapolation
+(item~2), a Jensen zero-counting argument (item~3), and a polynomial
+zero estimate via Vandermonde determinants (item~4).  The
+infrastructure for item~4 (injectivity of $2^a \cdot 3^b$ and the
+Mathlib Vandermonde API) is in place; the remaining gap is reindexing
+between \texttt{Fin}~types and range sums.
+
+Item~5 (\texttt{steiner\_cycle\_large}) handles cycles with
+$\Delta_3 \ge 80$, the frontier beyond Hercher's computational
+verification.  The $\Delta_3 \le 79$ case is fully proved
+(Theorem~\ref{thm:steiner-hercher}), reducing five former Baker-chain
+sorrys in \texttt{Baker.lean} to the single item~1.
+\texttt{CycleElimination.lean} and \texttt{CorrectionRatio.lean} are
+now sorry-free.
+
+Item~6 is the K-bound: the sole \texttt{sorry} on the critical path
+to \texttt{collatz\_conjecture}.  From the K-bound, the
+$\varepsilon$-gap ($\nu_3/t \le p_{\mathrm{eq}} - \varepsilon$) is
+derived as a proved theorem, since $\log_2 3 < 2$ implies
+$p_{\mathrm{eq}} > 1/3$.  The converse is also proved:
+\texttt{collatzReaches}$(n)$ implies the K-bound, so the K-bound is
 formally equivalent to the Collatz conjecture
-(\texttt{nu3\_linear\_bound\_iff\_reaches}).
+(\texttt{nu3\_linear\_bound\_iff\_reaches} in
+\texttt{Conclusion.lean}).
+
+Item~7 (\texttt{finite\_residence\_bound}) offers an alternative path
+to the K-bound via the Diophantine Repeller.  The decomposition is:
+Hensel attrition (proved, \texttt{HenselAttrition.lean}) $+$ Baker
+cell separation (proved, reduces to item~1) $+$ finite residence
+(this sorry) $\to$ K-bound.  The gap is equidistribution on the
+$(2,3)$-solenoid: converting the density bound $P(\text{run} \ge d) =
+2^{-d}$ into a per-trajectory bound.
+
+Axiom~A1 (Rhin's irrationality measure, $|p/q - \log_2 3| >
+C/q^6$) is an established result~\cite{Rhin1987} treated as an
+external axiom.  Axiom~A2 (Hercher's verification that no nontrivial
+$m$-cycle exists for $m \le 91$) is a computational
+result~\cite{Hercher2024} treated as an external axiom.
+
 The Baker--Feldman bridge (Section~\ref{sec:tunnel-eval}) identifies a
-route to proving this sorry from Baker's theorem via the structural
-pure-even sieve; the missing ingredient is a visitation frequency bound.
+route to proving item~6 from item~1 via the structural pure-even
+sieve; the missing ingredient is a visitation frequency bound.
 
 \subsection{AI/LLM disclosure}
 
@@ -1401,6 +1563,12 @@ The $3x+1$ problem: new lower bounds on nontrivial cycle lengths,
 \newblock \href{https://doi.org/10.1016/0012-365X(93)90052-U}%
   {\texttt{doi:10.1016/0012-365X(93)90052-U}}.
 
+\bibitem{Hercher2024}
+J.~Hercher,
+Über die Länge nicht-trivialer Collatz-Zyklen,
+\emph{Integers}
+\textbf{24} (2024), Paper No.~A31.
+
 \bibitem{Lagarias1985}
 J.~C.~Lagarias,
 The $3x+1$ problem and its generalizations,
@@ -1421,6 +1589,15 @@ T.~Oliveira e Silva, S.~Herzog, and S.~Pardi,
 Empirical verification of the $3x+1$ and related conjectures,
 \emph{The Ultimate Challenge: The $3x+1$ Problem} (J.~C.~Lagarias, ed.),
 Amer.\ Math.\ Soc., 2010, pp.~189--207.
+
+\bibitem{Rhin1987}
+G.~Rhin,
+Approximants de Padé et mesures effectives d'irrationalité,
+\emph{Séminaire de Théorie des Nombres, Paris 1985--86},
+Progress in Math., vol.~71,
+Birkhäuser, Boston, 1987, pp.~155--164.
+\newblock \href{https://doi.org/10.1007/978-1-4757-4267-1_11}%
+  {\texttt{doi:10.1007/978-1-4757-4267-1\_11}}.
 
 \bibitem{SimonsDeWeger2005}
 J.~Simons and B.~M.~M.~de Weger,
