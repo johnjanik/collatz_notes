@@ -129,61 +129,74 @@ Replace the first a+k Collatz steps per trajectory with a single arithmetic oper
 uint64_t n_new = (A_num * (uint64_t)n + B_num) >> K;
 ```
 
-**Cell grid updates** for the skipped steps: precompute per-residue cell increment arrays.
-For each residue r, the parity sequence of the first a+k steps is known → the (ν₂, ν₃)
-path is known → cell visits are predetermined. Store as batch increments per level.
+**Cell grid updates** for the skipped steps: replay the known parity sequence per-level
+(not per-step) for better cache locality. Each level's grid is accessed contiguously.
 
-**Memory cost** (k=24): 192MB precomp table + ~800MB cell increment tables (27 levels × 8M
-residues × ~4 bytes each). Total ~1GB. Fits in RAM.
+**Memory cost** (k=16): 769KB precomp table (fits in L2 cache).
+(k=24): 192MB precomp table (exceeds L3; cache misses negate the benefit).
 
-**Speed gain**: ~52% fewer inner-loop iterations. Accounting for the precomp lookup overhead
-and cell batch updates, net speedup estimate: **25-40%**.
+**Speed gain**: ~4% at N=100M with 26 grid levels.
 
-### Option B: Trajectory Sharing (more complex, higher payoff)
+### Why the Speedup is Modest
 
-For class-dead residues (89.5% at k=24), after the fast-forward the value n_new < n.
-If processing in ascending order, n_new was already processed, so its cell contributions
-are already accumulated. We could avoid recomputing the remaining ~34 steps.
+**Grid updates dominate**: Each Collatz step costs ~2ns for the 3x+1 arithmetic but ~100ns
+for 26 grid updates (modular indexing + memory access at each level). The sieve only saves
+the 2ns arithmetic; grid updates must still be replayed to keep cell counts correct.
 
-This requires storing trajectory cell contributions in a hash table or memoization structure,
-which adds significant memory and complexity.
+Breakdown for ~180-step trajectory (N=100M avg):
+- 180 steps × 2ns Collatz arithmetic = 360 ns
+- 180 steps × 100ns grid updates = 18,000 ns
+- Sieve saves: 25 × 2ns = 50 ns (0.3% of total)
+- Sieve overhead: ~15 ns (128-bit multiply, table lookup)
+- Net per-trajectory: ~35 ns saved → **4% overall** (confirmed by benchmark)
 
-**Combined speedup**: theoretically ~95% of steps eliminated, but the memory and lookup
-overhead may reduce this to ~60-70% net.
+**Critical lesson**: "per-step replay" (inner loop: for each step, update all levels)
+is 6% SLOWER than unsieved due to cache thrashing between levels. The fix is **per-level
+replay** (for each level, replay all steps): this keeps each grid in L1 and eliminates
+the overhead.
 
-### Option C: Sieve-Only Filtering (simplest)
+### Option B: Trajectory Sharing (future, higher payoff)
 
-For a quick win: just skip class-dead numbers entirely (don't process them). This loses
-their cell contributions but could be acceptable if we're sampling.
+For class-dead residues (85-93%), after fast-forward the value n_new < n. If processing
+in ascending order, n_new's trajectory suffix was already computed. A memoization table
+could avoid the remaining ~155 steps entirely for these numbers.
 
-**NOT recommended** for branch_locus since we need all cell statistics.
+**Potential**: 85% of trajectories × 155 steps saved = ~73% of all work eliminated.
+**Challenge**: requires ~100GB memoization table for N=100B. Impractical without
+trajectory compression.
 
 ## Practical Recommendation for the Next 100B+ Run
 
-1. **Use k=24 sieve** with Option A (fast-forward).
-2. Precompute the sieve at startup (~0.07 seconds).
-3. For each n, look up residue class and apply fast-forward formula.
-4. Pre-accumulate cell contributions for the determined steps.
-5. Continue Collatz iteration from n_new for the remaining steps.
-6. **Expected runtime reduction: ~30%** (from ~75 hours to ~52 hours for 100B).
+1. **Use k=16 sieve** with per-level batch replay.
+2. Precomp table is 769KB (fits in L2 cache — key for performance).
+3. For each odd n ≥ 65536: fast-forward 24.5 avg steps, replay grid updates per-level.
+4. **Measured speedup: 4%** (from ~75 hours to ~72 hours). Modest but free.
+5. The sieve's main value is **analytical** (class-dead fractions, v₂=1 danger
+   correlation, Hensel attrition) rather than computational.
 
-## Benchmark Results (sieve_bench.c)
+## Benchmark Results
 
-Proof-of-concept with recursive initial fast-forward (apply sieve at trajectory start,
-re-apply if resulting value is still odd). Step counts verified exact.
+### sieve_bench.c (bare Collatz iteration, no grids)
 
 | N    | k  | Steps skipped | Wall speedup | Notes                    |
 |------|----|--------------|-------------|--------------------------|
 | 10M  | 16 | 6.5%         | 1.21x       | Small N, many n < 2^k    |
-| 100M | 16 | 9.0%         | 1.10x       | Precomp table in L3 cache|
+| 100M | 16 | 9.0%         | 1.10x       | Table fits in L3         |
 | 100M | 24 | 8.1%         | 1.18x       | Larger skip per application|
 | 1B   | 24 | 9.7%         | 1.21x       | Steady-state behavior    |
 
-**Mid-trajectory sieve** (apply sieve at every intermediate odd value):
-- Skips 19.1% of steps (vs 8.1% for start-only)
-- But 2% SLOWER for bare iteration (128-bit multiply overhead > saved ALU ops)
-- For branch_locus with 27 grid levels per step: each skipped step saves ~145 ns of
-  grid work, while sieve lookup costs ~10 ns → net ~30-40% faster
+### branch_locus_sieved.c (26 grid levels, full cell verification)
+
+| N    | k  | Replay | Speedup | Grid match | Notes                       |
+|------|----|--------|---------|------------|-----------------------------|
+| 1M   | 16 | 7.2%   | 0.98x   | EXACT      | Too small for stable timing  |
+| 10M  | 16 | 6.5%   | 1.01x   | EXACT      | Per-level batch replay       |
+| 100M | 16 | 5.7%   | 1.04x   | EXACT      | Steady-state: **4% speedup**|
+| 100M | 24 | 7.5%   | 0.99x   | EXACT      | 192MB table → cache misses  |
+
+**Key finding**: Grid updates dominate branch_locus runtime (~98%). The sieve saves
+Collatz arithmetic (~2% of cost), so the net gain is modest. k=16 outperforms k=24 because
+the 769KB precomp table fits in L2 cache vs 192MB exceeding L3.
 
 ## Files Produced
 
@@ -191,7 +204,8 @@ re-apply if resulting value is still odd). Step counts verified exact.
 |------|------|-------------|
 | `gen_sieve.c` | 8KB | Sieve generator |
 | `analyze_sieve.c` | 7KB | Analysis tool |
-| `sieve_bench.c` | 5KB | Proof-of-concept benchmark |
+| `sieve_bench.c` | 5KB | Bare-iteration benchmark |
+| `branch_locus_sieved.c` | 14KB | Grid-verified POC (26 levels) |
 | `sieve_report.md` | — | This report |
 | `sieve_k16_class.bin` | 8KB | Class bitmap (k=16) |
 | `sieve_k16_exact.bin` | 8KB | Exact bitmap (k=16) |

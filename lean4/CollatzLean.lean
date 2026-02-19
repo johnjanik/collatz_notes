@@ -22,3 +22,4 @@ import CollatzLean.WallPersistence
 import CollatzLean.HenselAttrition
 import CollatzLean.DiophantineRepeller
 import CollatzLean.Syracuse
+import CollatzLean.SteinerCycle
