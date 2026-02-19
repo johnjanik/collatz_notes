@@ -21,5 +21,6 @@ import CollatzLean.Conclusion
 import CollatzLean.WallPersistence
 import CollatzLean.HenselAttrition
 import CollatzLean.DiophantineRepeller
--- import CollatzLean.Syracuse  -- TODO: fix build errors (Agent 6 WIP)
+import CollatzLean.Syracuse
 import CollatzLean.SteinerCycle
+import CollatzLean.SyracuseDrift

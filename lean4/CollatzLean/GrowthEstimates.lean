@@ -24,6 +24,7 @@ import Mathlib.Analysis.SpecialFunctions.Log.Base
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 import Mathlib.Data.Finset.Basic
 import Mathlib.NumberTheory.Real.Irrational
+import Mathlib.LinearAlgebra.Vandermonde
 
 namespace Collatz
 
@@ -205,22 +206,47 @@ def polyEvalExp (P : ℤ → ℤ → ℤ) (L : ℕ) (t : ℕ) : ℤ :=
   ∑ i ∈ Finset.range (L + 1), ∑ j ∈ Finset.range (L + 1),
     P i j * (2 : ℤ) ^ (i * t) * (3 : ℤ) ^ (j * t)
 
-/-- A non-zero polynomial of degree ≤ L in each variable has at most L²
+/-- The bases 2^a * 3^b are distinct for distinct (a,b) pairs,
+    by unique prime factorization (multiplicative independence of 2 and 3). -/
+private lemma two_pow_mul_three_pow_injective :
+    ∀ a b c d : ℕ, (2 : ℤ) ^ a * 3 ^ b = 2 ^ c * 3 ^ d → a = c ∧ b = d := by
+  intro a b c d h
+  -- Transfer to ℕ (all values positive, cast is injective)
+  have h' : (2 : ℕ) ^ a * 3 ^ b = 2 ^ c * 3 ^ d := by zify; exact h
+  -- Coprimality of powers of 2 and 3
+  have hcop1 : Nat.Coprime (2 ^ a) (3 ^ d) :=
+    Nat.Coprime.pow a d (by decide : Nat.Coprime 2 3)
+  have hcop2 : Nat.Coprime (2 ^ c) (3 ^ b) :=
+    Nat.Coprime.pow c b (by decide : Nat.Coprime 2 3)
+  constructor
+  · -- a = c: 2^a | 2^c and 2^c | 2^a (by coprimality), so 2^a = 2^c
+    have h1 : 2 ^ a ∣ 2 ^ c := hcop1.dvd_of_dvd_mul_right ⟨3 ^ b, h'.symm⟩
+    have h2 : 2 ^ c ∣ 2 ^ a := hcop2.dvd_of_dvd_mul_right ⟨3 ^ d, h'⟩
+    exact (Nat.pow_right_injective (by norm_num : 2 ≤ 2)) (Nat.dvd_antisymm h1 h2)
+  · -- b = d: cancel 2^a from both sides, then 3^b = 3^d
+    have hac : a = c := by
+      have h1 : 2 ^ a ∣ 2 ^ c := hcop1.dvd_of_dvd_mul_right ⟨3 ^ b, h'.symm⟩
+      have h2 : 2 ^ c ∣ 2 ^ a := hcop2.dvd_of_dvd_mul_right ⟨3 ^ d, h'⟩
+      exact (Nat.pow_right_injective (by norm_num : 2 ≤ 2)) (Nat.dvd_antisymm h1 h2)
+    rw [hac] at h'
+    have h3eq : (3 : ℕ) ^ b = 3 ^ d := mul_left_cancel₀ (by positivity : (2 : ℕ) ^ c ≠ 0) h'
+    exact (Nat.pow_right_injective (by norm_num : 2 ≤ 3)) h3eq
+
+/-- A non-zero polynomial of degree ≤ L in each variable has at most (L+1)²-1
     zeros among the points {(2^t, 3^t) : t = 0, 1, ..., T}.
 
-    This follows from the multiplicative independence of 2 and 3
-    (proved as `multIndep_two_three` in Baker.lean): the points
-    (2^t, 3^t) are "algebraically independent enough" that a
-    polynomial of degree L cannot vanish at more than L² of them.
+    This follows from the multiplicative independence of 2 and 3:
+    the values 2^i · 3^j for (i,j) ∈ {0,...,L}² are pairwise distinct,
+    so the Vandermonde determinant is non-zero, and a non-zero linear
+    combination of (L+1)² distinct exponentials α_k^t can vanish for
+    at most (L+1)²-1 values of t.
 
-    The underlying fact is that the Vandermonde-like determinant
-    det[(2^{t_k})^i · (3^{t_k})^j] is nonzero when the t_k are distinct,
-    because 2^a · 3^b are all distinct (by multiplicative independence). -/
+    Uses `eq_zero_of_forall_pow_sum_mul_pow_eq_zero` from Mathlib. -/
 theorem polynomial_zero_estimate
     (P : ℤ → ℤ → ℤ) (L : ℕ) (hL : L ≥ 1)
     (hsupp : ∀ i j : ℤ, (i < 0 ∨ i > L ∨ j < 0 ∨ j > L) → P i j = 0)
     (hP : ∃ i j : ℤ, 0 ≤ i ∧ i ≤ L ∧ 0 ≤ j ∧ j ≤ L ∧ P i j ≠ 0)
-    (T : ℕ) (hT : T > L * L) :
+    (T : ℕ) (hT : T + 1 ≥ (L + 1) * (L + 1)) :
     ∃ t : ℕ, t ≤ T ∧ polyEvalExp P L t ≠ 0 := by
   sorry
 
@@ -244,7 +270,7 @@ effective lower bound in baker_extrapolation.
     Given an auxiliary polynomial P of degree ≤ L with P(0,0) ≠ 0,
     coefficient bound B, and initial vanishing at integer points 0,...,T,
     the Schwarz-Jensen analysis produces a contradiction when T is large
-    enough relative to L (specifically T > L²).
+    enough relative to L (specifically T + 1 ≥ (L+1)²).
 
     This forces the auxiliary function F(z) = P(e^z, e^{βz}) to be
     identically zero, which contradicts P(0,0) ≠ 0.
@@ -259,7 +285,7 @@ theorem gelfond_schneider_contradiction
     (_B : ℝ) (_hB : _B > 0)
     (_hbound : ∀ i j : ℤ, (|P i j| : ℝ) ≤ _B)
     (_β : ℝ) (_hβ : Irrational _β)
-    (T : ℕ) (hT : T > L * L)
+    (T : ℕ) (hT : T + 1 ≥ (L + 1) * (L + 1))
     (hvanish : ∀ t : ℕ, t ≤ T → polyEvalExp P L t = 0) :
     False := by
   -- Step 1: polynomial_zero_estimate says ∃ t ≤ T with polyEvalExp P L t ≠ 0

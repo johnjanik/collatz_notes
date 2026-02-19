@@ -160,11 +160,11 @@ theorem baker_extrapolation (m n : ℤ) (_hm : m ≠ 0) (_hn : n ≠ 0)
     (L : ℕ) (hL : L ≥ 1)
     (hsupp : ∀ i j : ℤ, (i < 0 ∨ i > L ∨ j < 0 ∨ j > L) → P i j = 0)
     (_hbound : ∀ i j : ℤ, |P i j| ≤ max |m| |n|)
-    (T : ℕ) (hT : T > L * L)
+    (T : ℕ) (hT : T + 1 ≥ (L + 1) * (L + 1))
     (hvanish : ∀ t : ℕ, t ≤ T → polyEvalExp P L t = 0) :
     False := by
   -- The polynomial zero estimate says a non-zero P of degree ≤ L
-  -- can't vanish at all exponential points (2^t, 3^t) for t = 0,...,T when T > L².
+  -- can't vanish at all exponential points (2^t, 3^t) for t = 0,...,T when T+1 ≥ (L+1)².
   have hP_exists : ∃ i j : ℤ, 0 ≤ i ∧ i ≤ L ∧ 0 ≤ j ∧ j ≤ L ∧ P i j ≠ 0 :=
     ⟨0, 0, le_refl _, by omega, le_refl _, by omega, by exact_mod_cast hP⟩
   have ⟨t, ht, hne⟩ := polynomial_zero_estimate P L hL hsupp hP_exists T hT
