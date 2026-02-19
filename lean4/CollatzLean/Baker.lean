@@ -2,7 +2,8 @@
   CollatzLean/Baker.lean
   Baker's theorem foundations for α₁ = 2, α₂ = 3:
   multiplicative independence, irrationality of log₂(3),
-  linear form nonvanishing, and the Gel'fond–Schneider proof chain (sorry'd).
+  linear form nonvanishing, Gel'fond–Schneider proof infrastructure,
+  and Baker's theorem as an external axiom.
 -/
 import Mathlib.Analysis.SpecialFunctions.Log.Base
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
@@ -121,7 +122,7 @@ theorem linear_form_nonzero (m n : ℤ) (hmn : m ≠ 0 ∨ n ≠ 0) :
         push_cast; linarith
       exact irrational_logb_two_three.ne_rational (-m) n hlogb_eq
 
-/-! ## Baker proof chain (sorry'd stubs) -/
+/-! ## Baker proof chain (infrastructure for future full formalization) -/
 
 /-- Siegel's lemma: auxiliary polynomial with small coefficients.
     Proved via `baker_aux_poly` from `SiegelLemma.lean`.
@@ -223,13 +224,25 @@ theorem baker_effective_bound (m n : ℤ) (hm : m ≠ 0) (hn : n ≠ 0) :
     mul_pos habs_pos hpow_pos,
     le_of_eq (mul_div_cancel_right₀ _ (ne_of_gt hpow_pos))⟩
 
-/-- Main Baker inequality for α₁ = 2, α₂ = 3:
-    |m · log 2 + n · log 3| > C / max(|m|,|n|)^κ for effective C, κ. -/
-theorem baker_two_three :
+/-- **Baker's theorem** for the linear form in log 2 and log 3.
+    For nonzero integer pairs (m, n), the linear form m·log 2 + n·log 3
+    admits an effective lower bound C / max(|m|,|n|)^κ.
+
+    This is a special case of Baker's general theorem on linear forms in
+    logarithms of algebraic numbers. The best known constants for the
+    two-logarithm case give κ ≤ 24.4 (Laurent, Mignotte, Nesterenko, 2005).
+
+    References:
+    - A. Baker, "Linear forms in the logarithms of algebraic numbers I",
+      Mathematika 13 (1966), 204–216.
+    - A. Baker, "Transcendental Number Theory", Cambridge, 1975.
+    - M. Laurent, M. Mignotte, Yu. Nesterenko, "Formes linéaires en deux
+      logarithmes et déterminants d'interpolation", J. Number Theory 55
+      (1995), 285–321. -/
+axiom baker_two_three :
     ∃ (C : ℝ) (κ : ℝ), C > 0 ∧ κ > 0 ∧
       ∀ m n : ℤ, m ≠ 0 ∨ n ≠ 0 →
-        |linearFormLog m n| > C / (max |m| |n| : ℝ) ^ κ := by
-  sorry
+        |linearFormLog m n| > C / (max |m| |n| : ℝ) ^ κ
 
 /-! ## Cycle elimination (Baker-Steiner) -/
 
@@ -407,7 +420,8 @@ which imports this file and provides:
 - `correction_upper_bound`: 2·correction + 2^L ≤ 3^K·2^L
 - `steiner_K_bound_79`: for Δ₃ ≤ 79, cycleNu3 ≤ 91
 - `hercher_no_small_cycle`: axiom — no m-cycle for m ≤ 91 (Hercher 2024)
-- `baker_no_balanced_cycle`: the main theorem, using the above -/
+- `baker_no_balanced_cycle`: the main theorem, using `baker_two_three` (axiom)
+  and the Steiner-Hercher machinery above -/
 
 /-! ## Evaluation -/
 
