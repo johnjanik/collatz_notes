@@ -7,6 +7,7 @@
 import Mathlib.Analysis.SpecialFunctions.Log.Base
 import Mathlib.Data.Nat.Prime.Basic
 import Mathlib.NumberTheory.Real.Irrational
+import CollatzLean.SiegelLemma
 
 set_option linter.style.nativeDecide false
 
@@ -121,11 +122,17 @@ theorem linear_form_nonzero (m n : ℤ) (hmn : m ≠ 0 ∨ n ≠ 0) :
 /-! ## Baker proof chain (sorry'd stubs) -/
 
 /-- Siegel's lemma: auxiliary polynomial with small coefficients.
-    Stub — to be filled with proper polynomial ring types. -/
+    Proved via `baker_aux_poly` from `SiegelLemma.lean`.
+
+    NOTE: The current statement constrains P to be bounded on all of ℤ × ℤ,
+    effectively requiring a constant function. In a complete Gel'fond-Schneider
+    formalization, this would be replaced by a genuine polynomial whose
+    *coefficients* are bounded by Siegel's lemma, with additional vanishing
+    conditions at transcendental evaluation points. -/
 theorem baker_aux_construction (m n : ℤ) (hm : m ≠ 0) (hn : n ≠ 0) :
     ∃ (P : ℤ → ℤ → ℤ) (_hP : P 0 0 ≠ 0),
-      ∀ i j : ℤ, |P i j| ≤ max |m| |n| := by
-  sorry
+      ∀ i j : ℤ, |P i j| ≤ max |m| |n| :=
+  baker_aux_poly m n hm hn
 
 /-- Schwarz lemma + analytic continuation extends vanishing.
     Stub — needs complex analysis foundations. -/

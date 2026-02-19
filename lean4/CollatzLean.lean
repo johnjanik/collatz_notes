@@ -9,6 +9,7 @@ import CollatzLean.CollatzSFT
 import CollatzLean.BranchLocus
 import CollatzLean.StructuralPureEven
 import CollatzLean.Walk
+import CollatzLean.SiegelLemma
 import CollatzLean.Baker
 import CollatzLean.TunnelWidth
 import CollatzLean.Drift
@@ -16,3 +17,4 @@ import CollatzLean.CorrectionRatio
 import CollatzLean.Conclusion
 import CollatzLean.WallPersistence
 import CollatzLean.HenselAttrition
+import CollatzLean.DiophantineRepeller
