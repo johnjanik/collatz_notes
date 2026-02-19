@@ -72,9 +72,9 @@ reaching~$1$ implies the K-bound, so the sole critical-path axiom is
 formally equivalent to the conjecture itself.  A Syracuse framework
 bridge connects Tao's odd-step formulation to the walk/drift
 infrastructure.  The argument is formalized in approximately
-6\,400~lines of Lean~4 across 29~files with five explicit
-\texttt{sorry} gaps and three external axioms (Rhin~1987,
-Hercher~2024, Weyl~1916), all identified and categorized.
+6\,400~lines of Lean~4 across 29~files with four explicit
+\texttt{sorry} gaps and four external axioms (Baker~1966,
+Rhin~1987, Hercher~2024, Weyl~1916), all identified and categorized.
 \end{abstract}
 
 \maketitle
@@ -978,10 +978,10 @@ The following results are fully proved (zero \texttt{sorry}):
 \end{tabular}
 \end{center}
 
-\subsection{Remaining gaps: five \texttt{sorry} declarations and three axioms}
+\subsection{Remaining gaps: four \texttt{sorry} declarations and four axioms}
 
-Five \texttt{sorry} declarations and three external axioms remain,
-grouped into four categories:
+Four \texttt{sorry} declarations and four external axioms remain,
+grouped into three categories:
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
@@ -989,38 +989,40 @@ grouped into four categories:
   \toprule
   \textbf{\#} & \textbf{File} & \textbf{Theorem} & \textbf{Category} \\
   \midrule
-  1 & \texttt{Baker.lean} &
-    \texttt{baker\_two\_three} &
-    Universal Baker bound \\
-  2 & \texttt{GrowthEstimates.lean} &
+  1 & \texttt{GrowthEstimates.lean} &
     \texttt{schwarz\_vanishing\_bound} &
     Gel'fond--Schneider chain \\
-  3 & \texttt{SteinerCycle.lean} &
+  2 & \texttt{SteinerCycle.lean} &
     \texttt{steiner\_cycle\_large} &
     Cycles, $\Delta_3 \ge 80$ \\
-  4 & \texttt{Drift.lean} &
+  3 & \texttt{Drift.lean} &
     \texttt{nu3\_linear\_bound} &
     K-bound (critical path) \\
-  5 & \texttt{DiophantineRepeller.lean} &
+  4 & \texttt{DiophantineRepeller.lean} &
     \texttt{finite\_residence\_bound} &
     Solenoid mixing \\
   \midrule
-  A1 & \texttt{IrrationalityMeasure.lean} &
+  A1 & \texttt{Baker.lean} &
+    \texttt{baker\_two\_three} &
+    External (Baker 1966) \\
+  A2 & \texttt{IrrationalityMeasure.lean} &
     \texttt{rhin\_irrationality\_measure} &
     External (Rhin 1987) \\
-  A2 & \texttt{SteinerCycle.lean} &
+  A3 & \texttt{SteinerCycle.lean} &
     \texttt{hercher\_no\_small\_cycle} &
     External (Hercher 2024) \\
-  A3 & \texttt{WeylEquidistribution.lean} &
+  A4 & \texttt{WeylEquidistribution.lean} &
     \texttt{weyl\_equidistribution} &
     External (Weyl 1916) \\
   \bottomrule
 \end{tabular}
 \end{center}
 
-Item~1 is the universal Baker bound: $|m \log 2 + n \log 3| > C /
-\max(|m|, |n|)^{1+\delta}$.  Item~2 is the Schwarz-type extrapolation
-that feeds into item~1.  The two other steps in the Gel'fond--Schneider
+Axiom~A1 is Baker's theorem on linear forms in logarithms: $|m \log 2
++ n \log 3| > C / \max(|m|, |n|)^{\kappa}$ for effective $C, \kappa >
+0$~\cite{Baker1966}.  Item~1 is the Schwarz-type extrapolation
+in the Gel'fond--Schneider chain that feeds into axiom~A1.
+The two other steps in the Gel'fond--Schneider
 chain---the Jensen zero-counting argument
 (\texttt{jensen\_zero\_count}) and the polynomial zero estimate
 (\texttt{polynomial\_zero\_estimate})---are now fully proved: the
@@ -1032,15 +1034,15 @@ sub-lemmas involving Blaschke products
 \texttt{blaschke\_product\_le\_half\_pow}), neither of which is used
 downstream of the Baker chain.
 
-Item~3 (\texttt{steiner\_cycle\_large}) handles cycles with
+Item~2 (\texttt{steiner\_cycle\_large}) handles cycles with
 $\Delta_3 \ge 80$, the frontier beyond Hercher's computational
 verification.  The $\Delta_3 \le 79$ case is fully proved
-(Theorem~\ref{thm:steiner-hercher}), reducing five former Baker-chain
-sorrys in \texttt{Baker.lean} to the single item~1.
+(Theorem~\ref{thm:steiner-hercher}), using axiom~A1 via
+Baker cell separation and axiom~A3 via Hercher's theorem.
 \texttt{CycleElimination.lean} and \texttt{CorrectionRatio.lean} are
 now sorry-free.
 
-Item~4 is the K-bound: the sole \texttt{sorry} on the critical path
+Item~3 is the K-bound: the sole \texttt{sorry} on the critical path
 to \texttt{collatz\_conjecture}.  From the K-bound, the
 $\varepsilon$-gap ($\nu_3/t \le p_{\mathrm{eq}} - \varepsilon$) is
 derived as a proved theorem, since $\log_2 3 < 2$ implies
@@ -1050,10 +1052,10 @@ formally equivalent to the Collatz conjecture
 (\texttt{nu3\_linear\_bound\_iff\_reaches} in
 \texttt{Conclusion.lean}).
 
-Item~5 (\texttt{finite\_residence\_bound}) offers an alternative path
+Item~4 (\texttt{finite\_residence\_bound}) offers an alternative path
 to the K-bound via the Diophantine Repeller.  The decomposition is:
 Hensel attrition (proved, \texttt{HenselAttrition.lean}) $+$ Baker
-cell separation (proved, reduces to item~1) $+$ finite residence
+cell separation (proved, reduces to axiom~A1) $+$ finite residence
 (this sorry) $\to$ K-bound.  \texttt{DeficitBudget.lean} provides a
 sorry-free reduction of the finite residence bound to a sliding window
 condition: it suffices to show $3 \cdot \Delta\nu_3 \le W$ in every
@@ -1061,22 +1063,22 @@ window of width~$W$.  The gap is equidistribution on the
 $(2,3)$-solenoid: converting the density bound $P(\text{run} \ge d) =
 2^{-d}$ into a per-trajectory bound.
 
-Axiom~A1 (Rhin's irrationality measure, $|p/q - \log_2 3| >
+Axiom~A2 (Rhin's irrationality measure, $|p/q - \log_2 3| >
 C/q^6$) is an established result~\cite{Rhin1987} treated as an
-external axiom.  Axiom~A2 (Hercher's verification that no nontrivial
+external axiom.  Axiom~A3 (Hercher's verification that no nontrivial
 $m$-cycle exists for $m \le 91$) is a computational
 result~\cite{Hercher2024} treated as an external axiom.
-Axiom~A3 (Weyl's equidistribution theorem for irrational
+Axiom~A4 (Weyl's equidistribution theorem for irrational
 rotations~\cite{Weyl1916}) is used in
 \texttt{WeylEquidistribution.lean} to establish that
 $\{n \log_2 3\}$ is equidistributed modulo~1, connecting the
 irrational rotation structure to safe cell density bounds.
 
 The Baker--Feldman bridge (Section~\ref{sec:tunnel-eval}) identifies a
-route to proving item~4 from item~1 via the structural pure-even
+route to proving item~3 from axiom~A1 via the structural pure-even
 sieve; the missing ingredient is a visitation frequency bound.
 The Weyl equidistribution bridge provides a complementary route:
-axiom~A3 yields equidistribution of $\{n \log_2 3\}$, which combined
+axiom~A4 yields equidistribution of $\{n \log_2 3\}$, which combined
 with Baker cell separation gives safe cell density bounds that feed
 into the deficit budget framework.
 
@@ -1563,6 +1565,14 @@ assistant infrastructure that made the formalization possible.
 
 \bibliographystyle{amsplain}
 \begin{thebibliography}{99}
+
+\bibitem{Baker1966}
+A.~Baker,
+Linear forms in the logarithms of algebraic numbers~I,
+\emph{Mathematika}
+\textbf{13} (1966), 204--216.
+\newblock \href{https://doi.org/10.1112/S0025579300003971}%
+  {\texttt{doi:10.1112/S0025579300003971}}.
 
 \bibitem{Baker1975}
 A.~Baker,
