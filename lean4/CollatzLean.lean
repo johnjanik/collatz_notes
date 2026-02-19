@@ -25,3 +25,4 @@ import CollatzLean.Syracuse
 import CollatzLean.SteinerCycle
 import CollatzLean.ContinuedFraction
 import CollatzLean.SyracuseDrift
+import CollatzLean.WeylEquidistribution
