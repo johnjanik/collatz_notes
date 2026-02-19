@@ -11,6 +11,9 @@ import CollatzLean.StructuralPureEven
 import CollatzLean.Walk
 import CollatzLean.SiegelLemma
 import CollatzLean.Baker
+import CollatzLean.IrrationalityMeasure
+import CollatzLean.CycleElimination
+import CollatzLean.GrowthEstimates
 import CollatzLean.TunnelWidth
 import CollatzLean.Drift
 import CollatzLean.CorrectionRatio
@@ -18,3 +21,4 @@ import CollatzLean.Conclusion
 import CollatzLean.WallPersistence
 import CollatzLean.HenselAttrition
 import CollatzLean.DiophantineRepeller
+-- import CollatzLean.Syracuse  -- TODO: fix build errors (Agent 6 WIP)
