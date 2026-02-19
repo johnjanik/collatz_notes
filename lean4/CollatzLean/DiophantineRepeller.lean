@@ -85,17 +85,17 @@ theorem deficit_bounded_of_window (n W : ℕ) (hWpos : W ≥ 1)
     (hW : SlidingWindowCondition n W) :
     ∀ t : ℕ, deficit n t ≤ 2 * ↑W := by
   intro t
-  set k := t / W
-  set r := t % W with hr_def
-  have ht : t = k * W + r := by
-    have := Nat.div_add_mod t W; omega
-  have hr_lt : r < W := Nat.mod_lt t (by omega)
+  have hr_lt : t % W < W := Nat.mod_lt t (by omega)
+  have ht_eq : t = t / W * W + t % W := by
+    have h := Nat.div_add_mod t W; rw [Nat.mul_comm] at h; exact h.symm
   calc deficit n t
-      = deficit n (k * W + r) := by rw [ht]
-    _ ≤ deficit n (k * W) + 2 * ↑r := deficit_add_le n (k * W) r
-    _ ≤ 0 + 2 * ↑r := by linarith [deficit_nonpos_at_multiples n W k hW]
-    _ = 2 * ↑r := by ring
-    _ ≤ 2 * ↑W := by exact_mod_cast show 2 * r ≤ 2 * W from by omega
+      = deficit n (t / W * W + t % W) := by congr 1
+    _ ≤ deficit n (t / W * W) + 2 * ↑(t % W) :=
+        deficit_add_le n (t / W * W) (t % W)
+    _ ≤ 0 + 2 * ↑(t % W) := by
+        linarith [deficit_nonpos_at_multiples n W (t / W) hW]
+    _ = 2 * ↑(t % W) := by ring
+    _ ≤ 2 * ↑W := by exact_mod_cast show 2 * (t % W) ≤ 2 * W from by omega
 
 /-- Deficit bounded above implies the K-bound (reproduced from Drift.lean
     to avoid circular imports). -/
@@ -184,11 +184,24 @@ theorem baker_cell_separation :
   -- Apply Baker's bound and simplify
   have hbak := hbaker a (-b) hab'
   rw [hmax_eq] at hbak
-  rw [hce]
+  -- hbak : |linearFormLog a (-b)| > C / (max |↑a| |↑b|) ^ κ
+  -- Goal: |cellError a b| > C / log 2 / (max |↑a| |↑b|) ^ κ
+  -- Strategy: |cellError| * log 2 = |linearFormLog| (from cellError_linearForm)
+  -- so |cellError| = |linearFormLog| / log 2 > (C / max^κ) / log 2 = C / log 2 / max^κ
+  have hce_mul : |cellError a b| * Real.log 2 = |linearFormLog a (-b)| := by
+    rw [← cellError_linearForm, abs_mul, abs_of_pos hlog2_pos]
   rw [gt_iff_lt] at hbak ⊢
+  -- hbak : C / max^κ < |linearFormLog a (-b)|
+  -- Goal: C / log 2 / max^κ < |cellError a b|
+  rw [hce]
   -- Goal: C / log 2 / max^κ < |linearFormLog a (-b)| / log 2
-  apply div_lt_div_of_pos_right _ hlog2_pos
-  exact hbak
+  -- Rewrite LHS to (C / max^κ) / log 2
+  rw [div_div, mul_comm (Real.log 2), ← div_div]
+  -- Goal: C / max^κ / log 2 < |linearFormLog a (-b)| / log 2
+  -- Both sides are _ / log 2; use monotonicity of _ * (log 2)⁻¹
+  conv_lhs => rw [div_eq_mul_inv]
+  conv_rhs => rw [div_eq_mul_inv]
+  exact mul_lt_mul_of_pos_right hbak (inv_pos.mpr hlog2_pos)
 
 /-! ## The finite residence bound (irreducible gap) -/
 
@@ -260,32 +273,16 @@ theorem nu3_linear_bound_from_repeller (n : ℕ) (hn : n ≥ 1) :
   obtain ⟨W, hWpos, hW⟩ := finite_residence_bound n hn
   exact k_bound_from_repeller n hn W hWpos hW
 
-/-! ## Equivalence with nu3_linear_bound -/
+/-! ## Relationship with deficit-bounded formulation -/
 
-/-- The sliding window condition is equivalent to the deficit being bounded. -/
-theorem sliding_window_iff_deficit_bounded (n : ℕ) :
-    (∃ W : ℕ, W ≥ 1 ∧ SlidingWindowCondition n W) ↔
-    (∃ D : ℤ, ∀ t, deficit n t ≤ D) := by
-  constructor
-  · -- Window condition → deficit bounded
-    intro ⟨W, hWpos, hW⟩
-    exact ⟨2 * ↑W, deficit_bounded_of_window n W hWpos hW⟩
-  · -- Deficit bounded → window condition (take W = D + 1, roughly)
-    -- If deficit ≤ D for all t, then for W = 3*(D.toNat + 1):
-    -- deficit(t + W) ≤ D = deficit(t) + (D - deficit(t)) ≤ deficit(t)
-    -- only if deficit(t + W) ≤ deficit(t), but this needs deficit to actually
-    -- decrease over long windows, which requires safe steps.
-    -- In fact, the correct proof uses: deficit(t) ≤ D and deficit(0) = 0,
-    -- so deficit(t + W) ≤ D = deficit(t) + (D - deficit(t)).
-    -- But we can't guarantee deficit(t + W) ≤ deficit(t) from deficit ≤ D alone.
-    -- The window condition is STRONGER than deficit bounded.
-    -- So this direction is not provable in general.
-    -- We include it only in the forward direction.
-    intro ⟨D, hD⟩
-    -- The backward direction fails: deficit bounded does NOT imply
-    -- the window condition (deficit could oscillate).
-    -- We mark this with sorry to document the non-equivalence.
-    sorry
+/-- The sliding window condition implies deficit bounded.
+    (The converse does NOT hold in general: deficit bounded allows
+    oscillation, while the window condition requires monotone decay
+    at window boundaries.) -/
+theorem sliding_window_implies_deficit_bounded (n : ℕ) (W : ℕ) (hWpos : W ≥ 1)
+    (hW : SlidingWindowCondition n W) :
+    ∃ D : ℤ, ∀ t, deficit n t ≤ D :=
+  ⟨2 * ↑W, deficit_bounded_of_window n W hWpos hW⟩
 
 /-! ## Summary of the sorry decomposition -/
 
