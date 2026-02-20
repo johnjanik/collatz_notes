@@ -38,3 +38,4 @@ import CollatzLean.LinearFormThree
 import CollatzLean.SimultaneousApprox
 import CollatzLean.LittlewoodResidence
 import CollatzLean.LittlewoodInduction
+import CollatzLean.SpectralGap
