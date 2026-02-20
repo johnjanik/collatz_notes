@@ -5228,3 +5228,140 @@ This is the Diophantine signature.
 - `branch_transitions.csv` (16 MB, 570K rows)
 - `branch_checkpoints.csv` (42 KB, 51 snapshots)
 - `branch_summary.csv` (3.5 KB), `branch_params.csv` (198 B)
+
+
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCc
+
+20260220
+
+  Summary: Sorry Closure Progress                                                                                                                            
+                                                                                                                                                             
+  Closed 3 sorrys today (13 → 10 sorry-using declarations):                                                                                                  
+                                                                                                                                                             
+  Sorry: three_delta3_le_p_of_sublinear                                                                                                                    
+  File: SublinearDrift.lean
+  Technique: Fixed bug (k needed max T₀ T₂), used nlinarith with product witness for T₂*(p-1) + D₀abs*p + p ≥ 1
+  ────────────────────────────────────────
+  Sorry: deficit_sublinear_of_polynomial_bound
+  File: DenjoyKoksma.lean
+  Technique: tendsto_rpow_atTop + rpow_add algebra to show O(t^κ) with κ<1 implies o(t)
+  ────────────────────────────────────────
+  Sorry: deficit_sublinear
+  File: DenjoyKoksma.lean
+  Technique: Chain through the above two
+
+  Current state: 4 axioms, 10 sorrys, 3,112 jobs, builds clean.
+
+  Remaining 10 sorrys by category:
+
+  - Equivalent to conjecture (2): nu3_linear_bound, finite_deficit_bound
+  - Weyl bridge (2): equidistribution_implies_deficit_bounded, nu3_linear_bound_from_weyl
+  - Complex analysis / Baker chain (3): blaschke_factor_le_ratio, rising_factorial_le_pow, poisson_jensen_blaschke
+  - Cycle analysis (1): steiner_cycle_large (Δ₃ ≥ 80)
+  - Solenoid transfer (1): deficit_sublinear_bound
+  - Correction ratio (1): reaches_one_of_sublinear_deficit
+
+  The remaining sorrys are substantially harder — either equivalent to the conjecture, require complex analysis formalization (Blaschke products,
+  Poisson-Jensen), or bridge non-trivial mathematical gaps (solenoid transfer, correction ratio bounding). The most technically approachable is
+  rising_factorial_le_pow (AM-GM for products), but it requires significant rpow/product machinery in Lean.
+
+  The companion paper (docs/pedagogical_paper.tex) is already updated with bounded deficit as the target and the SWC bug as a cautionary tale, though the
+  sorry count should be updated from 8 to 10 to account for the DenjoyKoksma/SublinearDrift additions.
+
+
+---
+
+## 2026-02-20: Diophantine Ghost Island Discovery (100B Branch Locus)
+
+### Visualization
+- Created `python_scripts/branch_locus_viz.py` → 7 figures in `visualizations/`
+- Regenerated `diophantine_transitions.png` from 100B data (was 10B)
+- LaTeX companion document: `docs/branch_locus_figures.tex` (13 pages, 8 figures)
+
+### New structure at N=10¹¹ (absent at N=10¹⁰)
+
+**1. Diophantine ghost island (251 cells)**
+- Location: r₂ ∈ [0, 37], r₃ ∈ [438, 461] at k=729
+- Perpendicular distance ~370 from main foliation (main cluster spans d ∈ [-19, +18])
+- Complete void of 352 units between main cluster and island
+- Created by rational approximant 460/729 ≈ log₃2 (error 7.2e-5)
+- Only 3,233 total visits out of 25.1T steps (fraction 1.3e-10)
+- Mean visits/cell: 12.9 (vs 1.09 billion for main cluster)
+- 161 branch, 87 pure_even, 3 pure_odd — all have oo=0
+- Lower valence: 49% valence-3 (vs 90% in main cluster) — incomplete exploration
+
+**2. Shadow offset distribution gap sharpened**
+- Low-density region at |d_irr - d_rat| < 0.001 (~200 cells) — intrinsic geometric feature
+- Island adds concentrated bump at shadow_offset ∈ [+0.006, +0.008]
+  - Bin [0.006, 0.007): +100 cells on 328 main (30% boost)
+  - Bin [0.007, 0.008): +141 cells on 326 main (43% boost)
+- Creates visible asymmetric positive shoulder absent at 10B
+
+**3. Downward slope at t ≈ 235 in foliation-position plot**
+- Island appears at foliation position t ∈ [234, 277]
+- Shadow offset decreases from +0.008 to +0.006 (slope -5.1e-5/t)
+- 47 new frontier cells at d ≈ 15-18 extend main cluster at t ≈ 200-222
+
+### 10B → 100B cell count comparison (k=729)
+| | 10B | 100B | Δ |
+|---|---|---|---|
+| Non-empty | 19,025 | 23,268 | +4,243 |
+| Branch | 17,372 | 21,632 | +4,260 |
+| Pure even | 1,555 | 1,582 | +27 |
+| Pure odd | 98 | 54 | -44 |
+| Ghost island | 0 | 251 | +251 |
+| Main cluster new | — | — | +3,992 |
+
+44 cells reclassified from pure_odd → branch (finally got an even visit).
+
+### Theoretical significance
+- Ghost island = direct manifestation of continued fraction approximation quality
+- 352-unit gap controlled by Baker-type bounds on |p - q log₂3|
+- Expected to shrink at k=3⁹=19,683 (best approx 12,420/19,683, closer)
+- First direct visual evidence of Diophantine approximation quality controlling branch locus spatial structure
+
+---
+
+## 2026-02-20: Equilibrium Cusp in p_odd vs slope_dev
+
+### The cusp
+Panel 6d of branch_locus_fig6.png shows a sharp V-shaped cusp in the p_odd vs slope_dev scatter.
+
+**Location**: p* = 1/(1 + log₂3) = 0.38685... — the Anosov equilibrium parity fraction.
+
+**Definition**: slope_dev = |p_odd/(1-p_odd) - log₃2|, the absolute deviation of the cell's odds ratio from equilibrium. This is zero exactly when p_odd = p*.
+
+### Cusp shape (asymmetric V)
+- **Left arm** (p < p*): slope ≈ 2.47, convergent drift side
+- **Right arm** (p > p*): slope ≈ 2.87, divergent drift side  
+- **Asymmetry ratio**: ~1.16 (right arm 16% steeper)
+- **Exponent**: α = 1.00 ± 0.04 (linear V, not quadratic U)
+- Asymmetry comes from convexity of f(p) = p/(1-p): f''(p*) = 8.676
+
+### Why the asymmetry matters physically
+Growth factor per odd step (3/2) exceeds shrinkage per even step (1/2), so deviations toward more odd steps are "more expensive" in odds-ratio space. The right arm being steeper = divergent trajectories deviate faster from the foliation.
+
+### Key numbers
+- Minimum slope_dev: 3.85e-5 (6,600x below mean of 0.255)
+- Entropy at cusp: H(p*) = 0.963 (NOT maximum — max H=1 is at p=0.5)
+- The 11.3% gap between p*=0.387 and p=0.5: Collatz selects drift neutrality, not max randomness
+
+### Distribution around cusp
+- Mean p_odd = 0.284 at k=216, which is 0.103 BELOW p*
+- Most branch cells on the CONVERGENT side (ν₂/ν₃ > log₂3)
+- Consistent with Collatz conjecture: trajectories reaching 1 accumulate more even than odd steps
+
+### Universality across k
+Cusp appears at every k-level from k=9 onward, always at p*. Shape stabilizes for k≥54.
+| k | min slope_dev | alpha_left | alpha_right |
+|---|---|---|---|
+| 9 | 0.031 | 0.950 | — |
+| 81 | 1.83e-5 | 0.964 | 1.033 |
+| 216 | 3.85e-5 | 0.963 | 1.036 |
+
+k=81 achieves the smallest min because 81=3⁴ is a best-approximant denominator where a cell center lands very close to equilibrium.
+
+### Connection to other findings
+- The cusp is at p* = 0.387, the golden mean shift ceiling is 1/φ² = 0.382 — gap of only 0.005
+- This 0.005 gap is WHY the Collatz conjecture is "almost true" heuristically
+- The SFT constraint keeps ALL cells below 0.382, well on the convergent side of the cusp
