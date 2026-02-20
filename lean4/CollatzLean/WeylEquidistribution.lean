@@ -263,7 +263,52 @@ theorem equidistributed_subset_visits_lower
     (ε : ℝ) (_hε : ε > 0) :
     ∃ M₀ : ℕ, M₀ ≥ 1 ∧ ∀ M : ℕ, M ≥ M₀ →
       (subsetVisitCount seq N S M : ℝ) / (M : ℝ) ≥ (S.card : ℝ) / (N : ℝ) - ε := by
-  sorry
+  -- Case 1: S is empty — trivial since both sides are ≤ 0
+  by_cases hSne : S.Nonempty
+  swap
+  · rw [Finset.not_nonempty_iff_eq_empty] at hSne
+    subst hSne
+    refine ⟨1, le_refl _, fun M _ => ?_⟩
+    have h1 : subsetVisitCount seq N ∅ M = 0 := by simp [subsetVisitCount]
+    simp only [h1, Finset.card_empty, Nat.cast_zero, zero_div]
+    linarith
+  -- Case 2: S is nonempty
+  have hScard_pos : (0 : ℝ) < S.card := by exact_mod_cast Finset.card_pos.mpr hSne
+  have hε'_pos : ε / ↑S.card > 0 := div_pos _hε hScard_pos
+  -- For each r ∈ S, equidistribution gives M₀(r) with frequency within ε/|S| of 1/N
+  -- Define M₀(r) via Classical.choose (0 for r ∉ S, unused)
+  let M₀_of : ℕ → ℕ := fun r =>
+    if h : r ∈ S then (_hequi.2 r (_hS r h) (ε / ↑S.card) hε'_pos).choose else 0
+  -- Take M₀ = max(1, sup of M₀_of over S)
+  refine ⟨max 1 (S.sup' hSne M₀_of), le_max_left _ _, fun M hM => ?_⟩
+  -- M ≥ M₀_of r for all r ∈ S
+  have hM_ge : ∀ r ∈ S, M ≥ M₀_of r := fun r hr =>
+    le_trans (Finset.le_sup' M₀_of hr) (le_trans (le_max_right _ _) hM)
+  -- Per-residue frequency lower bound
+  have hfreq : ∀ r ∈ S, (visitCount seq N r M : ℝ) / (M : ℝ) ≥
+      1 / ↑N - ε / ↑S.card := by
+    intro r hr
+    have hspec := (_hequi.2 r (_hS r hr) (ε / ↑S.card) hε'_pos).choose_spec
+    have hdef : M₀_of r = (_hequi.2 r (_hS r hr) (ε / ↑S.card) hε'_pos).choose :=
+      dif_pos hr
+    have hbound := hspec.2 M (hdef ▸ hM_ge r hr)
+    simp only [visitCount]
+    linarith [(abs_lt.mp hbound).1]
+  -- Key: subsetVisitCount = ∑ visitCount (fiberwise decomposition)
+  have hdecomp : (subsetVisitCount seq N S M : ℝ) =
+      ∑ r ∈ S, (visitCount seq N r M : ℝ) := by
+    have h : subsetVisitCount seq N S M = ∑ r ∈ S, visitCount seq N r M := by
+      simp only [subsetVisitCount, visitCount]
+      exact (Finset.sum_card_fiberwise_eq_card_filter (Finset.range M) S
+        (fun k => seq k % N)).symm
+    exact_mod_cast h
+  -- Main calculation
+  calc (subsetVisitCount seq N S M : ℝ) / M
+      = (∑ r ∈ S, (visitCount seq N r M : ℝ)) / M := by rw [hdecomp]
+    _ = ∑ r ∈ S, ((visitCount seq N r M : ℝ) / M) := Finset.sum_div ..
+    _ ≥ ∑ r ∈ S, (1 / ↑N - ε / ↑S.card) := Finset.sum_le_sum fun r hr => hfreq r hr
+    _ = ↑S.card * (1 / ↑N - ε / ↑S.card) := by rw [Finset.sum_const, nsmul_eq_mul]
+    _ = ↑S.card / ↑N - ε := by field_simp
 
 /-! ## D4. Bridge: equidistribution implies safe cell visits
 
