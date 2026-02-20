@@ -36,7 +36,7 @@
 \numberwithin{equation}{section}
 
 %------------------------------------------------------------------
-\title{Diophantine Confinement of the Branch Locus\\in Syracuse Dynamics}
+\title{Diophantine Confinement in Syracuse Dynamics}
 
 \author{John A.\ Janik}
 \address{john.janik@gmail.com}
@@ -1165,6 +1165,79 @@ steps).
 \end{tabular}
 \end{center}
 
+\subsection{The equilibrium cusp}
+\label{sec:cusp}
+
+The branch locus computation records, for each torus cell
+$(r_2, r_3) \in (\Z/k\Z)^2$, the fraction of odd-step visits
+$p_{\mathrm{odd}}$ and the \emph{slope deviation}
+\[
+  \sigma(r_2, r_3) \;=\;
+  \left|\frac{p_{\mathrm{odd}}}{1 - p_{\mathrm{odd}}} - \log_3 2\right|,
+\]
+the absolute deviation of the cell's odds ratio from the Anosov
+equilibrium value $\log_3 2 = 1/\log_2 3$.  This quantity measures
+how far the cell's local parity balance lies from the neutral drift
+threshold.
+
+Since $f(p) = p/(1-p)$ is smooth and strictly convex, $\sigma$
+vanishes exactly at the equilibrium parity fraction
+$p^* = 1/(1 + \log_2 3) \approx 0.38685$
+(cf.\ Remark~\ref{rem:near-miss}), producing a sharp V-shaped cusp
+in the $(p_{\mathrm{odd}},\, \sigma)$ plane.  The cusp is
+\emph{asymmetric}: since $f'(p^*) = 1/(1-p^*)^2 = 2.660$ and
+$f''(p^*) = 2/(1-p^*)^3 = 8.676$,
+\begin{align*}
+  \text{Left arm } (p < p^*)\colon \quad
+    &\sigma \approx |\Delta p|\,(2.66 - 4.34\,|\Delta p|), \\
+  \text{Right arm } (p > p^*)\colon \quad
+    &\sigma \approx |\Delta p|\,(2.66 + 4.34\,|\Delta p|).
+\end{align*}
+The right arm (excess odd steps, divergent drift) is $\sim\!16\%$
+steeper than the left arm (excess even steps, convergent drift).
+This reflects the multiplicative asymmetry of the Collatz map: the
+growth factor $3/2$ per odd step exceeds the shrinkage factor $1/2$
+per even step, so deviations toward more odd steps produce larger
+slope deviations.
+
+Power-law fits $\sigma \sim a\,|p - p^*|^\alpha$ over the branch
+cells at $k = 216$ confirm $\alpha = 1.00 \pm 0.04$ on both arms
+($R^2 > 0.9999$), with the small deviation from unity explained by
+$f''(p^*)$ curvature.  The cusp appears at every $k$-level from
+$k = 9$ onward, always at the same theoretical location~$p^*$, with
+the minimum slope deviation improving from $0.031$ at $k = 9$ to
+$3.85 \times 10^{-5}$ at $k = 216$.
+
+Three observations from the cusp structure are significant for the
+confinement argument:
+
+\begin{enumerate}
+\item \emph{Population asymmetry.}  The mean $p_{\mathrm{odd}}$ of
+  branch cells at $k = 216$ is $0.284$, which is $0.103$ below~$p^*$.
+  The vast majority of branch cells sit on the \emph{left}
+  (convergent) arm of the cusp, where $\nu_2/\nu_3 > \log_2 3$.
+  This is the population-level manifestation of the walk's positive
+  drift (Section~\ref{sec:correction}).
+
+\item \emph{The cusp is not at maximum entropy.}  The entropy at
+  $p^*$ is $H(p^*) = 0.963$ ($96.3\%$ of the maximum $H = 1$ at
+  $p = 1/2$).  The Collatz dynamics selects for drift neutrality,
+  not maximum randomness.  The $11.3\%$ gap between $p^*$ and
+  $p = 1/2$ quantifies the departure from a symmetric random walk.
+
+\item \emph{Right-arm steepness and the golden mean gap.}  The
+  steeper right arm means that cells exceeding $p^*$ incur a
+  disproportionate slope penalty.  Combined with the golden mean
+  shift constraint $p_{\mathrm{odd}} \le 1/\varphi^2 \approx 0.382
+  < p^*$ (Proposition~\ref{prop:log23-lt-phi}), the SFT bound
+  confines all Collatz parity sequences to the left arm.  The cusp
+  geometry explains \emph{why} the $0.005$ gap between $1/\varphi^2$
+  and $p^*$ is dynamically effective: the right arm's steepness
+  amplifies even small excursions past equilibrium into large slope
+  deviations, creating a soft barrier that reinforces the hard SFT
+  bound.
+\end{enumerate}
+
 \subsection{Branch locus and tunnel structure}
 
 At torus resolution $k = 144$, the branch locus (cells visited by
@@ -1595,14 +1668,24 @@ $p_{\mathrm{eq}}$.  The Baker--Feldman bridge above identifies the
 precise mathematical content needed to close the gap.
 \end{remark}
 
+\section*{Conflict of Interest Statement}
+The author declares that he has no conflict of interest.
+
+\section*{Data Availability Statement}
+All data and Lean 4 code can be found at https://github.com/johnjanik/syracuse-confinement
+
 %==================================================================
 % Acknowledgements
 %==================================================================
 
-\subsection*{Acknowledgements}
+\section*{Acknowledgements}
 
 The author thanks the Lean~4 and Mathlib communities for the proof
-assistant infrastructure that made the formalization possible.
+assistant infrastructure that made the formalization possible. During the preparation of this work,
+the author used generative pre-trained transformers Claude Opus 4.6 to enhance readability and language,
+aiding in formulating and structuring content. After using these tools, the authors reviewed and edited
+the content as needed and takes full responsibility for the content of the publication.
+
 
 %==================================================================
 % References

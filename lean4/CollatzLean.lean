@@ -31,3 +31,6 @@ import CollatzLean.SolenoidMixing
 import CollatzLean.SkewProduct
 import CollatzLean.CorrelationDecay
 import CollatzLean.BorelCantelli
+import CollatzLean.UniqueErgodicity
+import CollatzLean.DenjoyKoksma
+import CollatzLean.SublinearDrift
