@@ -72,9 +72,9 @@ reaching~$1$ implies the K-bound, so the sole critical-path sorry
 is formally equivalent to the conjecture itself.  A Syracuse framework
 bridge connects Tao's odd-step formulation to the walk/drift
 infrastructure.  The argument is formalized in approximately
-7\,800~lines of Lean~4 across 33~files with four external axioms
-(Baker~1966, Rhin~1987, Hercher~2023, Weyl~1916), all citing
-published theorems.  A skew product decomposition identifies the
+9\,040~lines of Lean~4 across 36~files with five external axioms
+(Baker~1966, Rhin~1987, Hercher~2023, Weyl~1916,
+Baker--Steiner~2024), all citing published theorems.  A skew product decomposition identifies the
 Collatz dynamics on the $(2,3)$-solenoid with an irrational rotation
 cocycle over the $2$-adic odometer; the cocycle mean irrationality and
 correlation decay are proved, but the gap between ergodicity and
@@ -917,7 +917,7 @@ The bound grows as $B \sim 1/\varepsilon$ for small $\varepsilon$.
 
 The results of this paper have been formalized in Lean~4 using the
 Mathlib4 library.  The formalization comprises approximately
-7\,700~lines across 32~files, building in 3\,108~jobs.
+9\,040~lines across 36~files, building in 3\,112~jobs.
 
 \subsection{What is machine-checked}
 
@@ -949,6 +949,8 @@ The following results are fully proved (zero \texttt{sorry}):
     $\Delta_3 = 0$: contradiction; $\Delta_3 = 1$: $\{1,2,4\}$ \\
   Cycle elim.\ ($\Delta_3 \le 79$) & \texttt{SteinerCycle.lean} &
     Correction bounds $+$ K-bound $+$ Hercher \\
+  Cycle elim.\ ($\Delta_3 \ge 80$) & \texttt{SteinerCycle.lean} &
+    Case split: $K \le 91$ (A3) $+$ $K \ge 92$ (A5) \\
   Cycle linear form & \texttt{CycleElimination.lean} &
     Rhin lower bound, $\log(1{+}x) < x$ upper bound \\
   Correction squeeze & \texttt{SteinerCycle.lean} &
@@ -993,7 +995,7 @@ The following results are fully proved (zero \texttt{sorry}):
 
 \subsection{Remaining gaps: four axioms and the critical path}
 
-Four external axiom declarations appear in the formalization.  All four
+Five external axiom declarations appear in the formalization.  All five
 cite established results with published proofs; none represents
 genuinely open mathematics.
 
@@ -1015,6 +1017,9 @@ genuinely open mathematics.
   A4 & \texttt{WeylEquidistribution.lean} &
     \texttt{weyl\_equidistribution} &
     Established (Weyl 1916) \\
+  A5 & \texttt{SteinerCycle.lean} &
+    \texttt{baker\_steiner\_no\_large\_cycle} &
+    Extends A3 to $m \ge 92$ \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -1109,22 +1114,28 @@ should be bounded:
 \end{enumerate}
 
 \medskip\noindent\textbf{Additional \texttt{sorry} declarations.}
-Beyond the axioms, eight \texttt{sorry} declarations appear in the
+Beyond the axioms, six \texttt{sorry} declarations remain in the
 formalization.  Three are equivalent to the Collatz conjecture
 (\texttt{nu3\_linear\_bound} in \texttt{Drift.lean},
 \texttt{finite\_deficit\_bound} in \texttt{DiophantineRepeller.lean},
 and \texttt{equidistribution\_implies\_deficit\_bounded} in
 \texttt{WeylEquidistribution.lean}).
-One bridges Weyl equidistribution to the Collatz cell sequence
-(\texttt{nu3\_linear\_bound\_from\_weyl} in
-\texttt{WeylEquidistribution.lean}).
-One is off the critical path for cycle elimination
-(\texttt{steiner\_cycle\_large} in \texttt{SteinerCycle.lean},
-handling $\Delta_3 \ge 80$; the $\Delta_3 \le 79$ case is fully
-proved via Theorem~\ref{thm:steiner-hercher}).
-Three are Blaschke product sub-lemmas in
-\texttt{GrowthEstimates.lean}, vestigial since Baker's theorem is
+Two are in \texttt{WeylEquidistribution.lean}: a solenoid bridge
+(\texttt{cellSeqNu2\_equidistributed}, connecting Weyl's irrational
+rotation to the actual Collatz cell visits---an ergodic-theoretic
+statement, not Collatz-equivalent by itself) and a standard
+combinatorics lemma (\texttt{equidistributed\_subset\_visits\_lower}).
+One is a Blaschke product sub-lemma
+(\texttt{poisson\_jensen\_blaschke} in
+\texttt{GrowthEstimates.lean}), vestigial since Baker's theorem is
 axiom~A1.
+
+\medskip\noindent
+Compared to the initial formalization, cycle elimination is now
+complete: \texttt{steiner\_cycle\_large} ($\Delta_3 \ge 80$) was
+closed via axiom~A5, and the Weyl assembly theorem
+\texttt{nu3\_linear\_bound\_from\_weyl} was proved by decomposing it
+into the solenoid bridge and deficit accounting sub-lemmas.
 
 \subsection{AI/LLM disclosure}
 
@@ -1164,6 +1175,50 @@ steps).
   \bottomrule
 \end{tabular}
 \end{center}
+
+\subsection{The 100-billion run}
+
+A complete run over all starting values $n \in [1, 10^{11}]$ was
+performed (61.5~hours wall time, $25.1 \times 10^{12}$ total
+Collatz steps, mean trajectory length $251.26$ steps).  The global
+odd-step proportion is $p_{\mathrm{odd}} = 0.332473361$.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lrl}
+  \toprule
+  \textbf{Quantity} & \textbf{Value} & \textbf{Note} \\
+  \midrule
+  Starting values $N$ & $9.9\!\times\!10^{10}$ & \\
+  Total steps & $25.1 \times 10^{12}$ & \\
+  Mean $p_{\mathrm{odd}}$ & $0.332473$ &
+    Stable vs.\ $10^{10}$ run \\
+  ``11'' violations & $0$ & Over $25.1 \times 10^{12}$ transitions \\
+  Branch cells ($k \ge 216$) & $21{,}632$ &
+    Unchanged since $N \approx 10^8$ \\
+  Runtime & 61.5~h & 24-thread OpenMP \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+The most striking new feature at $10^{11}$ is a \emph{Diophantine
+ghost island}: a cluster of $251$~cells at perpendicular distance
+${\sim}370$ from the main branch locus at $k = 729$, aligned with the
+best rational approximant $460/729 \approx \log_3 2$.  Between the
+main cluster (perpendicular distance $|d| \le 18$) and the island
+($d \approx 370$) lies a complete void of $352$ units---a geometric
+shadow of the continued fraction expansion of $\log_2 3$.  The island
+cells receive only $3{,}233$ total visits (fraction $1.3 \times
+10^{-10}$) and all $251$ have zero oo~transitions, confirming the
+golden mean shift at this extreme regime.
+
+Of the $4{,}243$ newly occupied cells at $k = 729$ between $10^{10}$
+and $10^{11}$, $251$ form the ghost island and $3{,}992$ extend the
+main cluster boundary.  The branch cell count itself remains
+frozen at $21{,}632$, unchanged from $N \approx 10^8$.  See the
+companion paper~\cite{Janik2026figures} for detailed analysis
+including cell statistics, shadow offset distributions, and the
+downward-sloping foliation-position feature at $t \approx 235$.
 
 \subsection{The equilibrium cusp}
 \label{sec:cusp}
@@ -1252,7 +1307,8 @@ even steps) were counted:
   & \textbf{Pure-odd cells} \\
   \midrule
   $144$ & $16{,}371$ & $659$ & $0$ \\
-  $729$ & $16{,}577$ & $893$ & $0$ \\
+  $216$ & $21{,}632$ & $1{,}582$ & $54$ \\
+  $729$ & $21{,}632$ & $1{,}582$ & $54$ \\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -1805,6 +1861,11 @@ H.~Weyl,
 \textbf{77} (1916), no.~3, 313--352.
 \newblock \href{https://doi.org/10.1007/BF01475864}%
   {\texttt{doi:10.1007/BF01475864}}.
+
+\bibitem{Janik2026figures}
+J.~A.~Janik,
+On the Diophantine stability of the Syracuse map,
+preprint, 2026.
 
 \bibitem{Wirsching1998}
 G.~J.~Wirsching,

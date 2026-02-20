@@ -1,0 +1,1130 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+
+\DeclareMathOperator{\ord}{ord}
+
+\title{Furstenberg's $\times 2, \times 3$ Conjecture:\\
+A Computational-Diophantine Approach via Baker Separation\\
+and Partition Entropy}
+\author{John A. Janik\\
+john.janik@gmail.com}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present large-scale computational evidence and structural analysis
+bearing on Furstenberg's 1967 conjecture that the only Borel probability
+measures on $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ jointly invariant under
+$T_2\colon x \mapsto 2x$ and $T_3\colon x \mapsto 3x$ are Lebesgue
+measure and measures supported on finite orbits.
+Our approach transfers the Baker--cellError machinery developed for
+the Collatz conjecture to the Furstenberg setting, producing three
+categories of results.
+
+\emph{Phase~1 (Orbit structure):}
+We scan $4.55 \times 10^8$ primes up to $10^{10}$, verifying that the
+density of primes~$p$ for which $\langle 2, 3 \rangle = (\mathbb{Z}/p\mathbb{Z})^*$
+converges to the Euler product
+$\prod_\ell (1 - 1/(\ell^2(\ell-1))) = 0.69750\ldots$
+to five significant figures.
+We also compute continued-fraction convergents of $\log_2 3$
+and multi-scale cellError resonant fractions, confirming that the
+resonant count stays $O(1)$ at every scale (Baker separation).
+
+\emph{Phase~2 (Entropy bridge):}
+We compute the joint partition $\mathcal{P}_2^{(j)} \vee \mathcal{P}_3^{(k)}$
+for $j \leq 24$, $k \leq 15$, finding that:
+(i)~the entropy deficit $\log(\text{\#atoms}) - H$ is
+\emph{bounded} at $\sim 0.18$ nats across all scales;
+(ii)~the minimum atom width equals the B\'ezout floor $1/(2^j \cdot 3^k)$ exactly;
+(iii)~a fundamental asymmetry holds: $\ord_{2^j}(3) = 2^{j-2}$ (index~2)
+while $\ord_{3^k}(2) = \varphi(3^k)$ (index~1, primitive root), both
+verified computationally to exponent~40.
+These results constrain the entropy bridge argument: $T_3$-invariance
+forces approximate uniformity on $\mathcal{P}_2^{(j)}$ atoms, which
+together with Rudolph's theorem would close the conjecture.
+
+\emph{Phase~2b (Spectral gap):}
+We prove analytically and verify numerically that the transfer matrix
+of $T_3$ on $\mathcal{P}_2^{(j)}$ has \emph{all} non-trivial eigenvalues
+with modulus exactly~$1/3$, giving spectral gap $2/3$ \emph{independent of~$j$}.
+The proof uses a telescoping product identity:
+$\prod_{i=0}^{L-1} |1 + 2\cos\theta_i| = 1$ for every orbit of
+$\times 3$ on $\mathbb{Z}/2^j\mathbb{Z}$.
+This is verified to $j = 30$ via Fourier orbit products ($2^{30}$ elements)
+and to $j = 10$ via direct matrix multiplication ($1024 \times 1024$ matrices,
+4 orbit cycles each).
+The uniform spectral gap gives exponential mixing:
+$\|T_3^n p - \text{uniform}\|_2 \leq (1/3)^n \cdot \|p - \text{uniform}\|_2$.
+
+\emph{Phase~2c (Joint constraints):}
+We build the combined $T_2 + T_3$ constraint matrix across 2--3 consecutive
+dyadic scales (up to $9216 \times 9216$ at $j = 10$) and compute exact
+rank formulas via Gaussian elimination:
+$\operatorname{rank} = 7N - 1$ (2-scale) or $17N - 1$ (3-scale),
+with $T_2$-invariance killing exactly $N_{\text{finest}}$ degrees of freedom.
+However, the atom-mass DOF at the coarsest scale remains $N/2 + 1$, showing
+that the linear constraint system alone does not force $\mathbf{T}p = p$.
+This identifies \emph{positivity} ($w_{k,s} \ge 0$) as the essential
+non-linear ingredient for the entropy bridge, consistent with the structure
+of Rudolph's theorem.
+\end{abstract}
+
+
+%% ====================================================================
+\section{Introduction}
+%% ====================================================================
+
+Furstenberg's conjecture \cite{furstenberg1967} is one of the central
+open problems in ergodic number theory.
+
+\begin{conjecture}[Furstenberg, 1967]
+The only Borel probability measures on $\mathbb{T} = \mathbb{R}/\mathbb{Z}$
+simultaneously invariant under $T_2\colon x \mapsto 2x \pmod{1}$ and
+$T_3\colon x \mapsto 3x \pmod{1}$ are Lebesgue measure~$\lambda$ and
+measures supported on finite orbits (rationals with denominator coprime to~6).
+\end{conjecture}
+
+The state of the art includes:
+\begin{itemize}
+\item \textbf{Rudolph (1990):} If $\mu$ is ergodic, jointly $T_2$- and
+  $T_3$-invariant, and $h_\mu(T_2) > 0$, then $\mu = \lambda$.
+\item \textbf{Host (1995):} Simplified Rudolph's proof.
+\item \textbf{Einsiedler--Katok--Lindenstrauss (2006):} Any
+  counterexample has Hausdorff dimension~0.
+\item \textbf{The zero-entropy case remains completely open.}
+\end{itemize}
+
+Our approach uses Baker's theorem on linear forms in logarithms---the
+same effective Diophantine tool that drives the analysis of the Collatz
+conjecture via ``cellError'' separation---to obtain quantitative
+constraints on the joint partition structure of $T_2$ and $T_3$.
+The goal is to show that Baker separation forces positive entropy for
+any non-atomic jointly invariant measure, reducing Furstenberg to Rudolph.
+
+
+%% ====================================================================
+\section{Mathematical Framework}
+%% ====================================================================
+
+\subsection{The Fourier picture}
+
+Characters of $\mathbb{T}$ are $\chi_n(x) = e^{2\pi i n x}$ for
+$n \in \mathbb{Z}$.
+If $\mu$ is $T_2$-invariant, then $\hat\mu(n) = \hat\mu(2n)$;
+if also $T_3$-invariant, then $\hat\mu(n) = \hat\mu(3n)$.
+Thus $\hat\mu$ is constant on orbits of $\langle \times 2, \times 3 \rangle$
+acting on $\mathbb{Z}$.
+For $n \neq 0$, the orbit $\mathcal{O}(n) = \{2^a 3^b n : a, b \geq 0\}$
+is infinite by multiplicative independence of~2 and~3.
+The orbit tends to $\infty$, so by Riemann--Lebesgue
+$\hat\mu(n) = 0$ if $\mu$ is absolutely continuous.
+For singular~$\mu$, Riemann--Lebesgue fails, and the question is
+whether the Fourier coefficients can consistently remain nonzero
+along the rapidly diverging orbit.
+
+\subsection{Baker separation on the torus}
+
+Baker's theorem \cite{baker1966} gives a lower bound on linear forms
+in logarithms.  In the notation of \cite{rhin1987}:
+\[
+|a \log 2 + b \log 3| > \frac{C}{\max(|a|, |b|)^\kappa}
+\quad\text{for } (a,b) \neq (0,0),
+\]
+with $\kappa = 4.125$ (Rhin's effective value).
+Define the \emph{cellError}:
+\[
+\operatorname{cellError}(a, b) = a - \log_2 3 \cdot b.
+\]
+Baker gives $|\operatorname{cellError}(a,b)| > C / \max(|a|,|b|)^\kappa$,
+ensuring that the 2-adic and 3-adic structures are always ``transverse.''
+
+On the $(N \times N)$ torus, a cell $(a,b)$ is \emph{resonant} if
+$|\operatorname{cellError}(a,b)| < 1/N$.
+Baker bounds the resonant count at $O(1)$ (independent of~$N$),
+so the resonant \emph{fraction} decays as $O(1/N)$.
+This is the ``safe cell density'' of the Collatz framework,
+now applied to the pure $\times 2, \times 3$ action.
+
+\subsection{The entropy bridge conjecture}
+
+\begin{conjecture}[Entropy Production]
+\label{conj:entropy}
+If $\mu$ is a non-atomic, ergodic Borel probability measure on $\mathbb{T}$
+that is simultaneously $T_2$- and $T_3$-invariant, then
+\[
+h_\mu(T_2) = \lim_{j \to \infty} \frac{1}{j}\, H_\mu\!\!\left(
+\bigvee_{i=0}^{j-1} T_2^{-i}(\mathcal{P}_2)\right) > 0,
+\]
+where $\mathcal{P}_2 = \{[0, \tfrac12), [\tfrac12, 1)\}$.
+\end{conjecture}
+
+If Conjecture~\ref{conj:entropy} holds, then Rudolph's theorem
+immediately implies $\mu = \lambda$, closing Furstenberg's conjecture.
+
+The partition $\mathcal{P}_2^{(j)} = \bigvee_{i=0}^{j-1} T_2^{-i}(\mathcal{P}_2)$
+has atoms $\{[m/2^j, (m+1)/2^j) : 0 \leq m < 2^j\}$ with boundary
+points at the 2-adic rationals $\{m/2^j\}$.
+Similarly, $\mathcal{P}_3^{(k)}$ has boundaries at $\{m'/3^k\}$.
+The joint partition $\mathcal{P}_2^{(j)} \vee \mathcal{P}_3^{(k)}$ overlays
+both sets of boundaries.
+Baker's theorem ensures that 2-adic and 3-adic boundaries never coincide
+(except at~0), and quantifies their minimal separation.
+
+
+%% ====================================================================
+\section{Computational Methods}
+%% ====================================================================
+
+All computations were performed on an Intel Core Ultra 9~275HX
+(24~cores, no hyperthreading) with 128\,GB DDR5, using OpenMP
+parallelization.
+
+\subsection{Phase~1: Prime orbit scan (\texttt{furstenberg\_orbits.c})}
+
+For each prime $p$ with $\gcd(p, 6) = 1$ up to $P_{\max}$:
+\begin{enumerate}
+\item Factor $p - 1$ by trial division using precomputed primes to $10^5$.
+\item Compute $\ord_p(2)$ and $\ord_p(3)$ via the factorization of $p-1$:
+  start with $\text{ord} = p-1$, then for each prime factor $q$ of $p-1$,
+  divide out~$q$ while $x^{\text{ord}/q} \equiv 1 \pmod{p}$.
+\item Compute $|\langle 2, 3 \rangle| = \text{lcm}(\ord_p(2), \ord_p(3))$
+  using the cyclic group identity.
+\item Test full generation: $\langle 2, 3 \rangle = (\mathbb{Z}/p\mathbb{Z})^*$
+  iff $\text{lcm} = p - 1$.
+\end{enumerate}
+The sieve and prime collection use bit-packed Eratosthenes (625\,MB at
+$10^{10}$).
+Checkpoints are saved every 200K primes via atomic rename.
+At $10^{10}$, the program processes $7.9 \times 10^6$~primes/s
+on 24~threads.
+
+\subsection{Phase~2: Entropy computation (\texttt{furstenberg\_entropy.c})}
+
+For each $(j, k)$ pair, the joint partition
+$\mathcal{P}_2^{(j)} \vee \mathcal{P}_3^{(k)}$ has boundary points
+$\{m/2^j\} \cup \{m'/3^k\}$.
+In the common denominator $D = 2^j \cdot 3^k$, these become integers:
+\[
+\{m \cdot 3^k : 0 \leq m < 2^j\} \cup \{m' \cdot 2^j : 0 \leq m' < 3^k\}.
+\]
+We sort these $2^j + 3^k - 1$ integers (only~0 is shared), compute the
+gaps between consecutive values, and derive:
+\begin{itemize}
+\item Atom count: $N_{\text{atoms}} = 2^j + 3^k - 1$.
+\item Minimum and maximum gap in integer units.
+\item Entropy: $H = -\sum_i w_i \ln w_i$ where $w_i = \text{gap}_i / D$.
+\item Entropy deficit: $\ln(N_{\text{atoms}}) - H$.
+\end{itemize}
+For $j \leq 24$, $k \leq 15$, the boundary array fits in $\sim 250$\,MB.
+
+Multiplicative orders $\ord_{2^j}(3)$ and $\ord_{3^k}(2)$ are computed
+by factoring $\varphi(2^j)$ and $\varphi(3^k)$ and iteratively dividing
+out prime factors while the power test passes, using 128-bit modular
+arithmetic.
+
+\subsection{Phase~2b: Spectral verification (\texttt{furstenberg\_spectrum.c})}
+
+The transfer matrix spectrum is verified in two ways:
+(1)~Fourier orbit products over all orbits of $\times 3$ on
+$\mathbb{Z}/2^j\mathbb{Z}$ for $j \leq 20$, and representative orbits
+for $j \leq 30$;
+(2)~direct matrix power iteration on the $2^j \times 2^j$ transfer
+matrix for $j \leq 10$, tracking the geometric mean decay over complete
+orbit cycles of length $L = \ord_{2^j}(3) = 2^{j-2}$.
+
+\subsection{Phase~2c: Joint constraint analysis (\texttt{furstenberg\_lift.c})}
+
+For each scale~$j$, we construct the combined $T_2 + T_3$ constraint
+matrix (a dense $9N \times 9N$ system for the 2-scale case, with
+$N = 2^j$) and compute its rank via Gaussian elimination with column
+partial pivoting and tolerance $10^{-10}$.
+After row reduction, we project the null space onto subsets of variables
+(coarse sub-pieces, atom masses) and compute the projected null space
+dimension via a second rank computation.
+At $j = 10$, the matrix requires ${\sim}680$\,MB and the elimination
+takes ${\sim}10$\,s on a single core.
+For the 3-scale case (scales $j$, $j+1$, $j+2$), the system has
+$21N$ variables and $25N$ constraints; this is limited to $j \leq 8$
+(${\sim}275$\,MB).
+
+
+%% ====================================================================
+\section{Phase~1 Results: Orbit Structure at Scale $10^{10}$}
+%% ====================================================================
+
+\subsection{Full generation density}
+
+We scanned $455{,}052{,}509$ primes coprime to~6 up to $10^{10}$.
+Table~\ref{tab:fullgen} shows the full generation percentage by decade.
+
+\begin{table}[h]
+\centering
+\caption{Full generation density $|\langle 2,3 \rangle| / (p-1) = 1$ by decade.}
+\label{tab:fullgen}
+\begin{tabular}{lrrr}
+\toprule
+Range & Primes & Full gen & Pct \\
+\midrule
+$[5, 10^2)$          &            23 &            18 & 78.26\% \\
+$[10^2, 10^3)$       &           143 &           105 & 73.43\% \\
+$[10^3, 10^4)$       &         1,061 &           756 & 71.25\% \\
+$[10^4, 10^5)$       &         8,363 &         5,854 & 70.00\% \\
+$[10^5, 10^6)$       &        68,906 &        48,075 & 69.77\% \\
+$[10^6, 10^7)$       &       586,081 &       408,790 & 69.75\% \\
+$[10^7, 10^8)$       &     5,096,876 &     3,555,045 & 69.75\% \\
+$[10^8, 10^9)$       &    45,086,079 &    31,448,732 & 69.75\% \\
+$[10^9, 10^{10})$    &   404,204,977 &   281,933,832 & \textbf{69.75\%} \\
+\midrule
+\textbf{Total}       &   455,052,509 &   317,401,207 & 69.75\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+By Chebotarev's density theorem, the theoretical density of primes where
+$\langle 2, 3 \rangle = (\mathbb{Z}/p\mathbb{Z})^*$ is given by the
+Euler product:
+\begin{equation}
+\label{eq:euler}
+\delta = \prod_{\ell\ \text{prime}} \left(1 - \frac{1}{\ell^2(\ell - 1)}\right)
+= 0.69750136\ldots
+\end{equation}
+The product converges rapidly: $\ell = 2$ contributes $3/4$;
+$\ell = 3$ contributes $17/18$; $\ell = 5$ contributes $99/100$.
+Our empirical $69.750\%$ matches to five significant figures.
+
+\textbf{Interpretation.}
+At ``scale~$p$'' (working on $\mathbb{Z}/p\mathbb{Z}$), the
+$\langle \times 2, \times 3 \rangle$ semigroup covers all of
+$(\mathbb{Z}/p\mathbb{Z})^*$ for $\sim 70\%$ of primes.
+For the remaining $\sim 30\%$, non-trivial invariant subsets exist,
+but these are \emph{finite orbits}---precisely what Furstenberg allows.
+The conjecture is consistent at every finite prime scale.
+
+\subsection{Index distribution}
+
+For non-full-generation primes, the index $(p-1)/|\langle 2, 3 \rangle|$
+characterizes the failure mode.
+Table~\ref{tab:index} shows the distribution over all $455$M primes.
+
+\begin{table}[h]
+\centering
+\caption{Index distribution over $4.55 \times 10^8$ primes.}
+\label{tab:index}
+\begin{tabular}{rrrl}
+\toprule
+Index & Count & Pct & Interpretation \\
+\midrule
+1 & 317,401,207 & 69.75\% & Full generation \\
+2 &  93,355,317 & 20.52\% & Both are QR mod $p$ \\
+3 &  17,982,555 &  3.95\% & Both are cubic residues \\
+4 &   9,334,173 &  2.05\% & 4th power residues \\
+5 &   3,180,503 &  0.70\% & \\
+6 &   4,494,649 &  0.99\% & Composite: $2 \times 3$ \\
+8 &   2,722,949 &  0.60\% & \\
+12 &  1,123,071 &  0.25\% & Highly composite \\
+24 &    327,576 &  0.07\% & Highly composite \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Highly composite indices (6, 12, 24) are over-represented
+because they have many prime-power divisors, each contributing
+a factor to the probability.
+
+\subsection{Maximum index growth}
+
+Table~\ref{tab:maxindex} shows the maximum index per decade.
+
+\begin{table}[h]
+\centering
+\caption{Maximum index $\max_p (p-1)/|\langle 2,3 \rangle|$ by decade.}
+\label{tab:maxindex}
+\begin{tabular}{lr}
+\toprule
+Decade & Max index \\
+\midrule
+$[10^2, 10^3)$ & 10 \\
+$[10^3, 10^4)$ & 56 \\
+$[10^4, 10^5)$ & 72 \\
+$[10^5, 10^6)$ & 170 \\
+$[10^6, 10^7)$ & 519 \\
+$[10^7, 10^8)$ & 2,834 \\
+$[10^8, 10^9)$ & 3,235 \\
+$[10^9, 10^{10})$ & \textbf{35,590} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The worst-case primes have very smooth $p - 1$ (many small prime factors),
+causing both 2 and 3 to land in tiny subgroups.
+The minimum fraction $|\langle 2, 3\rangle|/(p-1)$ in the last decade
+is $2.81 \times 10^{-5}$, meaning the generators cover only
+$0.003\%$ of $(\mathbb{Z}/p\mathbb{Z})^*$.
+
+\subsection{CF convergents of $\log_2 3$}
+
+The continued fraction $\log_2 3 = [1; 1, 1, 2, 2, 3, 1, 5, 2, 23, \ldots]$
+gives the best rational approximations $p_n/q_n$ to $\log_2 3$,
+equivalently the closest near-equalities $2^{p_n} \approx 3^{q_n}$.
+Table~\ref{tab:cf} shows selected convergents with their cellError
+and the ratio to Baker's lower bound.
+
+\begin{table}[h]
+\centering
+\caption{CF convergents of $\log_2 3$ and comparison to Baker's bound.}
+\label{tab:cf}
+\begin{tabular}{rrrcc}
+\toprule
+$n$ & $a_n$ & $p_n/q_n$ & $|\operatorname{cellError}|$ & err/Baker \\
+\midrule
+4  & 2  & $19/12$              & $1.96 \times 10^{-2}$  & $6.6 \times 10^3$ \\
+8  & 2  & $1054/665$           & $6.30 \times 10^{-5}$  & $1.8 \times 10^{10}$ \\
+13 & 1  & $301994/190537$      & $9.31 \times 10^{-8}$  & $1.1 \times 10^{20}$ \\
+19 & 1  & $630138897/397573379$& $1.16 \times 10^{-10}$ & $1.4 \times 10^{22}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The err/Baker ratio grows rapidly: Baker's lower bound is exponentially
+weaker than the actual CF approximation rate.
+This ``gap'' is the quantitative room in which the entropy bridge must operate.
+
+\subsection{Multi-scale cellError resonance}
+
+On the $N \times N$ torus with threshold $\delta = 1/N$,
+we count cells $(a,b)$ with $|\operatorname{cellError}(a,b)| < \delta$.
+Table~\ref{tab:resonant} shows the results.
+
+\begin{table}[h]
+\centering
+\caption{CellError resonant fraction at scales $N = 6^k$.}
+\label{tab:resonant}
+\begin{tabular}{rrrr}
+\toprule
+$k$ & $N = 6^k$ & Resonant cells & Fraction \\
+\midrule
+1 & 6         & 1 & 0.167 \\
+2 & 36        & 2 & 0.056 \\
+3 & 216       & 2 & 0.009 \\
+4 & 1,296     & 2 & 0.0015 \\
+5 & 7,776     & 3 & 0.00039 \\
+6 & 46,656    & 1 & 0.000021 \\
+8 & 1,679,616 & 6 & 0.0000036 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The resonant count stays $O(1)$ at every scale, consistent with
+Baker separation (at most $\sim 2$ CF convergents in range at any scale).
+The resonant fraction decays as $\sim 1/N$, confirming that the torus
+becomes overwhelmingly ``safe'' at large scales.
+
+
+%% ====================================================================
+\section{Phase~2 Results: The Entropy Bridge}
+%% ====================================================================
+
+\subsection{Multiplicative order asymmetry}
+
+\begin{proposition}[Verified computationally to exponent 40]
+\label{prop:orders}
+For all $j \geq 3$:
+\[
+\ord_{2^j}(3) = 2^{j-2}, \qquad
+\text{index } [\varphi(2^j) : \ord_{2^j}(3)] = 2.
+\]
+For all $k \geq 1$:
+\[
+\ord_{3^k}(2) = \varphi(3^k) = 2 \cdot 3^{k-1}, \qquad
+\text{index } = 1 \;\; (\text{2 is a primitive root mod } 3^k).
+\]
+\end{proposition}
+
+Both statements are classically known
+(the second is Artin's conjecture restricted to $g = 2$, $p = 3$,
+verified for all prime powers $3^k$).
+We verify them computationally through 128-bit modular exponentiation
+for all $j, k \leq 40$ (80 tests, all matching predictions).
+
+This asymmetry is the structural foundation of the entropy bridge:
+\begin{itemize}
+\item $T_3$ (multiplication by~3) acts on $\mathcal{P}_2^{(j)}$ with
+  period $2^{j-2}$, generating only \emph{half} of $(\mathbb{Z}/2^j\mathbb{Z})^*$.
+\item $T_2$ (multiplication by~2) acts on $\mathcal{P}_3^{(k)}$ with
+  full period $\varphi(3^k)$, generating \emph{all} of $(\mathbb{Z}/3^k\mathbb{Z})^*$.
+\end{itemize}
+The index-2 constraint on the 2-adic side means that $T_3$-invariance
+forces a measure to be constant on orbits of size $2^{j-2}$,
+but leaves one binary degree of freedom (the relative weight of the
+two cosets).
+
+\subsection{Joint partition atom analysis}
+
+For balanced scales $k(j) = \lfloor j \log 2 / \log 3 + 1/2 \rfloor$
+(where $2^j \approx 3^k$), the joint partition
+$\mathcal{P}_2^{(j)} \vee \mathcal{P}_3^{(k)}$ has
+$N = 2^j + 3^k - 1$ atoms.
+Table~\ref{tab:entropy} shows the entropy statistics.
+
+\begin{table}[h]
+\centering
+\caption{Entropy of $\mathcal{P}_2^{(j)} \vee \mathcal{P}_3^{(k)}$
+  under Lebesgue measure (balanced scales).}
+\label{tab:entropy}
+\begin{tabular}{rrrcccc}
+\toprule
+$j$ & $k$ & Atoms & $H$ (nats) & $H/j$ & Deficit & Efficiency \\
+\midrule
+ 4 &  3 &         42 &  3.590 & 0.897 & 0.148 & 0.960 \\
+ 8 &  5 &        498 &  6.020 & 0.752 & 0.191 & 0.969 \\
+12 &  8 &     10,656 &  9.101 & 0.758 & 0.173 & 0.981 \\
+16 & 10 &    124,584 & 11.541 & 0.721 & 0.192 & 0.984 \\
+20 & 13 &  2,642,898 & 14.611 & 0.731 & 0.177 & 0.988 \\
+24 & 15 & 31,126,122 & 17.063 & 0.711 & 0.190 & 0.989 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key observation: the entropy deficit is bounded.}
+Across all tested scales, the deficit $\ln(N) - H$ stays in the
+interval $[0.148, 0.192]$ nats.
+The efficiency $H / \ln(N)$ increases monotonically toward~1.
+Under Lebesgue measure, $H/j$ converges to $\log 2 \approx 0.693$
+from above (the excess comes from the additional information in the
+3-adic refinement).
+
+\begin{proposition}[Bounded entropy deficit, empirical]
+\label{prop:deficit}
+For all tested $(j, k)$ with $j \leq 24$ and $k = k(j)$ balanced:
+\[
+\ln(2^j + 3^k - 1) - H_\lambda(\mathcal{P}_2^{(j)} \vee \mathcal{P}_3^{(k)})
+\leq 0.20 \text{ nats},
+\]
+where $\lambda$ denotes Lebesgue measure.
+\end{proposition}
+
+This bounded deficit means the atom widths are approximately uniform
+at all scales.  The few thin atoms (width $\sim 1/(2^j \cdot 3^k)$,
+achieving the B\'ezout floor) contribute negligibly to entropy.
+
+\subsection{Gap anatomy}
+
+The atoms of $\mathcal{P}_2^{(j)} \vee \mathcal{P}_3^{(k)}$ arise from
+interleaving two arithmetic progressions in $[0, D)$ with $D = 2^j \cdot 3^k$:
+the 2-adic boundaries $\{m \cdot 3^k\}$ (step $3^k$) and the 3-adic
+boundaries $\{m' \cdot 2^j\}$ (step $2^j$).
+
+\begin{proposition}[B\'ezout floor]
+\label{prop:bezout}
+For all $(j, k)$ tested (up to $j = 24$), the minimum gap between
+consecutive boundary points in the common-denominator representation is
+exactly~$1$.
+That is,
+\[
+\min_{\text{atoms}} \operatorname{width} = \frac{1}{2^j \cdot 3^k}.
+\]
+This minimum is achieved by the B\'ezout identity: there exist
+$m_0, m_0'$ with $m_0 \cdot 3^k - m_0' \cdot 2^j = 1$.
+\end{proposition}
+
+Three types of gaps occur between consecutive boundary points:
+
+\begin{table}[h]
+\centering
+\caption{Gap types for $\mathcal{P}_2^{(12)} \vee \mathcal{P}_3^{(8)}$
+  ($D = 2^{12} \cdot 3^8 = 26{,}873{,}856$, $N = 10{,}656$ atoms).}
+\label{tab:gaps}
+\begin{tabular}{lcrl}
+\toprule
+Gap type & Count & Width & Meaning \\
+\midrule
+3-adic $\to$ 3-adic & 2,464 & $2^{12} = 4096$ & 3-adic boundaries well-separated \\
+Mixed (2$\leftrightarrow$3) & 8,192 & 1--4096 & Baker-governed \\
+2-adic $\to$ 2-adic & 0 & --- & Impossible ($3^8 > 2^{12}$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The zero count of pure 2-adic gaps when $3^k > 2^j$ means that
+every pair of 2-adic boundaries has a 3-adic boundary between them---the
+3-adic partition is ``finer'' at this scale.
+The mixed gaps, governed by Baker's coprimality floor, have
+mean $\sim 3^k / 2$ and minimum exactly~1.
+
+\subsection{Minimum atom width decay}
+
+The ratio of minimum to mean atom width decays exponentially:
+
+\begin{table}[h]
+\centering
+\caption{Minimum-to-mean atom width ratio (balanced scales).}
+\label{tab:minmean}
+\begin{tabular}{rcc}
+\toprule
+$j$ & min/mean & $\approx$ \\
+\midrule
+ 8 & $8.0 \times 10^{-4}$ & $\sim 2^{-10}$ \\
+12 & $4.0 \times 10^{-4}$ & $\sim 2^{-11.3}$ \\
+16 & $3.2 \times 10^{-5}$ & $\sim 2^{-14.9}$ \\
+20 & $1.6 \times 10^{-6}$ & $\sim 2^{-19.3}$ \\
+24 & $1.3 \times 10^{-8}$ & $\sim 2^{-26.2}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Despite the exponential shrinkage of the thinnest atom, the entropy
+deficit remains bounded because there is \emph{exactly one}
+B\'ezout-thin atom per partition, and its entropy contribution
+$w \ln(1/w) \to 0$ as $w \to 0$.
+
+
+\subsection{Transfer matrix spectral gap}
+
+The transfer matrix of $T_3\colon x \mapsto 3x$ on the partition
+$\mathcal{P}_2^{(j)}$ is the $2^j \times 2^j$ doubly stochastic matrix
+$\mathbf{T}$ with entries:
+\[
+T_{mi} = \begin{cases} 1/3 & \text{if } m \in \{3i, 3i+1, 3i+2\} \pmod{2^j}, \\
+0 & \text{otherwise.}
+\end{cases}
+\]
+The column sums are~1 (each cell is hit by exactly 3~preimages from one source),
+and the row sums are~1 (each cell distributes equally to 3~targets).
+
+\begin{theorem}[Spectral gap of $T_3$ on $\mathcal{P}_2^{(j)}$]
+\label{thm:spectral}
+For $j \geq 3$, all non-trivial eigenvalues of $\mathbf{T}$ have
+modulus exactly $1/3$.  The spectral gap is $1 - 1/3 = 2/3$,
+independent of~$j$.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+In the Fourier basis $v_k(m) = \omega^{mk}$ with $\omega = e^{2\pi i/2^j}$,
+the matrix $\mathbf{T}$ maps $v_k \mapsto \lambda(k) \cdot v_{ks}$ where
+$s = 3^{-1} \bmod 2^j$ and
+\[
+\lambda(k) = \tfrac{1}{3}\bigl(1 + 2\cos(2\pi ks / 2^j)\bigr).
+\]
+For an orbit $\{k_0, 3k_0, 9k_0, \ldots\}$ of size~$L$ under $\times 3 \pmod{2^j}$,
+the eigenvalue modulus on the associated $L$-dimensional block is
+$\bigl(\prod_{i=0}^{L-1} |\lambda(k_i)|\bigr)^{1/L}$.
+
+Using the identity $1 + 2\cos\theta = (e^{3i\theta} - 1)/(e^{i\theta} - 1)$,
+the product telescopes:
+\[
+\prod_{i=0}^{L-1} |1 + 2\cos(2\pi k_i s / 2^j)|
+= \frac{|e^{2\pi i \cdot 3^L k_0 s / 2^j} - 1|}{|e^{2\pi i \cdot k_0 s / 2^j} - 1|}
+= 1,
+\]
+since $3^L \equiv 1 \pmod{2^j / \gcd(k_0, 2^j)}$.
+Therefore $|\text{eigenvalue}| = (1/3^L)^{1/L} = 1/3$.
+\end{proof}
+
+\textbf{Numerical verification.}
+We verify this theorem in two independent ways:
+
+\begin{enumerate}
+\item \emph{Fourier orbit products} ($j = 3$ to $30$):
+  For each $j \leq 20$, we enumerate \emph{all} orbits of $\times 3$ on
+  $\mathbb{Z}/2^j\mathbb{Z}$ and compute $\prod |1 + 2\cos\theta_i|$;
+  every orbit gives product~$= 1.0000000000$ (to 10 decimal places).
+  For $j = 21$ to $30$, we check representative orbits of $k = 1$ and
+  $k = 2$; the product stays within $10^{-7}$ of~1 (double-precision limit
+  for sums over $10^8$ terms).
+
+\item \emph{Direct matrix multiplication} ($j = 3$ to $10$):
+  We build the full transfer matrix, apply it to an initial vector
+  orthogonal to uniform, and track the geometric mean of the per-step
+  decay ratio over complete orbit cycles of length $L = \text{ord}_{2^j}(3)$.
+  Every cycle gives geometric mean $= 0.3333333333$ to 10 decimal places.
+\end{enumerate}
+
+\textbf{Structural observations.}
+\begin{itemize}
+\item The number of orbits is $2j + 1$ (for $j \leq 20$, verified),
+  reflecting the $j + 1$ powers of~2 dividing $\gcd(k, 2^j)$ plus
+  the coset structure.
+\item The maximum orbit size is $2^{j-2} = \text{ord}_{2^j}(3)$, confirming
+  Proposition~\ref{prop:orders}.
+\item The eigenvalue $\lambda(2^{j-1}) = -1/3$ (the unique fixed point
+  $k = 2^{j-1}$ under $\times 3$, since $3 \cdot 2^{j-1} \equiv 2^{j-1} \pmod{2^j}$).
+\end{itemize}
+
+\begin{proposition}[Exponential mixing]
+\label{prop:mixing}
+For any probability distribution $p$ on $\mathcal{P}_2^{(j)}$ atoms:
+\[
+\|\mathbf{T}^n p - \text{uniform}\|_2 \leq (1/3)^n \cdot \|p - \text{uniform}\|_2.
+\]
+After $n$ applications of $T_3$, the distribution is exponentially close
+to uniform, at rate $1/3$ per step.
+\end{proposition}
+
+This means $T_3$-invariance at the measure level ($\mathbf{T} p = p$)
+forces $p = \text{uniform}$ on $\mathcal{P}_2^{(j)}$ atoms, which gives
+$H_\mu(\mathcal{P}_2^{(j)}) = j \log 2$.
+The remaining question is whether $T_3$-invariance of a measure~$\mu$
+on $\mathbb{T}$ implies $T_3$-invariance of the induced distribution on
+$\mathcal{P}_2^{(j)}$ atoms---i.e., whether the ``lift'' from partition
+to measure preserves the spectral gap constraint.
+
+\subsection{The lift problem: straddle analysis}
+
+The preimage $T_3^{-1}(I_m)$ of atom $I_m = [m/2^j, (m+1)/2^j)$
+consists of three intervals of width $1/(3 \cdot 2^j)$:
+\[
+T_3^{-1}(I_m) = \bigcup_{r=0}^{2}
+\left[\frac{m + r \cdot 2^j}{3 \cdot 2^j},\;
+      \frac{m + r \cdot 2^j + 1}{3 \cdot 2^j}\right).
+\]
+In the common denominator $D = 3 \cdot 2^j$, each preimage piece
+occupies the interval $[a, a+1)$ where $a = m + r \cdot 2^j$.
+Since atoms in~$D$-coordinates span $[3k, 3k+3)$ and
+$a + 1 \leq 3k + 3$ (as $a \bmod 3 \leq 2$),
+every piece lies entirely inside one atom.
+No straddling occurs: the ``straddle matrix'' $\mathbf{S}$ equals
+the transfer matrix $\mathbf{T}$ exactly.
+
+\begin{proposition}[Degrees of freedom]
+\label{prop:dof}
+At each scale~$j$, $T_3$-invariance of~$\mu$ imposes $N-1$
+independent linear constraints on the $3N$ sub-piece masses
+$\{w_{k,s}\}$ (where $k$ indexes atoms and $s \in \{0,1,2\}$ indexes
+sub-pieces).
+Together with the $N$ atom-sum constraints
+$w_{k,0} + w_{k,1} + w_{k,2} = p_k$,
+the system has rank $2N - 1$, leaving $N + 1$ degrees of freedom
+(or~2 per atom plus normalization).
+\end{proposition}
+
+This is verified computationally for $j = 3$ to $12$: the constraint
+rank is always $N-1$, giving exactly 2~DOF per atom at every scale.
+
+\textbf{Interpretation.}
+$T_3$-invariance at a single scale~$j$ constrains the atom masses~$p_m$
+but \emph{not} the within-atom distribution.
+Each atom has 3~sub-pieces (one for each preimage branch), and the
+relative weights of these sub-pieces are free parameters.
+The transfer matrix equation $\mathbf{T} p = p$ is the \emph{special case}
+where each sub-piece carries exactly $1/3$ of its atom's mass.
+
+\textbf{Multi-scale constraints.}
+At scale~$j+1$, each atom of~$\mathcal{P}_2^{(j)}$ splits into two
+atoms of~$\mathcal{P}_2^{(j+1)}$.  Each old sub-piece (width $1/(3 \cdot 2^j)$)
+spans $\sim 4/3$ new atoms, so the scale-$(j+1)$ constraints
+partially fix the within-atom distribution at scale~$j$.
+After $\lceil \log_2 3 \rceil + 1 = 3$ refinements, each old sub-piece
+is resolved into separate atoms, and the scale-$(j+3)$ spectral gap
+forces the resolved masses toward uniformity.
+
+The question is: do \emph{multi-scale} constraints (T$_3$-invariance
+at scales $j$ and $j+1$ simultaneously, plus $T_2$-invariance
+linking the scales) eliminate the within-atom DOFs?
+This is the subject of the next section.
+
+
+\subsection{Joint $T_2 + T_3$ constraint rank analysis}
+\label{sec:lift}
+
+We now build the full constraint system for joint $T_2$- and
+$T_3$-invariance across multiple dyadic scales, and compute its rank
+to determine the degrees of freedom exactly.
+
+\subsubsection*{Mathematical setup (2-scale system)}
+
+Consider two consecutive scales~$j$ and $j+1$, with $N = 2^j$.
+The sub-piece masses are:
+\begin{align*}
+\text{Scale } j\!: &\quad w_{k,s} \;\text{ for }
+  k \in [0, N),\; s \in \{0,1,2\}
+  &&\text{($3N$ variables)}, \\
+\text{Scale } j\!+\!1\!: &\quad w'_{m,s} \;\text{ for }
+  m \in [0, 2N),\; s \in \{0,1,2\}
+  &&\text{($6N$ variables)}.
+\end{align*}
+The total is $9N$ unknowns.
+Four blocks of homogeneous linear constraints relate them:
+
+\begin{enumerate}
+\item \textbf{$T_3$-invariance at scale~$j$} ($N$ equations):
+  for each atom~$m$,
+  \[
+  \sum_{s=0}^{2} w_{m,s}
+  = \sum_{r=0}^{2} w_{\lfloor(m+rN)/3\rfloor,\;(m+rN)\bmod 3}.
+  \]
+
+\item \textbf{$T_3$-invariance at scale~$j\!+\!1$} ($2N$ equations):
+  same structure with $2N$ atoms and $6N$ fine variables.
+
+\item \textbf{Refinement} ($3N$ equations):
+  each coarse sub-piece is the union of two fine sub-pieces.
+  Explicitly:
+  \begin{align*}
+  w_{k,0} &= w'_{2k,0} + w'_{2k,1}, \\
+  w_{k,1} &= w'_{2k,2} + w'_{2k+1,0}, \\
+  w_{k,2} &= w'_{2k+1,1} + w'_{2k+1,2}.
+  \end{align*}
+  These follow from the geometric subdivision: sub-piece $(k,s)$
+  at scale~$j$ covers $[(3k+s)/(3 \cdot 2^j),\; (3k+s+1)/(3 \cdot 2^j))$,
+  which at scale~$j+1$ (in coordinates with denominator $3 \cdot 2^{j+1}$)
+  spans $[6k+2s,\; 6k+2s+2)$ and splits at $6k+2s+1$.
+
+\item \textbf{$T_2$-linking} ($3N$ equations):
+  $T_2$-invariance relates sub-pieces across scales via
+  \[
+  w_{k,s} = w'_{k,s} + w'_{k+N,s}
+  \qquad (0 \le k < N,\; s \in \{0,1,2\}),
+  \]
+  since $T_2^{-1}$ of a sub-piece at scale~$j$ decomposes into
+  two sub-pieces at scale~$j+1$ separated by~$N$.
+\end{enumerate}
+
+\subsubsection*{Rank computation}
+
+We compute the rank of the constraint matrix via Gaussian elimination.
+Table~\ref{tab:lift2} shows the results for $j = 3$ to~$10$.
+
+\begin{table}[h]
+\centering
+\caption{2-scale constraint rank analysis ($9N$ variables,
+  verified for $j = 3, \ldots, 10$).}
+\label{tab:lift2}
+\begin{tabular}{rrrrrrr}
+\toprule
+$j$ & $N$ & $9N$ & DOF (no $T_2$) & DOF ($+T_2$) & $T_2$ kills & Atom DOF \\
+\midrule
+ 3 &      8 &     72 &    33 &    17 &    16 &    5 \\
+ 4 &     16 &    144 &    65 &    33 &    32 &    9 \\
+ 5 &     32 &    288 &   129 &    65 &    64 &   17 \\
+ 6 &     64 &    576 &   257 &   129 &   128 &   33 \\
+ 7 &    128 &  1{,}152 &   513 &   257 &   256 &   65 \\
+ 8 &    256 &  2{,}304 & 1{,}025 &   513 &   512 &  129 \\
+ 9 &    512 &  4{,}608 & 2{,}049 & 1{,}025 & 1{,}024 &  257 \\
+10 &  1{,}024 &  9{,}216 & 4{,}097 & 2{,}049 & 2{,}048 &  513 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{proposition}[Joint constraint rank, 2-scale]
+\label{prop:liftrank}
+For the 2-scale system at scales $j$, $j+1$ with $N = 2^j$ ($j \ge 3$):
+\begin{alignat*}{2}
+\operatorname{rank}(\text{no } T_2) &= 5N - 1,
+  &\qquad \operatorname{DOF}(\text{no } T_2) &= 4N + 1, \\
+\operatorname{rank}(\text{with } T_2) &= 7N - 1,
+  &\qquad \operatorname{DOF}(\text{with } T_2) &= 2N + 1.
+\end{alignat*}
+$T_2$-invariance kills exactly $2N$ degrees of freedom.
+\end{proposition}
+
+\subsubsection*{3-scale extension}
+
+The same analysis extends to three consecutive scales ($j$, $j+1$, $j+2$)
+with $21N$ variables and $25N$ constraint rows.
+Table~\ref{tab:lift3} shows the results.
+
+\begin{table}[h]
+\centering
+\caption{3-scale constraint rank analysis ($21N$ variables,
+  verified for $j = 3, \ldots, 8$).}
+\label{tab:lift3}
+\begin{tabular}{rrrrrr}
+\toprule
+$j$ & $N$ & $21N$ & DOF (no $T_2$) & DOF ($+T_2$) & $T_2$ kills \\
+\midrule
+3 &    8 &    168 &    65 &    33 &    32 \\
+4 &   16 &    336 &   129 &    65 &    64 \\
+5 &   32 &    672 &   257 &   129 &   128 \\
+6 &   64 &  1{,}344 &   513 &   257 &   256 \\
+7 &  128 &  2{,}688 & 1{,}025 &   513 &   512 \\
+8 &  256 &  5{,}376 & 2{,}049 & 1{,}025 & 1{,}024 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The 3-scale rank formulas are:
+\begin{alignat*}{2}
+\operatorname{rank}(\text{no } T_2) &= 13N - 1,
+  &\qquad \operatorname{DOF}(\text{no } T_2) &= 8N + 1, \\
+\operatorname{rank}(\text{with } T_2) &= 17N - 1,
+  &\qquad \operatorname{DOF}(\text{with } T_2) &= 4N + 1.
+\end{alignat*}
+In both cases, the total DOF follows the universal formula
+\begin{equation}
+\label{eq:dof}
+\operatorname{DOF}(\text{with } T_2)
+= N_{\text{finest}} + 1,
+\end{equation}
+where $N_{\text{finest}}$ is the number of atoms at the finest scale
+($2N$ for 2-scale, $4N$ for 3-scale).
+The extra DOF beyond~1 (overall scaling) resides at the finest scale,
+which has no child constraints.
+
+\subsubsection*{Projection analysis}
+
+To understand where the freedom lives, we project the null space
+of the full 2-scale system (with~$T_2$) onto subsets of variables.
+Table~\ref{tab:proj} shows the projected null space dimension at
+each level.
+
+\begin{table}[h]
+\centering
+\caption{Projected null space dimension for the 2-scale system
+  (pattern exact for $j = 3, \ldots, 10$).}
+\label{tab:proj}
+\begin{tabular}{lcc}
+\toprule
+Projection & Null dim & Formula \\
+\midrule
+Full system ($9N$ variables) & $2N + 1$ & $N_{\text{finest}} + 1$ \\
+Coarse sub-pieces ($3N$ variables) & $N + 1$ & \\
+Coarse atom masses ($N$ variables) & $N/2 + 1$ & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The atom-mass DOF at the coarsest scale is $N/2 + 1$,
+and this value is \emph{unchanged} between the 2-scale and 3-scale
+systems (verified for $j = 3, \ldots, 8$).
+Adding more scales does not further constrain the coarsest-scale
+atom masses within the linear system.
+
+\subsubsection*{Interpretation}
+
+The atom-mass DOF $= N/2 + 1 \gg 2$ means the \emph{linear} constraint
+system does not force $\mathbf{T}p = p$ (which would give DOF~$= 2$,
+corresponding to Lebesgue and~$\delta_0$).
+The extra $N/2 - 1$ dimensions correspond to signed
+``pseudo-measures'' that satisfy all the $T_3$, $T_2$, and refinement
+constraints algebraically but violate positivity ($w_{k,s} \ge 0$).
+
+This identifies \textbf{positivity} as the essential ingredient for the
+entropy bridge.
+The linear-algebraic structure establishes:
+\begin{itemize}
+\item $T_2$-invariance halves the DOF at every scale
+  (killing exactly $N_{\text{finest}}$ directions);
+\item The spectral gap (Theorem~\ref{thm:spectral}) forces any
+  \emph{genuine} solution of $\mathbf{T}p = p$ to be uniform;
+\item But the measure-level $T_3$-invariance constraint is weaker than
+  $\mathbf{T}p = p$, leaving ${\sim}\,N/2$ directions of freedom
+  in atom masses that are incompatible with positivity but satisfy
+  the linear system.
+\end{itemize}
+
+Both Lebesgue measure (uniform: $w_{k,s} = 1/(3N)$ at scale~$j$,
+$w'_{m,s} = 1/(6N)$ at scale~$j+1$) and $\delta_0$ (point mass:
+$w_{0,0} = 1$, $w'_{0,0} = 1$, all others~$0$) are verified to
+be exact solutions of the full constraint system.
+These span a 2-dimensional subspace within the $(2N+1)$-dimensional
+null space.
+The remaining $2N - 1$ null directions have negative components
+and therefore cannot represent probability measures.
+
+
+%% ====================================================================
+\section{Synthesis: Architecture of the Entropy Bridge}
+%% ====================================================================
+
+The Phase~1 and Phase~2 data reveal the following architecture for
+the entropy bridge argument:
+
+\begin{enumerate}
+\item \textbf{Baker coprimality floor.}
+  The minimum distance between a 2-adic and a 3-adic boundary is
+  $1 / (2^j \cdot 3^k)$, achieved exactly by B\'ezout.
+  Atoms never collapse.
+
+\item \textbf{Bounded entropy deficit.}
+  $\ln(N) - H \leq 0.20$ nats for all tested balanced scales up to
+  $j = 24$.
+  The atom widths are approximately uniform under Lebesgue measure,
+  with the non-uniformity entirely explained by a single B\'ezout-thin atom.
+
+\item \textbf{Order asymmetry.}
+  $\ord_{2^j}(3) = 2^{j-2}$ (index~2), while $\ord_{3^k}(2) = \varphi(3^k)$ (index~1).
+  Any $T_3$-invariant measure on $\mathcal{P}_2^{(j)}$ must be constant
+  on orbits of size $2^{j-2}$, leaving only two cosets as free parameters.
+
+\item \textbf{Full generation at prime scales.}
+  For $69.75\%$ of primes~$p$, $\langle 2, 3 \rangle = (\mathbb{Z}/p\mathbb{Z})^*$,
+  leaving no room for non-trivial invariant measures.
+  For the remaining primes, invariant subsets exist but are
+  \emph{finite orbits}---exactly what Furstenberg allows.
+
+\item \textbf{Spectral gap $= 2/3$.}
+  The transfer matrix of $T_3$ on $\mathcal{P}_2^{(j)}$ has all
+  non-trivial eigenvalues with modulus exactly $1/3$
+  (Theorem~\ref{thm:spectral}).
+  This gives exponential mixing at rate $1/3$ per step,
+  so $T_3$-invariance at the partition level forces exact uniformity.
+
+\item \textbf{Joint constraint rank $= 7N - 1$.}
+  The combined $T_2 + T_3$ constraint system at two consecutive
+  scales has rank $7N - 1$ out of $9N$ variables
+  (Proposition~\ref{prop:liftrank}), leaving DOF $= 2N + 1$.
+  $T_2$-invariance kills exactly $2N$ directions, halving the
+  freedom at every scale.
+  However, the \emph{linear} system does not force the transfer
+  equation $\mathbf{T}p = p$: the atom-mass DOF is $N/2 + 1$,
+  not~$2$.
+  The extra directions are signed pseudo-measures that violate
+  positivity.
+\end{enumerate}
+
+\subsection{The gap to close}
+
+Points (1)--(5) together show that:
+\begin{itemize}
+\item Baker separation ensures atoms never collapse (point~1).
+\item The entropy deficit is bounded under Lebesgue measure (point~2).
+\item $T_3$-invariance at the partition level forces exact uniformity on
+  $\mathcal{P}_2^{(j)}$ atoms via the spectral gap (points~3, 5).
+\end{itemize}
+
+The remaining question is whether $T_3$-invariance of a \emph{measure}~$\mu$
+implies $T_3$-invariance of the induced distribution on partition atoms.
+Specifically, if $\mu$ is $T_3$-invariant, does the atom mass vector
+$p_m = \mu([m/2^j, (m+1)/2^j))$ satisfy $\mathbf{T} p = p$?
+
+If $\mu$ is $T_3$-invariant and the partition $\mathcal{P}_2^{(j)}$ were
+$T_3$-invariant (i.e., $T_3^{-1}(\mathcal{P}_2^{(j)}) \preccurlyeq \mathcal{P}_2^{(j)}$),
+then yes.  But $\mathcal{P}_2^{(j)}$ is a $T_2$-partition, not a $T_3$-partition,
+so the refinement $T_3^{-1}(\mathcal{P}_2^{(j)})$ generally creates atoms
+that straddle the 2-adic boundaries.
+
+Point~(6) sharpens this obstacle.
+The joint $T_2 + T_3$ constraint system, even across multiple scales,
+leaves $N/2 + 1$ degrees of freedom in the atom masses---far more
+than the~$2$ needed for $\mathbf{T}p = p$.
+The extra directions are signed pseudo-measures that satisfy all
+linear constraints but violate positivity ($w_{k,s} \ge 0$).
+Adding more scales does not reduce this freedom: the atom-mass
+DOF is $N/2 + 1$ for both 2-scale and 3-scale systems.
+
+This identifies \textbf{positivity} as the essential non-linear ingredient.
+The linear-algebraic framework determines the constraint architecture
+(exact ranks, DOF formulas), but the final step---showing that
+the only \emph{non-negative} solutions are Lebesgue and~$\delta_0$---requires
+a convexity or extremal-measure argument that goes beyond rank computation.
+One promising route is to exploit the spectral gap: since $\mathbf{T}$
+contracts non-uniform components by factor $1/3$, any non-uniform
+positive eigenvector of the multi-scale refinement must amplify
+signed components at finer scales, eventually violating positivity.
+
+
+%% ====================================================================
+\section{Comparison with Prior Work}
+%% ====================================================================
+
+Our computational-Diophantine approach differs from the existing
+literature in several respects:
+
+\begin{itemize}
+\item \textbf{Rudolph (1990)} proves the conjecture under $h_\mu > 0$
+  using symbolic dynamics and Rohklin partitions.
+  We aim to show that Baker's effective bounds \emph{force} $h_\mu > 0$,
+  reducing to Rudolph rather than replacing it.
+
+\item \textbf{EKL (2006)} use measure rigidity on homogeneous spaces
+  to show any counterexample has dimension~0.
+  Our dimension argument (Phase~3, future work) would recover this
+  result by an entirely different route: multi-scale Baker separation
+  on the torus.
+
+\item \textbf{No prior work} has combined Baker's theorem with explicit
+  partition entropy computation.
+  The bounded entropy deficit (Proposition~\ref{prop:deficit})
+  and the order asymmetry (Proposition~\ref{prop:orders}) are,
+  to our knowledge, new observations in this context.
+\end{itemize}
+
+
+%% ====================================================================
+\section{Honest Assessment}
+%% ====================================================================
+
+\textbf{Difficulty: Extreme.}
+Furstenberg's conjecture has resisted all approaches for over 55~years.
+The gap between ``Baker separation makes resonances sparse''
+(which we have demonstrated) and ``Baker separation forces entropy
+production'' (which we conjecture) is precisely the gap that
+separates the known results (Rudolph, EKL) from the full conjecture.
+
+\textbf{What we have accomplished:}
+\begin{itemize}
+\item Verified the Euler product prediction to five significant figures
+  over $4.55 \times 10^8$ primes.
+\item Demonstrated bounded entropy deficit across six orders of magnitude
+  in partition scale.
+\item Established the order asymmetry as a structural invariant of the
+  $\times 2, \times 3$ system.
+\item Proved and verified the spectral gap $= 2/3$ theorem
+  (Theorem~\ref{thm:spectral}), showing exponential mixing of $T_3$
+  on $\mathcal{P}_2^{(j)}$.
+\item Computed exact rank formulas for the joint $T_2 + T_3$
+  multi-scale constraint system (Proposition~\ref{prop:liftrank}),
+  identifying positivity as the essential non-linear ingredient
+  for the entropy bridge.
+\item Built a computational framework (OpenMP, checkpointed, extensible
+  to GPU) for further investigation.
+\end{itemize}
+
+\textbf{Realistic best case:}
+We prove the Entropy Production Conjecture, reducing Furstenberg
+to Rudolph.  This would be a major theorem.
+
+\textbf{Realistic worst case:}
+We produce a partial result (e.g., Furstenberg for measures
+satisfying an explicit Diophantine condition on their support),
+publishable independently, that clarifies the remaining obstacle.
+
+
+%% ====================================================================
+\begin{thebibliography}{99}
+
+\bibitem{baker1966}
+A.~Baker, \emph{Linear forms in the logarithms of algebraic numbers},
+Mathematika \textbf{13} (1966), 204--216.
+
+\bibitem{einsiedler2006}
+M.~Einsiedler, A.~Katok, and E.~Lindenstrauss,
+\emph{Invariant measures and the set of exceptions to Littlewood's conjecture},
+Ann.\ of Math.\ \textbf{164} (2006), 513--560.
+
+\bibitem{furstenberg1967}
+H.~Furstenberg, \emph{Disjointness in ergodic theory, minimal sets,
+and a problem in Diophantine approximation},
+Math.\ Systems Theory \textbf{1} (1967), 1--49.
+
+\bibitem{host1995}
+B.~Host, \emph{Nombres normaux, entropie, translations},
+Israel J.\ Math.\ \textbf{91} (1995), 75--83.
+
+\bibitem{rhin1987}
+G.~Rhin, \emph{Approximants de Pad\'e et mesures effectives
+d'irrationalit\'e},
+S\'eminaire de Th\'eorie des Nombres, Paris 1985--86,
+Progr.\ Math.\ \textbf{71}, Birkh\"auser, 1987, pp.~155--164.
+
+\bibitem{rudolph1990}
+D.~J.~Rudolph, \emph{$\times 2$ and $\times 3$ invariant measures
+and entropy},
+Ergodic Theory Dynam.\ Systems \textbf{10} (1990), 395--406.
+
+\end{thebibliography}
+
+\end{document}

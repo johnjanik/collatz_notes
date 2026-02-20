@@ -39,3 +39,6 @@ import CollatzLean.SimultaneousApprox
 import CollatzLean.LittlewoodResidence
 import CollatzLean.LittlewoodInduction
 import CollatzLean.SpectralGap
+import CollatzLean.ArithmeticRigidity
+import CollatzLean.MetricConflict
+import CollatzLean.CarryBitScrambling
