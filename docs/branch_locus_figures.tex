@@ -1,0 +1,424 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\T}{\mathbb{T}}
+
+\title{Branch Locus of Collatz Dynamics on Finite Tori:\\
+  Visualizing the 100-Billion Computation}
+
+\author{John A.\ Janik}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present the results of an exhaustive branch locus computation for
+the Collatz map on the family of finite tori
+$\T^2_k = (\Z/k\Z)^2$, carried out for all
+$n \le 10^{11}$ across 27 hierarchically nested grid levels
+($k \in \{1, 2, 3, \ldots, 19683\}$).  The computation consumed
+61.5~hours on a 24-core Intel Core Ultra~9 275HX, accumulating
+$25.1 \times 10^{12}$ Collatz steps.  Seven figures document the
+principal findings: cell saturation, torus heatmaps, Diophantine
+signatures, shift-of-finite-type (SFT) forbidden transitions,
+foliation enrichment collapse, cell-level statistics, and convergence
+over~$N$.  Together they give a detailed empirical portrait of the
+arithmetic structure governing which torus cells carry mixed-parity
+(branch) dynamics and which are confined to a single parity type.
+\end{abstract}
+
+%------------------------------------------------------------------
+\section{Overview of the computation}
+\label{sec:overview}
+
+The \emph{branch locus} of the Collatz map at resolution~$k$ is the
+set of cells $(r_2, r_3) \in (\Z/k\Z)^2$ that are visited by
+trajectories with \emph{both} even and odd steps.  The complementary
+cells---\emph{pure even} (only even steps land there) and
+\emph{pure odd} (only odd steps)---carry deterministic parity and
+are therefore confined to a single leaf of the Anosov-like foliation.
+
+For each starting value $n = 1, 2, \ldots, 10^{11} - 1$, we iterate
+the Collatz map $T(n) = n/2$ (if even) or $T(n) = 3n+1$ (if odd),
+and at every step~$t$ we record the residue class
+$(r_2, r_3) = (\nu_2(t) \bmod k,\; \nu_3(t) \bmod k)$ for each of the
+27~grid levels $k = 3^a \cdot 2^b$ with $0 \le a,b$ and
+$k \le 19{,}683$.  We also record transition types (even$\to$even,
+even$\to$odd, etc.) and foliation/shadow geometry.
+
+Key parameters:
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Total trajectories & $99{,}999{,}999{,}999$ \\
+Total Collatz steps & $25{,}125{,}922{,}364{,}266$ \\
+Mean trajectory length & $251.26$ steps \\
+Global $p_{\mathrm{odd}}$ & $0.332473361$ \\
+Number of $k$-levels & 27 \\
+Saturated branch cell count & $21{,}632$ (from $k = 216$ onward) \\
+Runtime & 61.5~hours (24-thread OpenMP) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+%------------------------------------------------------------------
+\section{Figure 1: Cell saturation and scale overview}
+\label{sec:fig1}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../visualizations/branch_locus_fig1.png}
+\caption{Cell saturation and scale overview. \textbf{(a)}~Branch cell
+  count vs.\ $k$ on log--log axes.  At small~$k$ every cell is
+  branch (count $= k^2$); by $k = 216$ the count saturates at
+  $21{,}632$ and remains frozen through $k = 19{,}683$.  The $k^2$
+  reference line shows the departure from full occupancy.
+  \textbf{(b)}~Occupancy fraction (occupied$/k^2$) drops from 1.0 at
+  $k \le 108$ to $0.006\%$ at $k = 19{,}683$, meaning the vast
+  majority of cells at high resolution are empty.
+  \textbf{(c)}~Stacked cell-type composition across all 27~levels:
+  branch (green), pure even (cyan), pure odd (purple), and empty
+  (gray).  The transition from all-branch to predominantly-empty
+  occurs between $k = 108$ and $k = 216$.  \textbf{(d)}~Key
+  statistics panel summarizing the run.}
+\label{fig:saturation}
+\end{figure}
+
+The saturation of branch cells at exactly $21{,}632$ is the central
+empirical fact.  It means the torus $\T^2_k$ for $k \ge 216$ contains
+a \emph{fixed} set of $21{,}632$ cells that carry all the dynamical
+complexity.  The remaining $k^2 - 21{,}632$ cells are either
+permanently empty or confined to a single parity.  This is consistent
+with the Diophantine confinement picture: the irrational foliation
+$r_3 = \log_2 3 \cdot r_2$ carves out a thin neighborhood that
+captures all branch dynamics, while cells far from the foliation are
+``repelled'' to pure-parity or emptiness.
+
+The $1{,}582$ pure-even cells and $54$ pure-odd cells that appear at
+$k \ge 216$ are arithmetically special: they correspond to residue
+classes where the modular constraint forces a single parity choice.
+
+%------------------------------------------------------------------
+\section{Figure 2: Torus heatmaps at four scales}
+\label{sec:fig2}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../visualizations/branch_locus_fig2.png}
+\caption{Torus heatmaps of $p_{\mathrm{odd}}$ at four resolutions.
+  Each pixel represents a cell $(r_2, r_3)$; color encodes the
+  fraction of odd steps landing in that cell.  The green dots trace
+  the irrational foliation $r_3 = \log_2 3 \cdot r_2 \pmod{k}$;
+  cyan markers indicate pure-even cells.  \textbf{(a)}~$k = 81$:
+  fully occupied, smooth gradient.  \textbf{(b)}~$k = 144$: first
+  appearance of empty cells and pure-parity specialization.
+  \textbf{(c)}~$k = 216$: transition complete, fractal-like
+  occupancy pattern.  \textbf{(d)}~$k = 729$: sparse torus with
+  only $\sim 4\%$ occupancy, branch cells concentrated near the
+  irrational foliation.}
+\label{fig:heatmaps}
+\end{figure}
+
+These heatmaps reveal the geometric structure of the branch locus
+on the two-dimensional torus.  At $k = 81$, every cell is a branch
+cell and $p_{\mathrm{odd}}$ varies smoothly, with the irrational
+foliation passing through regions of moderate $p_{\mathrm{odd}}$.
+By $k = 144$, the first empty cells appear along with pure-even
+cells, which cluster near the foliation but on specific arithmetic
+sublattices.  At $k = 729$, the torus is almost entirely dark
+(empty), with occupied cells forming a fractal dust concentrated
+near---but not exactly on---the irrational line.
+
+The visual progression from smooth to fractal mirrors the algebraic
+transition from a fully ergodic system (all residues visited) to a
+Diophantine-constrained one where only cells within
+$O(1/k)$ of the foliation survive.
+
+%------------------------------------------------------------------
+\section{Figure 3: Diophantine signature}
+\label{sec:fig3}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../visualizations/branch_locus_fig3.png}
+\caption{Diophantine signature at $k = 729$.
+  \textbf{(a)}~Distance to the irrational foliation vs.\ $p_{\mathrm{odd}}$,
+  colored by cell type.  Branch cells (green) span a range of
+  foliation distances and $p_{\mathrm{odd}}$ values.  Pure-even
+  cells (cyan) cluster at $p_{\mathrm{odd}} = 0$ and moderate
+  foliation distance.
+  \textbf{(b)}~Shadow offset histogram: the gap between each cell's
+  irrational and rational foliation distances.  Branch cells show a
+  smooth distribution; pure-even cells are concentrated at specific
+  offsets.
+  \textbf{(c)}~Irrational vs.\ rational foliation distance, colored
+  by~$p_{\mathrm{odd}}$.  Cells near the diagonal have comparable
+  distances to both foliations; those far from the diagonal are
+  ``captured'' by one foliation.}
+\label{fig:diophantine}
+\end{figure}
+
+The Diophantine signature quantifies the relationship between each
+cell's proximity to the irrational foliation
+($r_3/r_2 \approx \log_2 3$) and its dynamical character.  The
+\emph{shadow offset}---the gap between a cell's irrational and
+rational foliation distances---measures how strongly the cell is
+``pulled'' toward one foliation leaf versus the other.
+
+Panel~(a) shows that branch cells span a continuous range of
+foliation distances, while pure-even cells are confined to a narrow
+band.  This is consistent with Baker's theorem: cells where the
+rational approximation to $\log_2 3$ is too close (relative to the
+Diophantine threshold $|p/q - \log_2 3| > c/q^\mu$) are forced into
+pure parity.
+
+Panel~(c) reveals a striking structure: cells with high
+$p_{\mathrm{odd}}$ tend to lie near the irrational foliation (small
+$d_{\mathrm{irr}}$), while those with low $p_{\mathrm{odd}}$ are
+closer to rational foliation lines.  The diagonal represents cells
+equidistant from both foliations---these are the most ``generic''
+cells dynamically.
+
+%------------------------------------------------------------------
+\section{Figure 4: SFT forbidden transitions}
+\label{sec:fig4}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../visualizations/branch_locus_fig4.png}
+\caption{Shift-of-finite-type (SFT) transition structure.
+  \textbf{(a)}~Transition composition at $k = 81$: each cell's
+  four transition fractions (ee, eo, oe, oo) sorted by valence.  The
+  oo (odd$\to$odd) transition is identically zero across all 6{,}561
+  cells---the golden mean shift in action.
+  \textbf{(b)}~Valence distribution by $k$-level: the number of
+  non-zero transition types per cell.
+  \textbf{(c)}~Entry type specialization: the fraction of cells
+  classified as ``branch,'' ``mixed,'' or ``none'' by transition type,
+  across $k$-levels.}
+\label{fig:sft}
+\end{figure}
+
+The most striking finding is that the odd$\to$odd (oo) transition
+count is \emph{exactly zero} at every $k$-level where transitions
+are recorded.  This is the empirical manifestation of the
+\emph{golden mean shift} constraint: in the Collatz map, two
+consecutive odd steps are impossible because $3n + 1$ is always even.
+The parity sequence of every Collatz orbit therefore lies in the
+golden mean subshift $\Sigma_{\mathrm{GM}} = \{0,1\}^\N$ with no
+consecutive~1s.
+
+This constraint has profound consequences.  It implies
+$p_{\mathrm{odd}} \le 1/\varphi^2 \approx 0.382$, which is within
+$0.005$ of the equilibrium threshold
+$p_{\mathrm{eq}} = 1 - \log_3 2 \approx 0.387$ at which the
+transverse drift vanishes.  The narrow gap between the SFT ceiling
+and the equilibrium threshold is what makes the Collatz conjecture
+``almost true'' heuristically---and what makes a proof so difficult.
+
+The valence distribution (panel~b) shows that at $k = 81$,
+most cells have valence~3 (three of four possible transitions),
+which drops as $k$ increases and cells specialize.
+
+%------------------------------------------------------------------
+\section{Figure 5: Foliation enrichment collapse}
+\label{sec:fig5}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../visualizations/branch_locus_fig5.png}
+\caption{Foliation enrichment and collapse.
+  \textbf{(a)}~Fraction of cells on the unstable foliation vs.\ $k$:
+  decreases from 1.0 at small~$k$ to near-zero at $k = 729$.
+  \textbf{(b)}~Comparison of $p_{\mathrm{odd}}$ distributions for
+  cells on vs.\ off the unstable foliation at $k = 81$.
+  \textbf{(c)}~Unstable foliation distance map at $k = 81$: color
+  encodes each cell's distance from the unstable direction, with
+  on-foliation cells highlighted in green.
+  \textbf{(d)}~At $k = 729$, only a handful of cells remain on the
+  unstable foliation (green dots), amid $21{,}632$ occupied cells
+  (gray).}
+\label{fig:foliation}
+\end{figure}
+
+The unstable foliation of the Collatz dynamics on $\T^2_k$ is
+defined by the eigenvector of the linearized map corresponding to
+the expanding direction.  At small $k$, essentially all cells
+intersect the unstable foliation (the torus is too coarse to
+resolve the foliation's irrationality).  As $k$ increases, the
+fraction of cells on the unstable foliation drops precipitously:
+by $k = 729$, only $O(1)$ cells lie on it.
+
+This ``foliation enrichment collapse'' is the geometric counterpart
+of the Diophantine repulsion.  The unstable foliation has irrational
+slope $\log_2 3$; on a lattice of mesh $1/k$, only cells within
+$O(1/k)$ of the foliation can intersect it, yielding
+$O(k)$ cells on-foliation out of $O(k^2)$ total---a fraction
+$O(1/k) \to 0$.  What is surprising is that the \emph{branch} cells
+track this collapse rather than the occupied-cell count: the branch
+locus is essentially a thickened neighborhood of the unstable
+foliation, with the pure-parity cells forming the boundary layer.
+
+Panel~(b) shows that at $k = 81$, on-foliation and off-foliation
+cells have similar $p_{\mathrm{odd}}$ distributions, consistent
+with the fully-occupied regime.  The distance map in panel~(c) shows
+the characteristic striped pattern of an irrational foliation on a
+torus.
+
+%------------------------------------------------------------------
+\section{Figure 6: Cell-level statistics}
+\label{sec:fig6}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../visualizations/branch_locus_fig6.png}
+\caption{Cell-level statistical distributions at $k = 216$.
+  \textbf{(a)}~$p_{\mathrm{odd}}$ histogram for branch cells: the
+  distribution peaks near $0.28$ with the global mean at $0.3325$
+  (green) and $1/3$ (gold) marked.
+  \textbf{(b)}~Entropy histogram: most branch cells have
+  $H \approx 0.84$, indicating robust mixing of even/odd steps.
+  \textbf{(c)}~Slope deviation histogram: measures departure of each
+  cell's local $\nu_2/\nu_3$ slope from the global equilibrium.
+  \textbf{(d)}~Scatter of $p_{\mathrm{odd}}$ vs.\ slope deviation,
+  colored by entropy: high-entropy cells cluster near the global
+  mean, while low-entropy cells show large deviations.
+  \textbf{(e)}~Mean $p_{\mathrm{odd}}$ vs.\ $k$ with $\pm\sigma$
+  error bars: systematic decrease as the torus resolves finer
+  Diophantine structure.
+  \textbf{(f)}~Dual-axis plot of mean entropy and slope deviation
+  spread vs.\ $k$.}
+\label{fig:cellstats}
+\end{figure}
+
+At $k = 216$---the first level at which the branch locus is fully
+saturated---the $21{,}632$ branch cells exhibit a rich statistical
+landscape.
+
+The $p_{\mathrm{odd}}$ distribution (panel~a) is not centered at the
+global mean $0.3325$ but rather skews toward lower values, with a
+peak near $0.28$.  This reflects the fact that the branch locus
+at $k = 216$ includes cells both near and far from the irrational
+foliation; cells far from the foliation tend to have atypical
+$p_{\mathrm{odd}}$.
+
+The entropy distribution (panel~b) quantifies the mixing quality of
+each cell.  A cell with $H \approx \log_2 2 = 1$ has equal even/odd
+visits; most branch cells achieve $H \approx 0.84$, indicating a
+$67/33$ split favoring even steps, consistent with the global ratio.
+
+Panel~(e) reveals a systematic trend: mean $p_{\mathrm{odd}}$
+decreases with $k$, stabilizing around $0.284$ for $k \ge 216$.
+This is lower than the global $0.3325$ because at high resolution,
+the branch cells preferentially sample the ``dynamically active''
+region near the foliation, which has a lower effective odd-step
+probability.  The error bars (standard deviation across cells)
+grow with $k$, reflecting increasing cell-to-cell heterogeneity.
+
+%------------------------------------------------------------------
+\section{Figure 7: Convergence over $N$}
+\label{sec:fig7}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../visualizations/branch_locus_fig7.png}
+\caption{Convergence of cell counts with increasing~$N$.
+  \textbf{(a)}~Branch cell count at $k = 216$ vs.\ checkpoint~$N$:
+  rapid initial growth, saturating at $21{,}632$ by
+  $N \approx 10^8$.  \textbf{(b)}~Multiple $k$-levels on log scale:
+  small-$k$ levels saturate immediately at $k^2$; larger levels
+  ($k = 162, 216$) take longer but all converge.
+  \textbf{(c)}~Empty cell count at $k = 729$ vs.~$N$: slowly
+  decreasing as new cells become occupied, but still far from zero at
+  $N = 10^{11}$.  \textbf{(d)}~Pure-even and pure-odd counts at
+  $k = 216$: both stabilize early, confirming that the cell-type
+  classification is robust.}
+\label{fig:convergence}
+\end{figure}
+
+The convergence analysis confirms that our cell counts are
+well-determined at $N = 10^{11}$.  The branch cell count at
+$k = 216$ reaches its final value of $21{,}632$ by $N \approx 10^8$
+and remains unchanged through $N = 10^{11}$, a factor of $10^3$
+more trajectories.  This stability is strong evidence that the branch
+locus is a genuine arithmetic invariant, not an artifact of
+finite sampling.
+
+At $k = 729$ (panel~c), the empty cell count is still slowly
+decreasing at $N = 10^{11}$, suggesting that with more trajectories,
+a few additional cells might become occupied.  However, the branch
+cell count has already saturated at $21{,}632$, matching $k = 216$
+exactly.  This means the \emph{new} cells that become occupied at
+$k = 729$ for large~$N$ are pure-parity, not branch---the
+Diophantine structure is already locked in.
+
+The pure-even and pure-odd counts (panel~d) stabilize at $1{,}582$
+and $54$ respectively, both early in the computation.  The asymmetry
+($1{,}582 \gg 54$) reflects the fact that even steps are more common
+($p_{\mathrm{even}} \approx 0.667$), so more cells can
+accumulate enough visits to be classified as pure-even.
+
+%------------------------------------------------------------------
+\section{Summary}
+\label{sec:summary}
+
+The 100-billion branch locus computation reveals several mutually
+reinforcing structural features:
+
+\begin{enumerate}
+\item \textbf{Saturation}: The branch locus has exactly $21{,}632$
+  cells from $k = 216$ onward, independent of both the grid
+  resolution and the number of trajectories (beyond $\sim 10^8$).
+
+\item \textbf{SFT constraint}: The odd$\to$odd transition is
+  identically zero at all resolutions, confirming the golden mean
+  shift structure of Collatz parity sequences.
+
+\item \textbf{Foliation collapse}: At high resolution, the branch
+  locus concentrates near the irrational foliation
+  $r_3 = \log_2 3 \cdot r_2$, with the fraction of on-foliation
+  cells collapsing as $O(1/k)$.
+
+\item \textbf{Diophantine repulsion}: Pure-even cells cluster at
+  specific Diophantine distances from the irrational foliation,
+  consistent with Baker-type lower bounds on
+  $|p - q\log_2 3|$.
+
+\item \textbf{Statistical fingerprint}: Branch cells at $k \ge 216$
+  have a characteristic $p_{\mathrm{odd}} \approx 0.284$ (lower
+  than the global $0.332$), entropy $H \approx 0.84$, and
+  increasing cell-to-cell heterogeneity with $k$.
+\end{enumerate}
+
+These findings support the Diophantine confinement framework
+developed in the companion paper~\cite{Janik2026}: the branch locus
+is arithmetically determined, its geometry is controlled by the
+irrationality of $\log_2 3$, and the SFT structure of the parity
+subshift keeps $p_{\mathrm{odd}}$ safely below the critical
+threshold.
+
+\begin{thebibliography}{9}
+\bibitem{Janik2026}
+J.~A.~Janik, \emph{Diophantine Confinement in Syracuse Dynamics},
+  preprint, 2026.
+\end{thebibliography}
+
+\end{document}
