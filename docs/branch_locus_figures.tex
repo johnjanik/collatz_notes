@@ -36,13 +36,17 @@ $\T^2_k = (\Z/k\Z)^2$, carried out for all
 $n \le 10^{11}$ across 27 hierarchically nested grid levels
 ($k \in \{1, 2, 3, \ldots, 19683\}$).  The computation consumed
 61.5~hours on a 24-core Intel Core Ultra~9 275HX, accumulating
-$25.1 \times 10^{12}$ Collatz steps.  Seven figures document the
+$25.1 \times 10^{12}$ Collatz steps.  Eight figures document the
 principal findings: cell saturation, torus heatmaps, Diophantine
 signatures, shift-of-finite-type (SFT) forbidden transitions,
-foliation enrichment collapse, cell-level statistics, and convergence
-over~$N$.  Together they give a detailed empirical portrait of the
-arithmetic structure governing which torus cells carry mixed-parity
-(branch) dynamics and which are confined to a single parity type.
+foliation enrichment collapse, cell-level statistics, convergence
+over~$N$, and transition/shadow analysis.  A comparison with the
+earlier $10^{10}$ run reveals new structure invisible at lower~$N$:
+a ``Diophantine ghost island'' of 251~cells at perpendicular
+distance~370 from the main branch locus, created by the best rational
+approximant $460/729 \approx \log_3 2$, together with a sharpened
+gap in the shadow offset distribution and a new downward-sloping
+feature in the foliation-position shadow profile.
 \end{abstract}
 
 %------------------------------------------------------------------
@@ -384,75 +388,204 @@ accumulate enough visits to be classified as pure-even.
 \centering
 \includegraphics[width=\textwidth]{../visualizations/diophantine_transitions.png}
 \caption{Transition, valence, SFT, and shadow offset analysis at
-  $k = 729$ (Diophantine level $3^6$).
+  $k = 729$ (Diophantine level $3^6$), $N = 10^{11}$.
   \textbf{Top left}: Transition valence map---each non-empty cell is
   colored by the number of distinct transition types (ee, eo, oe) it
-  exhibits; valence~3 (mixed) cells concentrate along the irrational
-  foliation.
+  exhibits.  A secondary band is visible near $r_3 \approx 440$--$460$:
+  the Diophantine ghost island (Section~\ref{sec:ghost}).
   \textbf{Top center}: ``11'' successor analysis---after an odd-visited
   cell at $(r_2, r_3)$, the successor cell at $(r_2, r_3+1)$ is
-  classified by type; the absence of odd$\to$odd successors confirms the
-  golden mean shift.
+  classified by type; the island appears as a second band of successor
+  cells near the rational foliation $460/729$.
   \textbf{Top right}: Shadow offset spatial map---red cells are closer
   to the rational foliation ($460/729$), blue cells closer to the
-  irrational foliation ($\log_2 3$); the sign change tracks the
-  gap between the two nearly parallel foliations.
+  irrational foliation ($\log_2 3$); the island cells are
+  uniformly positive (red), sitting on the rational side.
   \textbf{Bottom left}: Transition type fractions at $k = 81$ vs.\
-  $k = 729$ with inset valence distribution; the ee/eo/oe split is
-  nearly unchanged between scales.
+  $k = 729$ with inset valence distribution.
   \textbf{Bottom center}: Shadow offset as a function of position along
-  the irrational foliation, colored by $p_{\mathrm{odd}}$; the running
-  mean (black) shows a systematic drift from positive to negative,
-  reflecting the winding of the rational shadow around the irrational
-  foliation.
-  \textbf{Bottom right}: Shadow offset distribution for all non-empty
-  cells (gray) and branch cells (gold); the branch distribution has
-  mean $-0.00818$ and median $-0.00951$, indicating a slight bias
-  toward the irrational foliation.}
+  the irrational foliation; a new downward-sloping feature appears above
+  the axis at $t \approx 235$--$277$, created by the ghost island.
+  \textbf{Bottom right}: Shadow offset distribution with a pronounced
+  gap near zero and an asymmetric shoulder at $+0.007$ from the island.}
 \label{fig:transitions}
 \end{figure}
 
-This figure combines four complementary views of the transition
-structure and shadow geometry at the Diophantine level $k = 729 = 3^6$.
+This figure combines six views of the transition structure and
+shadow geometry at the Diophantine level $k = 729 = 3^6$.  A comparison
+with the same analysis at $N = 10^{10}$ reveals three new features
+that emerged between $10^{10}$ and $10^{11}$ trajectories.
+
+\subsection{Transition valence and SFT structure}
 
 The \emph{transition valence} (top left) measures how many of the
 three allowed transition types (ee, eo, oe) are realized at each cell.
-Most branch cells have valence~3, meaning they experience all three
-transition types---full dynamical mixing.  Cells with lower valence
-sit near the boundary of the branch locus, where one or more
-transitions become forbidden by arithmetic constraints.
+In the main cluster, 89.7\% of cells have valence~3 (full dynamical
+mixing).  The \emph{``11'' successor analysis} (top center) verifies
+the SFT constraint cell by cell: for every cell visited by an odd
+step, the successor cell (obtained by incrementing $\nu_3$ by~1)
+is never pure-odd.  The golden mean shift is confirmed at every cell
+in both the main cluster and the ghost island.
 
-The \emph{``11'' successor analysis} (top center) verifies the SFT
-constraint cell by cell: for every cell visited by an odd step, the
-successor cell (obtained by incrementing $\nu_3$ by~1) is never
-pure-odd.  This is the spatial manifestation of the golden mean shift
-on the torus---the forbidden ``11'' word cannot be realized in any
-cell's transition structure.
+\subsection{Shadow offset geometry}
 
-The \emph{shadow offset} (top right, bottom center, bottom right) is
-the signed distance $d_{\mathrm{irr}} - d_{\mathrm{rat}}$ between
-each cell's proximity to the irrational foliation
-($r_3/r_2 = \log_2 3$) and its proximity to the best rational
-approximant ($r_3/r_2 = 460/729$).  The spatial map (top right) shows
-a clean red--blue dipole pattern: cells on one side of the gap
-between the two foliations are closer to the rational line, while
+The \emph{shadow offset} $d_{\mathrm{irr}} - d_{\mathrm{rat}}$
+measures whether a cell sits closer to the irrational foliation
+($r_3/r_2 = \log_2 3$) or the best rational approximant
+($r_3/r_2 = 460/729$).  The spatial map (top right) shows a
+red--blue dipole: cells on one side of the gap between the two
+nearly parallel foliations are closer to the rational line, while
 those on the other side are closer to the irrational line.
 
-The shadow offset distribution (bottom right) reveals a slight but
-statistically significant negative bias: branch cells are on average
-$0.00818$ cell units closer to the irrational foliation than to the
-rational one.  This asymmetry is consistent with the Diophantine
-repulsion mechanism: cells that are ``too rational'' (too close to
-$460/729$ relative to $\log_2 3$) tend to be pushed toward pure-parity
-status, leaving the branch locus slightly enriched on the irrational
-side.
+The distribution (bottom right) has mean $-0.00818$ and median
+$-0.00951$, indicating branch cells are slightly biased toward
+the irrational foliation---consistent with Diophantine repulsion
+of ``too-rational'' cells to pure-parity status.
 
-The position-resolved shadow offset (bottom center) shows that this
-bias is not uniform along the foliation.  The running mean drifts from
-positive (closer to rational) near one end to negative (closer to
-irrational) at the other, reflecting the slow winding of the rational
-approximant $460/729$ around the true irrational slope $\log_3 2$ as
-one traverses the torus.
+The position-resolved shadow offset (bottom center) shows the
+running mean drifting from positive near one end of the foliation
+to negative at the other, reflecting the slow winding of $460/729$
+around the true slope $\log_3 2$.
+
+%------------------------------------------------------------------
+\section{New structure at $10^{11}$: the Diophantine ghost island}
+\label{sec:ghost}
+
+The most striking new feature in the $10^{11}$ run is a cluster
+of 251~cells that were entirely absent from the $10^{10}$ data.
+These cells form a ``ghost island'' separated from the main branch
+locus by a gap of 352~perpendicular units.
+
+\subsection{Location and geometry}
+
+The island is located at $r_2 \in [0, 37]$, $r_3 \in [438, 461]$,
+at perpendicular distance $d \approx 370$ from the main foliation
+line $r_3 = \log_3 2 \cdot r_2$.  The main cluster spans
+$d \in [-19, +18]$.  Between $d = 18$ and $d = 370$ there are
+\emph{zero} occupied cells---a complete void.
+
+The value $460 = \mathrm{round}(729 \cdot \log_3 2)$ is the
+numerator of the best rational approximation to $\log_3 2$ with
+denominator~729, with error
+\[
+  \left|\frac{460}{729} - \log_3 2\right| \approx 7.2 \times 10^{-5}.
+\]
+The island lies along a shifted copy of the irrational foliation,
+$r_3 = \log_3 2 \cdot r_2 + C$ with $C \approx 441$, centered
+near the rational foliation $r_3 = (460/729)\, r_2$ shifted by
+one period.
+
+\subsection{Cell statistics}
+
+\begin{center}
+\begin{tabular}{lrr}
+\toprule
+& Main cluster & Ghost island \\
+\midrule
+Total cells & 23{,}017 & 251 \\
+Branch cells & 21{,}471 & 161 \\
+Pure even & 1{,}495 & 87 \\
+Pure odd & 51 & 3 \\
+\midrule
+Total visits & $25.1 \times 10^{12}$ & $3{,}233$ \\
+Mean visits/cell & $1.09 \times 10^{9}$ & 12.9 \\
+Mean $p_{\mathrm{odd}}$ (branch) & 0.284 & 0.276 \\
+\midrule
+Valence 3 & 89.7\% & 48.6\% \\
+Valence 2 & 4.9\% & 25.9\% \\
+Valence 1 & 5.4\% & 25.5\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The island cells are extraordinarily sparse: their 3{,}233 total
+visits out of $25.1 \times 10^{12}$ steps represent a fraction of
+$1.3 \times 10^{-10}$.  The lower valence reflects incomplete
+exploration: with only $\sim\!13$ visits per cell, many transition
+types have not yet been observed.  Critically, all 251~island cells
+have $\mathit{oo} = 0$---the golden mean shift constraint is
+preserved even in this extreme regime.
+
+\subsection{Impact on shadow offset distribution}
+
+The island contributes a concentrated bump at shadow offset
+$\in [+0.006, +0.008]$.  In the bin $[0.006, 0.007)$, the island
+adds 100~cells to 328~main-cluster cells (a 30\% increase); in
+$[0.007, 0.008)$, it adds 141 to 326 (43\% increase).  This
+creates the visible asymmetric shoulder on the positive side of
+the distribution that was absent at $N = 10^{10}$, and sharpens
+the gap near zero by providing contrast.
+
+The gap itself---a low-density region at $|d_{\mathrm{irr}} -
+d_{\mathrm{rat}}| < 0.001$ containing only $\sim\!200$ cells---is
+an intrinsic geometric feature where the two foliations have equal
+perpendicular distances.  Its width is stable between $10^{10}$
+and $10^{11}$; what changes is its visual prominence due to the
+island's contribution to the positive tail.
+
+\subsection{The downward slope at $t \approx 235$}
+
+In the foliation-position plot (bottom center of Figure~\ref{fig:transitions}),
+the island appears as a band of dots above the zero line at
+position $t \in [234, 277]$, with a clear downward slope:
+shadow offset decreases from $+0.008$ to $+0.006$ across this range
+(linear slope $-5.1 \times 10^{-5}$ per unit of~$t$).  Additionally,
+47~new frontier cells at the positive boundary of the main cluster
+($d \approx 15$--$18$) extend the occupied region at $t \approx 200$--$222$,
+creating a secondary feature at the onset of the island's
+foliation-position range.
+
+\subsection{Comparison: $10^{10}$ vs.\ $10^{11}$}
+
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+& $N = 10^{10}$ & $N = 10^{11}$ & New \\
+\midrule
+Non-empty cells ($k = 729$) & 19{,}025 & 23{,}268 & $+4{,}243$ \\
+Branch cells & 17{,}372 & 21{,}632 & $+4{,}260$ \\
+Pure even & 1{,}555 & 1{,}582 & $+27$ \\
+Pure odd & 98 & 54 & $-44$ \\
+\midrule
+Ghost island cells & 0 & 251 & $+251$ \\
+Main cluster new cells & --- & --- & $+3{,}992$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Of the 4{,}243 newly occupied cells, 251 form the ghost island
+and 3{,}992 extend the main cluster's boundary.  The main-cluster
+growth is concentrated at the perpendicular-distance frontier:
+932~new cells at the negative boundary ($d \approx -18$ to $-19$)
+and 454 at the positive boundary ($d \approx +13$ to $+17$), with
+scattered interior filling elsewhere.
+
+The 44~cells that were pure-odd at $10^{10}$ but are no longer at
+$10^{11}$ have been reclassified as branch cells: they finally
+received an even-step visit in the additional $9 \times 10^{10}$
+trajectories.
+
+\subsection{Theoretical significance}
+
+The ghost island is a direct manifestation of the rational
+approximation quality of $460/729$ to $\log_3 2$.  The Collatz
+dynamics produces trajectories whose $(\nu_2 \bmod 729,\;
+\nu_3 \bmod 729)$ residues cluster along the irrational foliation.
+At $N = 10^{11}$, trajectories are long enough that rare
+fluctuations push the $(\nu_2, \nu_3)$ residue to a second copy of
+the foliation, shifted by approximately $(0, 460)$ in the
+$r_3$~direction.  This second copy exists because $460/729$ is close
+to $\log_3 2$: the shift by~460 approximately preserves the foliation
+structure.
+
+The 352-unit gap between the main cluster and the island is a
+direct consequence of the approximation quality---controlled by
+Baker-type lower bounds (axiom~A1 in the Lean formalization) on
+$|p - q \log_2 3|$.  The gap width is expected to shrink at the
+next Diophantine level ($k = 3^9 = 19{,}683$, best approximant
+$12{,}420/19{,}683$), where the rational approximation is closer
+and the ghost island would merge into a thicker branch locus
+neighborhood.
 
 %------------------------------------------------------------------
 \section{Summary}
@@ -490,6 +623,15 @@ reinforcing structural features:
   than to the rational approximant $460/729$, consistent with
   Diophantine repulsion of ``too-rational'' cells to pure-parity
   status.
+
+\item \textbf{Diophantine ghost island}: At $N = 10^{11}$,
+  251~entirely new cells appear at perpendicular distance~370 from
+  the main branch locus, forming a shifted copy of the foliation
+  along the rational approximant $460/729 \approx \log_3 2$.  The
+  352-unit void between the main cluster and the island is
+  controlled by Baker-type Diophantine bounds, and the island's
+  positive shadow offsets create the asymmetric shoulder in the
+  offset distribution.
 \end{enumerate}
 
 These findings support the Diophantine confinement framework
@@ -497,7 +639,11 @@ developed in the companion paper~\cite{Janik2026}: the branch locus
 is arithmetically determined, its geometry is controlled by the
 irrationality of $\log_2 3$, and the SFT structure of the parity
 subshift keeps $p_{\mathrm{odd}}$ safely below the critical
-threshold.
+threshold.  The ghost island discovered at $N = 10^{11}$ provides
+the first direct visual evidence of Diophantine approximation
+quality controlling the spatial structure of the branch locus---the
+gap between the main cluster and the island is a geometric shadow
+of the continued fraction expansion of $\log_2 3$.
 
 \begin{thebibliography}{9}
 \bibitem{Janik2026}
