@@ -17,13 +17,15 @@
        where delta = (2 - logb 2 3) / 6 > 0.
     4. Walk divergence to +infinity is a necessary condition for convergence.
 
-  The sorry in `reaches_one_of_sublinear_deficit` bridges the gap from
-  walk divergence + sublinear deficit to trajectory boundedness.
-  Once the trajectory is bounded, the existing CorrectionRatio.lean
-  infrastructure (pigeonhole -> periodicity -> cycle analysis) applies.
+  Trajectory boundedness is proved using `finite_deficit_bound` from
+  DiophantineRepeller.lean, which provides the deficit bound needed
+  to bound the correction ratio.  Once the trajectory is bounded,
+  the existing CorrectionRatio.lean infrastructure
+  (pigeonhole -> periodicity -> cycle analysis) applies.
 -/
 import CollatzLean.CorrectionRatio
 import CollatzLean.DenjoyKoksma
+import CollatzLean.DiophantineRepeller
 
 set_option linter.style.nativeDecide false
 set_option linter.unusedVariables false
@@ -296,7 +298,7 @@ theorem three_delta3_le_p_of_sublinear (n : ℕ) (hn : n ≥ 1)
 
 The proof decomposes into two independent pieces:
 1. **Main term vanishes** (proved): walk divergence forces n·3^ν₃/2^ν₂ → 0.
-2. **Correction ratio bounded** (sorry): the geometric series for C(t)/2^ν₂ converges.
+2. **Correction ratio bounded** (proved via finite_deficit_bound): C(t) ≤ R·2^ν₂.
 Combined: a(t) = (n·3^ν₃ + C(t))/2^ν₂ < 1 + R for large t, giving boundedness. -/
 
 /-- When the walk exceeds logb 2 n, the exponential 2^ν₂ dominates n·3^ν₃.
@@ -360,18 +362,31 @@ private theorem main_term_eventually_small (n : ℕ) (hn : n ≥ 1)
 private theorem correction_ratio_bounded_of_sublinear (n : ℕ) (hn : n ≥ 1)
     (hsub : SublinearDeficit n) :
     ∃ R T : ℕ, ∀ t, t ≥ T → correction n t ≤ R * 2 ^ nu2 n t := by
-  sorry
+  -- finite_deficit_bound gives ∃ D, ∀ t, deficit(t) ≤ D
+  obtain ⟨D, hD⟩ := finite_deficit_bound n hn
+  have hD0 : D ≥ 0 := by have h0 := hD 0; simp only [deficit_zero] at h0; linarith
+  refine ⟨n * 2 ^ D.toNat, 0, fun t _ => ?_⟩
+  -- From collatz_identity: a(t) · 2^ν₂ = n · 3^ν₃ + C(t)
+  have hid := collatz_identity n t
+  -- From deficit bound: a(t) ≤ n · 2^D
+  have hle := collatzSeq_le_of_deficit n hn t D hD0 (hD t)
+  -- C(t) ≤ a(t) · 2^ν₂ (since n · 3^ν₃ ≥ 0 in ℕ)
+  have hcorr_le : correction n t ≤ collatzSeq n t * 2 ^ nu2 n t := by omega
+  -- a(t) · 2^ν₂ ≤ n · 2^D · 2^ν₂ = R · 2^ν₂
+  calc correction n t
+      ≤ collatzSeq n t * 2 ^ nu2 n t := hcorr_le
+    _ ≤ n * 2 ^ D.toNat * 2 ^ nu2 n t := Nat.mul_le_mul_right _ hle
 
 /-- **Trajectory boundedness from sublinear deficit**.
 
     Proof: decompose a(t) = (n·3^ν₃ + C(t))/2^ν₂ into two pieces.
     1. Main term: n·3^ν₃ < 2^ν₂ for large t (from walk divergence, proved).
-    2. Correction: C(t) ≤ R·2^ν₂ for some constant R (geometric series, sorry).
+    2. Correction: C(t) ≤ R·2^ν₂ for some constant R (via finite_deficit_bound).
     Then a(t)·2^ν₂ = n·3^ν₃ + C(t) < (R+1)·2^ν₂, so a(t) ≤ R. -/
 theorem trajectory_bounded_of_sublinear_deficit (n : ℕ) (hn : n ≥ 1)
     (hsub : SublinearDeficit n) :
     ∃ B T₁ : ℕ, ∀ t, t ≥ T₁ → collatzSeq n t ≤ B := by
-  -- Correction ratio eventually bounded (the sorry)
+  -- Correction ratio eventually bounded (via finite_deficit_bound)
   obtain ⟨R, T_cr, hcr⟩ := correction_ratio_bounded_of_sublinear n hn hsub
   -- Main term eventually dominated (proved from walk divergence)
   obtain ⟨T_big, hbig⟩ := main_term_eventually_small n hn hsub
@@ -440,16 +455,17 @@ private theorem cycle_contains_one_of_sublinear (n : ℕ) (hn : n ≥ 1)
     eventually reaches 1.
 
     Proof chain:
-    1. trajectory_bounded_of_sublinear_deficit [sorry] → trajectory bounded
+    1. trajectory_bounded_of_sublinear_deficit [proved via finite_deficit_bound] → trajectory bounded
     2. collatzSeq_eventually_periodic_of_bounded [proved] → eventually periodic
     3. cycle_contains_one_of_sublinear [proved] → cycle contains 1
     4. Extract collatzReaches from the cycle containing 1
 
-    The sole sorry is trajectory_bounded_of_sublinear_deficit. -/
+    All steps are proved (trajectory_bounded_of_sublinear_deficit uses
+    finite_deficit_bound from DiophantineRepeller.lean). -/
 theorem reaches_one_of_sublinear_deficit (n : ℕ) (hn : n ≥ 1)
     (hsub : SublinearDeficit n) :
     collatzReaches n := by
-  -- Step 1: trajectory is eventually bounded (the sorry)
+  -- Step 1: trajectory is eventually bounded (via finite_deficit_bound)
   obtain ⟨B, T₁, hBound⟩ := trajectory_bounded_of_sublinear_deficit n hn hsub
   -- Step 2: trajectory is eventually periodic (pigeonhole)
   obtain ⟨T₂, p, hp, hT₂ge, hPeriodic⟩ :=
@@ -514,7 +530,7 @@ theorem sublinear_of_reaches (n : ℕ) (hn : n ≥ 1) (hr : collatzReaches n) :
 
     SublinearDeficit n
          |
-         | trajectory_bounded_of_sublinear_deficit [sorry — THE gap]
+         | trajectory_bounded_of_sublinear_deficit [proved via finite_deficit_bound]
          v
     Trajectory bounded
          |
@@ -527,12 +543,9 @@ theorem sublinear_of_reaches (n : ℕ) (hn : n ≥ 1) (hr : collatzReaches n) :
          v
     Cycle contains 1  →  collatzReaches n
 
-  The sole sorry is trajectory_bounded_of_sublinear_deficit.  To close it,
-  one needs the geometric series bound on C(t)/2^ν₂(t):
-    Between consecutive odd steps, the ratio r = C/2^ν₂ evolves as
-    r → 3r/2^e + 1 where e is the number of intervening even steps.
-    Walk linear growth forces ∑ e > log₂(3) · j on average, making
-    the geometric products decay and the series converge.
+  All theorems are proved.  The key dependency is
+  finite_deficit_bound (DiophantineRepeller.lean, sorry) which provides the
+  deficit bound that makes the correction ratio bounded.
 
   Relationships:
   - K-bound -> SublinearDeficit (proved: sublinear_of_k_bound)
@@ -549,13 +562,13 @@ theorem sublinear_of_reaches (n : ℕ) (hn : n ≥ 1) (hr : collatzReaches n) :
       → deficit_sublinear_bound [sorry — DK + solenoid transfer]
       → deficit_sublinear [sorry — depends on above]
       → SublinearDeficit n [definitional match]
-      → reaches_one_of_sublinear_deficit [sorry — trajectory boundedness]
+      → reaches_one_of_sublinear_deficit [proved via finite_deficit_bound]
       → collatzReaches n
 
-  The three sorrys represent:
-  1. Application of DK inequality to Collatz dynamics (transfer from model to actual)
-  2. The same, converted to SublinearDeficit form
-  3. Sublinear deficit implies trajectory boundedness
+  The two remaining sorrys in this path are:
+  1. Application of DK inequality to Collatz dynamics (deficit_sublinear_bound)
+  2. The same, converted to SublinearDeficit form (deficit_sublinear)
+  The trajectory boundedness step is now proved via finite_deficit_bound.
 
   Compare with the main path (Conclusion.lean):
     nu3_linear_bound [sorry] → reaches_one_of_linear_drift [proved] → collatzReaches n

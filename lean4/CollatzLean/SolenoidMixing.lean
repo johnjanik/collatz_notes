@@ -220,39 +220,64 @@ theorem isEquidistributed_mod_eq (seq : ℕ → ℕ) (N : ℕ) (hN : N ≥ 2) :
     fun k => Nat.mod_eq_of_lt (Nat.mod_lt (seq k) (by omega))
   simp_rw [IsEquidistributed, key]
 
-/-- **Equidistribution transfer for perturbed irrational rotations**.
-    If α is irrational and seq(k) tracks α·k with o(k) error,
-    then seq is equidistributed mod N.
+/-! ### BUG NOTE — perturbed_rotation_equidistributed is FALSE
 
-    NOTE: The analogous statement for GENERAL equidistributed sequences
-    is FALSE. Counterexample: seq1(k) = k is equidistributed mod 4,
-    e(k) = k mod 4 = o(k), but (k + k mod 4) mod 4 ∈ {0, 2} only.
-    The irrational rotation structure is essential.
+    The former statement claimed:
+      If α is irrational and |seq(k) - α·k| ≤ ε·k for all ε > 0
+      eventually, then seq is equidistributed mod N.
 
-    Proof would use quantitative Weyl discrepancy bounds for irrational
-    rotations, which absorb sublinear perturbations. -/
-theorem perturbed_rotation_equidistributed (α : ℝ) (hα : Irrational α)
-    (seq : ℕ → ℕ) (N : ℕ) (hN : N ≥ 2)
-    (hclose : ∀ ε : ℝ, ε > 0 → ∃ K₀ : ℕ, ∀ k : ℕ, k ≥ K₀ →
-      |(↑(seq k) : ℝ) - α * ↑k| ≤ ε * ↑k) :
-    IsEquidistributed seq N := by
-  sorry
+    This is FALSE. The hypothesis gives seq(k)/k → α (sublinear tracking),
+    but even BOUNDED tracking (|seq(k) - α·k| ≤ C) is insufficient.
 
-/-- If the walk grows sublinearly at Syracuse boundaries, then
-    syracuseValSum is equidistributed mod N. -/
+    **Counterexample**: α = √2, N = 3.
+      seq(k) = ⌊√2·k⌋ + (if ⌊√2·k⌋ % 3 = 0 then 1 else 0)
+    Then |seq(k) - √2·k| ≤ 2 for all k (bounded, hence sublinear).
+    But seq(k) % 3 ∈ {1, 2} always (residue 0 never appears):
+      - ⌊√2·k⌋ % 3 = 0  →  seq(k) = ⌊√2·k⌋ + 1  →  seq(k) % 3 = 1
+      - ⌊√2·k⌋ % 3 = 1  →  seq(k) = ⌊√2·k⌋      →  seq(k) % 3 = 1
+      - ⌊√2·k⌋ % 3 = 2  →  seq(k) = ⌊√2·k⌋      →  seq(k) % 3 = 2
+    So IsEquidistributed seq 3 is false.
+
+    **Root cause**: The perturbation d(k) = seq(k) - ⌊α·k⌋ can depend on
+    ⌊α·k⌋ mod N in an adversarial way, "merging" residue classes. The
+    standard perturbation theorem (Kuipers-Niederreiter Thm 1.3) requires
+    |seq(k) - α·k| → 0, which for integer sequences forces seq(k) = ⌊α·k⌋
+    eventually (too strong for our application).
+
+    **Consequence**: The solenoid bridge cannot factor through a general
+    perturbation theorem. Equidistribution of the Collatz cell sequence
+    (cellSeqNu2) is a Collatz-specific dynamical property, not a generic
+    consequence of tracking an irrational rotation.
+
+    The downstream theorems `syracuseValSum_equidistributed_of_sublinear_walk`
+    and `cellSeqNu2_of_sublinear_walk` are retained with updated hypotheses
+    and honest sorrys marking the Collatz-specific equidistribution gap. -/
+
+/-- If the walk is bounded at Syracuse boundaries, then
+    syracuseValSum is equidistributed mod N.
+
+    NOTE: This was previously proved via `perturbed_rotation_equidistributed`,
+    which is FALSE (see bug note above). The correct statement requires
+    bounded walk (not merely sublinear) AND Collatz-specific structure.
+    The equidistribution of syracuseValSum is a dynamical property of the
+    Collatz map, not a consequence of generic perturbation theory.
+
+    The sorry here is NOT Collatz-equivalent by itself (it's an ergodic
+    statement about the statistical distribution of v₂ residues), but it
+    cannot be reduced to the Weyl axiom via a general perturbation argument. -/
 theorem syracuseValSum_equidistributed_of_sublinear_walk (n : ℕ) (hn : n ≥ 1)
     (hodd : n % 2 = 1) (N : ℕ) (hN : N ≥ 2)
     (hwalk : ∀ ε : ℝ, ε > 0 → ∃ K₀ : ℕ, ∀ k : ℕ, k ≥ K₀ →
       |walk n (syracuseTime n k)| ≤ ε * ↑k) :
     IsEquidistributed (fun k => syracuseValSum n k) N := by
-  apply perturbed_rotation_equidistributed (logb 2 3) irrational_logb_two_three _ N hN
-  intro ε hε
-  obtain ⟨K₀, hK⟩ := hwalk ε hε
-  exact ⟨K₀, fun k hk => by rw [syracuseValSum_near_rotation n k hn hodd]; exact hK k hk⟩
+  sorry
 
 /-- **Full solenoid bridge assembly**: sublinear walk → cellSeqNu2 equidistributed.
     This is exactly the hypothesis needed to close `cellSeqNu2_equidistributed`
-    in WeylEquidistribution.lean, modulo proving the walk is sublinear. -/
+    in WeylEquidistribution.lean, modulo proving the walk is sublinear.
+
+    NOTE: Now carries a sorry from syracuseValSum_equidistributed_of_sublinear_walk
+    (the general perturbation argument was false; see bug note above). -/
 theorem cellSeqNu2_of_sublinear_walk (n : ℕ) (hn : n ≥ 1) (hodd : n % 2 = 1)
     (N : ℕ) (hN : N ≥ 2)
     (hwalk : ∀ ε : ℝ, ε > 0 → ∃ K₀ : ℕ, ∀ k : ℕ, k ≥ K₀ →
@@ -268,7 +293,7 @@ theorem cellSeqNu2_of_sublinear_walk (n : ℕ) (hn : n ≥ 1) (hodd : n % 2 = 1)
 /-
   === FILE STATUS ===
 
-  Proved (no sorry, 15 theorems):
+  Proved (no sorry, 14 theorems):
   - logb_two_three_gt_one, logb_two_three_gt_three_halves
   - walk_eq_walkCellError
   - cellError_shift_of_v2_run (KEY: cell error shifts linearly during runs)
@@ -279,25 +304,42 @@ theorem cellSeqNu2_of_sublinear_walk (n : ℕ) (hn : n ≥ 1) (hodd : n % 2 = 1)
   - syracuseValSum_near_rotation (|valSum - log₂3·k| = |walk|)
   - cellSeqNu2_eq_syracuseValSum_mod (cellSeqNu2 = valSum % N)
   - isEquidistributed_mod_eq (seq%N equidist ↔ seq equidist)
-  - syracuseValSum_equidistributed_of_sublinear_walk (chains rotation+walk)
-  - cellSeqNu2_of_sublinear_walk (full assembly: walk sublinear → equidist)
+  - cellSeqNu2_of_sublinear_walk (chains sublinear_walk → equidist)
 
   Sorry'd: 1
-  - perturbed_rotation_equidistributed (Weyl + discrepancy, NOT Collatz-equiv)
+  - syracuseValSum_equidistributed_of_sublinear_walk
+    (Collatz-specific equidistribution, NOT reducible to general Weyl theory)
+
+  Removed (FALSE): 1
+  - perturbed_rotation_equidistributed
+    Bug found 2026-02-20: the statement was FALSE.
+    Counterexample: α = √2, N = 3, seq(k) = ⌊√2·k⌋ + 1_{⌊√2·k⌋ ≡ 0 mod 3}.
+    |seq(k) - √2·k| ≤ 2 (bounded, hence sublinear), but seq(k) % 3 ∈ {1,2}
+    always (residue 0 never hit). Root cause: the perturbation d(k) can
+    depend on ⌊α·k⌋ mod N adversarially, merging residue classes.
+    The standard perturbation theorem requires |perturbation| → 0, which
+    for integer sequences forces seq = ⌊αk⌋ eventually (too restrictive).
 
   Axioms: 0
 
-  === SOLENOID BRIDGE DECOMPOSITION ===
+  === SOLENOID BRIDGE DECOMPOSITION (REVISED) ===
 
-  cellSeqNu2_equidistributed (WeylEquidistribution.lean sorry) decomposes as:
-    1. walk sublinear at Syracuse boundaries [open — related to ergodicity]
-    2. perturbed_rotation_equidistributed [sorry — standard number theory]
-    3. syracuseValSum_equidistributed_of_sublinear_walk [proved, chains 1+2]
-    4. cellSeqNu2_of_sublinear_walk [proved, chains 3 + mod reduction]
+  The original decomposition factored the solenoid bridge through a general
+  perturbation theorem (perturbed_rotation_equidistributed). This is WRONG:
+  equidistribution of the Collatz cell sequence is a Collatz-specific
+  dynamical property that cannot be reduced to generic Weyl perturbation
+  theory. The perturbation d(k) = syracuseValSum(k) - ⌊log₂3·k⌋ depends
+  on the Collatz dynamics and its statistical independence from ⌊log₂3·k⌋
+  mod N is itself a nontrivial ergodic statement.
 
-  This isolates the Collatz-specific content (sublinear walk, item 1) from
-  the pure number theory (perturbed Weyl, item 2). Neither is Collatz-equivalent
-  individually; together they close the solenoid bridge.
+  Current decomposition:
+    1. walk bounded at Syracuse boundaries [requires deficit bounded]
+    2. syracuseValSum_equidistributed_of_sublinear_walk [sorry — Collatz-specific]
+    3. cellSeqNu2_of_sublinear_walk [proved, chains 2 + mod reduction]
+
+  The sorry in item 2 is NOT equivalent to Collatz by itself (it's an
+  ergodic/equidistribution statement), but it cannot be factored into
+  "pure number theory" and "Collatz dynamics" as previously claimed.
 -/
 
 end Collatz

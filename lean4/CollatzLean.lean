@@ -34,3 +34,7 @@ import CollatzLean.BorelCantelli
 import CollatzLean.UniqueErgodicity
 import CollatzLean.DenjoyKoksma
 import CollatzLean.SublinearDrift
+import CollatzLean.LinearFormThree
+import CollatzLean.SimultaneousApprox
+import CollatzLean.LittlewoodResidence
+import CollatzLean.LittlewoodInduction

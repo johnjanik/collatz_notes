@@ -426,24 +426,29 @@ theorem equidistribution_implies_k_bound
     These are stated as separate lemmas so that nu3_linear_bound_from_weyl
     chains through them explicitly, making the two gaps visible. -/
 
-/-- **Solenoid bridge** (NOT equivalent to Collatz by itself):
-    The Collatz cell visit sequence cellSeqNu2 is equidistributed modulo N.
+/-- **Solenoid bridge** (Collatz-equivalent for each n):
+    The Collatz cell visit sequence cellSeqNu2 is equidistributed modulo N,
+    for ODD N ≥ 2.
 
-    Weyl's theorem (axiom A4) gives equidistribution of the irrational rotation
-    sequence k ↦ ⌊k·log₂3⌋ mod N. The gap is connecting this to the actual
-    Collatz cell visit sequence: the Syracuse valuation sums ν₂(n, syracuseTime(n,k))
-    approximate log₂3 · k, but the error terms depend on the specific trajectory.
+    **IMPORTANT: N must be odd.** For even N (e.g., N=10), the statement is FALSE.
+    After reaching 1, the Syracuse iteration has val2(3·1+1) = 2 at each step,
+    so cellSeqNu2 n N k = (c + 2k) % N. When N is even, this only visits
+    N/2 residues (those with the same parity as c), not all N residues.
+    Computationally verified: n=7, N=10 visits only {1,3,5,7,9}.
 
-    The solenoid mixing content would close this gap: the (2,3)-solenoid structure
-    of the Collatz map ensures that ν₂ residues track the irrational rotation
-    asymptotically. This is an ergodic-theoretic statement about the STATISTICAL
-    distribution of v₂ residues, not about individual trajectory boundedness.
+    For odd N with gcd(2,N)=1, the sequence (c + 2k) % N has period N and
+    visits all residues, so equidistribution holds after reaching the 1-cycle.
+    Before reaching 1, the trajectory visits cells according to the Syracuse
+    dynamics, and the equidistribution claim is equivalent to the Collatz
+    conjecture for n (the trajectory must eventually settle into the 1-cycle
+    for the long-term statistics to converge to 1/N per residue).
 
-    Note: The former axiom `solenoid_mixing` (SolenoidMixing.lean) was removed
-    because it depended on the false SlidingWindowCondition. A correct version
-    would need to target equidistribution of cellSeqNu2 directly. -/
+    The decomposition via `cellSeqNu2_of_sublinear_walk` (SolenoidMixing.lean)
+    requires the walk to be sublinear at Syracuse boundaries, but the walk
+    grows linearly as ~(2 - log₂3)k ≈ 0.415k after reaching 1, so that
+    pathway is NOT viable. This sorry remains a direct assertion. -/
 theorem cellSeqNu2_equidistributed (n : ℕ) (_hn : n ≥ 1)
-    (N : ℕ) (hN : N ≥ 2) :
+    (N : ℕ) (hN : N ≥ 2) (hodd : N % 2 = 1) :
     IsEquidistributed (cellSeqNu2 n N) N := by
   sorry
 
@@ -514,22 +519,23 @@ theorem safeCellDensity_at_inverse_scale (N : ℕ) (hN : N ≥ 5) :
     This is the alternative proof of nu3_linear_bound via the equidistribution route.
 
     The proof explicitly chains through three ingredients:
-    1. safeCellDensity_at_inverse_scale — safe density > 1/4 at N=10 [proved above]
-    2. cellSeqNu2_equidistributed — solenoid bridge [sorry — Gap A, NOT Collatz-equiv]
-    3. equidistribution_implies_deficit_bounded — budget argument [sorry — Gap B, IS Collatz-equiv]
+    1. safeCellDensity_at_inverse_scale — safe density > 1/4 at N=5 [proved above]
+    2. cellSeqNu2_equidistributed — solenoid bridge [sorry — Collatz-equiv for each n]
+    3. equidistribution_implies_deficit_bounded — budget argument [sorry — Collatz-equiv]
     4. k_bound_of_deficit_bounded — deficit bounded → K-bound [proved, Drift.lean]
 
-    This decomposition isolates Gap A (ergodic theory: solenoid mixing) from
-    Gap B (dynamical systems: deficit budget), making the two mathematical
-    challenges independently visible. -/
+    NOTE: Uses N=5 (odd) because cellSeqNu2_equidistributed is FALSE for even N.
+    After reaching the 1-cycle, cellSeqNu2 increments by 2 per Syracuse step;
+    for even N, this only visits N/2 residues. For odd N, gcd(2,N)=1 ensures
+    all residues are visited. -/
 theorem nu3_linear_bound_from_weyl (n : ℕ) (hn : n ≥ 1) :
     ∃ K : ℕ, ∃ T₀ : ℕ, ∀ t, t ≥ T₀ → 3 * nu3 n t ≤ t + K := by
-  -- Step 1: Safe density at N=10 exceeds 1/4 [proved, Baker separation]
-  have hsafe := safeCellDensity_at_inverse_scale 10 (by omega)
-  -- Step 2: Solenoid bridge — cellSeqNu2 equidistributed at N=10 [sorry — Gap A]
-  have hequi := cellSeqNu2_equidistributed n hn 10 (by omega)
-  -- Step 3: Equidistribution + safe density → deficit bounded [sorry — Gap B]
-  have hdef := equidistribution_implies_deficit_bounded n hn 10 (by omega)
+  -- Step 1: Safe density at N=5 exceeds 1/4 [proved, Baker separation]
+  have hsafe := safeCellDensity_at_inverse_scale 5 (by omega)
+  -- Step 2: Solenoid bridge — cellSeqNu2 equidistributed at N=5 [sorry]
+  have hequi := cellSeqNu2_equidistributed n hn 5 (by omega) (by omega)
+  -- Step 3: Equidistribution + safe density → deficit bounded [sorry]
+  have hdef := equidistribution_implies_deficit_bounded n hn 5 (by omega)
     (1 / 4) (by norm_num) hsafe hequi
   -- Step 4: Deficit bounded → K-bound [proved, Drift.lean]
   exact k_bound_of_deficit_bounded n hn hdef
@@ -549,36 +555,49 @@ theorem nu3_linear_bound_from_weyl (n : ℕ) (hn : n ≥ 1) :
       → total_dangerous_cells_bound [proved, this file]
       → safe_density_positive_of_irrational [proved, this file]
       → safeCellDensity_at_inverse_scale [proved, this file]
-    cellSeqNu2_equidistributed [sorry — Gap A, solenoid bridge]
-    equidistribution_implies_deficit_bounded [sorry — Gap B, deficit budget]
+    cellSeqNu2_equidistributed [sorry — Collatz-equivalent for each n]
+    equidistribution_implies_deficit_bounded [sorry — Collatz-equivalent]
       → k_bound_of_deficit_bounded [proved, Drift.lean]
-    = nu3_linear_bound_from_weyl [PROVED — chains Gap A + Gap B + proved infra]
+    = nu3_linear_bound_from_weyl [PROVED — chains two sorrys + proved infra]
 
-  Remaining sorry gaps (3 in this file, but nu3_linear_bound_from_weyl is closed):
-  1. equidistribution_implies_deficit_bounded (Gap B) — connects equidistribution
+  Remaining sorry gaps (2 in this file):
+  1. equidistribution_implies_deficit_bounded — connects equidistribution
      of cell visits to bounded deficit via safe/dangerous cell accounting.
      EQUIVALENT to the Collatz conjecture for the given n.
-  2. cellSeqNu2_equidistributed (Gap A) — solenoid bridge connecting Weyl's
+  2. cellSeqNu2_equidistributed — solenoid bridge connecting Weyl's
      irrational rotation equidistribution to the actual Collatz cell visits.
-     NOT equivalent to Collatz by itself (ergodic-theoretic statement).
-  3. equidistributed_subset_visits_lower — standard combinatorics lemma
-     (NOT Collatz-equivalent, provable from basic equidistribution theory).
+     EQUIVALENT to the Collatz conjecture for each n (equidistribution holds
+     iff the trajectory eventually reaches the 1-cycle).
+     REQUIRES ODD N: the statement is FALSE for even N (see BUG NOTE below).
+
+  BUG NOTE (2026-02-20): cellSeqNu2_equidistributed was previously stated
+  for all N ≥ 2, but it is FALSE for even N. After reaching the 1→4→2→1
+  cycle, each Syracuse step has val2(3·1+1) = 2, so cellSeqNu2 n N k
+  becomes (c + 2k) % N. For even N, this only visits N/2 residues
+  (same parity as c), not all N. Verified: n=7, N=10 only visits {1,3,5,7,9}.
+  For odd N, gcd(2,N)=1, so (c+2k) % N has period N and visits all residues.
+  Fixed: added hypothesis `N % 2 = 1`. Assembly uses N=5 (odd, ≥ 5).
+
+  Also fixed: The `cellSeqNu2_of_sublinear_walk` bridge (SolenoidMixing.lean)
+  requires |walk(syracuseTime k)| = o(k), but after reaching 1 the walk
+  grows linearly as (2 - log₂3)·k ≈ 0.415k. That bridge is NOT viable.
 
   Key structural improvement: nu3_linear_bound_from_weyl is now PROVED
   (modulo the two sorry sub-lemmas), explicitly chaining:
-    safeCellDensity_at_inverse_scale 10 [proved] →
-    cellSeqNu2_equidistributed [sorry — Gap A] →
-    equidistribution_implies_deficit_bounded [sorry — Gap B] →
+    safeCellDensity_at_inverse_scale 5 [proved] →
+    cellSeqNu2_equidistributed [sorry, N=5 odd] →
+    equidistribution_implies_deficit_bounded [sorry] →
     k_bound_of_deficit_bounded [proved]
-  This cleanly isolates Gap A (ergodic theory) from Gap B (dynamical budget).
 
-  Proved theorems (6, up from 4):
+  Proved theorems (8):
   - dangerous_cells_per_row_bound — interval ⊆ Icc proof, card ≤ ⌈2δ⌉₊+1
   - total_dangerous_cells_bound — biUnion decomposition over b coordinate
   - safe_density_positive_of_irrational — complement counting + N > 2M
   - safeCellDensity_at_inverse_scale — at N≥5, density(1/N) > 1/4
+  - equidistributed_subset_visits_lower — standard combinatorics (fiberwise)
   - equidistribution_implies_k_bound — deficit bounded → K-bound
   - nu3_linear_bound_from_weyl — assembly (chains through sorry sub-lemmas)
+  - isEquidistributed_iff_visitFreq — definitional equivalence
 -/
 
 end Collatz
