@@ -377,6 +377,84 @@ and $54$ respectively, both early in the computation.  The asymmetry
 accumulate enough visits to be classified as pure-even.
 
 %------------------------------------------------------------------
+\section{Figure 8: Transition, valence, SFT, and shadow analysis}
+\label{sec:fig8}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{../visualizations/diophantine_transitions.png}
+\caption{Transition, valence, SFT, and shadow offset analysis at
+  $k = 729$ (Diophantine level $3^6$).
+  \textbf{Top left}: Transition valence map---each non-empty cell is
+  colored by the number of distinct transition types (ee, eo, oe) it
+  exhibits; valence~3 (mixed) cells concentrate along the irrational
+  foliation.
+  \textbf{Top center}: ``11'' successor analysis---after an odd-visited
+  cell at $(r_2, r_3)$, the successor cell at $(r_2, r_3+1)$ is
+  classified by type; the absence of odd$\to$odd successors confirms the
+  golden mean shift.
+  \textbf{Top right}: Shadow offset spatial map---red cells are closer
+  to the rational foliation ($460/729$), blue cells closer to the
+  irrational foliation ($\log_2 3$); the sign change tracks the
+  gap between the two nearly parallel foliations.
+  \textbf{Bottom left}: Transition type fractions at $k = 81$ vs.\
+  $k = 729$ with inset valence distribution; the ee/eo/oe split is
+  nearly unchanged between scales.
+  \textbf{Bottom center}: Shadow offset as a function of position along
+  the irrational foliation, colored by $p_{\mathrm{odd}}$; the running
+  mean (black) shows a systematic drift from positive to negative,
+  reflecting the winding of the rational shadow around the irrational
+  foliation.
+  \textbf{Bottom right}: Shadow offset distribution for all non-empty
+  cells (gray) and branch cells (gold); the branch distribution has
+  mean $-0.00818$ and median $-0.00951$, indicating a slight bias
+  toward the irrational foliation.}
+\label{fig:transitions}
+\end{figure}
+
+This figure combines four complementary views of the transition
+structure and shadow geometry at the Diophantine level $k = 729 = 3^6$.
+
+The \emph{transition valence} (top left) measures how many of the
+three allowed transition types (ee, eo, oe) are realized at each cell.
+Most branch cells have valence~3, meaning they experience all three
+transition types---full dynamical mixing.  Cells with lower valence
+sit near the boundary of the branch locus, where one or more
+transitions become forbidden by arithmetic constraints.
+
+The \emph{``11'' successor analysis} (top center) verifies the SFT
+constraint cell by cell: for every cell visited by an odd step, the
+successor cell (obtained by incrementing $\nu_3$ by~1) is never
+pure-odd.  This is the spatial manifestation of the golden mean shift
+on the torus---the forbidden ``11'' word cannot be realized in any
+cell's transition structure.
+
+The \emph{shadow offset} (top right, bottom center, bottom right) is
+the signed distance $d_{\mathrm{irr}} - d_{\mathrm{rat}}$ between
+each cell's proximity to the irrational foliation
+($r_3/r_2 = \log_2 3$) and its proximity to the best rational
+approximant ($r_3/r_2 = 460/729$).  The spatial map (top right) shows
+a clean red--blue dipole pattern: cells on one side of the gap
+between the two foliations are closer to the rational line, while
+those on the other side are closer to the irrational line.
+
+The shadow offset distribution (bottom right) reveals a slight but
+statistically significant negative bias: branch cells are on average
+$0.00818$ cell units closer to the irrational foliation than to the
+rational one.  This asymmetry is consistent with the Diophantine
+repulsion mechanism: cells that are ``too rational'' (too close to
+$460/729$ relative to $\log_2 3$) tend to be pushed toward pure-parity
+status, leaving the branch locus slightly enriched on the irrational
+side.
+
+The position-resolved shadow offset (bottom center) shows that this
+bias is not uniform along the foliation.  The running mean drifts from
+positive (closer to rational) near one end to negative (closer to
+irrational) at the other, reflecting the slow winding of the rational
+approximant $460/729$ around the true irrational slope $\log_3 2$ as
+one traverses the torus.
+
+%------------------------------------------------------------------
 \section{Summary}
 \label{sec:summary}
 
@@ -406,6 +484,12 @@ reinforcing structural features:
   have a characteristic $p_{\mathrm{odd}} \approx 0.284$ (lower
   than the global $0.332$), entropy $H \approx 0.84$, and
   increasing cell-to-cell heterogeneity with $k$.
+
+\item \textbf{Shadow asymmetry}: At $k = 729$, branch cells are
+  on average $0.008$ cell units closer to the irrational foliation
+  than to the rational approximant $460/729$, consistent with
+  Diophantine repulsion of ``too-rational'' cells to pure-parity
+  status.
 \end{enumerate}
 
 These findings support the Diophantine confinement framework
