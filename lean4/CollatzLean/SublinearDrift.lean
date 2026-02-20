@@ -292,36 +292,111 @@ theorem three_delta3_le_p_of_sublinear (n : ℕ) (hn : n ≥ 1)
              mul_nonneg (Nat.cast_nonneg (α := ℝ) T₂) (show (0:ℝ) ≤ ↑p - 1 from by linarith),
              mul_nonneg (Nat.cast_nonneg (α := ℝ) D₀abs) (show (0:ℝ) ≤ ↑p from by linarith)]
 
-/-! ## Trajectory boundedness (the gap) -/
+/-! ## Trajectory boundedness
 
-/-- **Trajectory boundedness from sublinear deficit**: the sole sorry in this file.
+The proof decomposes into two independent pieces:
+1. **Main term vanishes** (proved): walk divergence forces n·3^ν₃/2^ν₂ → 0.
+2. **Correction ratio bounded** (sorry): the geometric series for C(t)/2^ν₂ converges.
+Combined: a(t) = (n·3^ν₃ + C(t))/2^ν₂ < 1 + R for large t, giving boundedness. -/
 
-    If the deficit grows sublinearly, the Collatz trajectory is eventually bounded.
+/-- When the walk exceeds logb 2 n, the exponential 2^ν₂ dominates n·3^ν₃.
+    Bridge from real-valued walk to natural number power comparison.
+    (Same proof technique as Conclusion.lean: logb → log → exp → ℕ cast.) -/
+private theorem pow2_dominates_of_walk_large (n : ℕ) (hn : n ≥ 1) (t : ℕ)
+    (hwalk : walk n t > logb 2 (↑n : ℝ)) :
+    n * 3 ^ nu3 n t < 2 ^ nu2 n t := by
+  -- Positivity setup
+  have hn_pos : (0 : ℝ) < ↑n := Nat.cast_pos.mpr (by omega)
+  have h3pos : (0 : ℝ) < (3 : ℝ) ^ nu3 n t := by positivity
+  have hprod_pos : (0 : ℝ) < ↑n * (3 : ℝ) ^ nu3 n t := mul_pos hn_pos h3pos
+  have h2nu2_pos : (0 : ℝ) < (2 : ℝ) ^ nu2 n t := by positivity
+  -- logb 2 (n * 3^ν₃) = logb 2 n + ν₃ · logb 2 3
+  have hlog_prod : logb 2 (↑n * (3 : ℝ) ^ nu3 n t) =
+      logb 2 ↑n + ↑(nu3 n t) * logb 2 3 := by
+    rw [logb_mul (ne_of_gt hn_pos) (ne_of_gt h3pos), logb_pow]
+  -- logb 2 (2^ν₂) = ν₂
+  have hlog_2nu2 : logb 2 ((2 : ℝ) ^ nu2 n t) = ↑(nu2 n t) := by
+    rw [logb_pow, logb_self_eq_one (by norm_num : (1 : ℝ) < 2), mul_one]
+  -- logb 2 (n * 3^ν₃) < logb 2 (2^ν₂) from walk bound
+  have hlog_lt : logb 2 (↑n * (3 : ℝ) ^ nu3 n t) <
+      logb 2 ((2 : ℝ) ^ nu2 n t) := by
+    rw [hlog_prod, hlog_2nu2]; unfold walk at hwalk; linarith
+  -- Convert logb → log inequality
+  have hlog2_pos : (0 : ℝ) < Real.log 2 := Real.log_pos (by norm_num : (1 : ℝ) < 2)
+  have hlog2_ne : Real.log 2 ≠ 0 := ne_of_gt hlog2_pos
+  have hlog_lt' : Real.log (↑n * (3 : ℝ) ^ nu3 n t) <
+      Real.log ((2 : ℝ) ^ nu2 n t) := by
+    simp only [Real.logb] at hlog_lt
+    have h1 := mul_lt_mul_of_pos_right hlog_lt hlog2_pos
+    rwa [div_mul_cancel₀ _ hlog2_ne, div_mul_cancel₀ _ hlog2_ne] at h1
+  -- exp(log x) = x gives the ℝ inequality
+  have hexp_lt := Real.exp_strictMono hlog_lt'
+  rw [Real.exp_log hprod_pos, Real.exp_log h2nu2_pos] at hexp_lt
+  -- Cast ℝ → ℕ
+  exact_mod_cast hexp_lt
 
-    Mathematical argument (not yet formalized):
-    From the identity a(t) · 2^ν₂ = n · 3^ν₃ + C(t), we have
-      a(t) = n · 3^ν₃/2^ν₂ + C(t)/2^ν₂.
+/-- Walk divergence implies the main term n·3^ν₃ is eventually dominated by 2^ν₂. -/
+private theorem main_term_eventually_small (n : ℕ) (hn : n ≥ 1)
+    (hsub : SublinearDeficit n) :
+    ∃ T : ℕ, ∀ t, t ≥ T → n * 3 ^ nu3 n t < 2 ^ nu2 n t := by
+  have hdiv := walk_diverges_of_sublinear_deficit n hn hsub
+  rw [Filter.tendsto_atTop_atTop] at hdiv
+  obtain ⟨T, hT⟩ := hdiv (logb 2 ↑n + 1)
+  exact ⟨T, fun t ht =>
+    pow2_dominates_of_walk_large n hn t (by linarith [hT t ht])⟩
 
-    Walk divergence (proved from sublinear deficit) gives 2^ν₂/3^ν₃ → ∞,
-    so the first term → 0.
+/-- **Correction ratio eventually bounded** (the geometric series core).
 
-    The correction ratio r(t) = C(t)/2^ν₂ satisfies:
+    The correction ratio r(t) = C(t)/2^ν₂(t) satisfies:
       even step: r → r/2,  odd step: r → 3r + 1.
-    Between consecutive odd steps at positions s_j, s_{j+1}, with e_j = s_{j+1} - s_j - 1
-    even steps in between, the ratio evolves as r → 3r/2^{e_j} + 1.
-    Walk linear growth forces ∑ e_j > log₂(3) · j (on average),
-    making the products ∏(3/2^{e_k}) decay geometrically and the
-    geometric series ∑ ∏(3/2^{e_k}) converge, giving r(t) ≤ B.
+    Between consecutive odd steps at positions s_j, s_{j+1}, with e_j even
+    steps in between, the ratio evolves as r → (3r + 1)/2^{e_j}.
+    Iterating: R_j = ∑_{k<j} ∏_{m=k+1}^{j-1} (3/2^{e_m}) · (1/2^{e_k}).
+    Walk linear growth (walk ≥ δt) forces the partial products
+    ∏(3/2^{e_m}) = 3^j/2^{Σe_m} = 1/2^{walk} ≤ 2^{-δt} to decay
+    exponentially, making the geometric series converge to ≤ 1/(1-2^{-δ}).
+    Formalizing this requires tracking inter-odd-step gaps and their
+    partial products as a convergent series. -/
+private theorem correction_ratio_bounded_of_sublinear (n : ℕ) (hn : n ≥ 1)
+    (hsub : SublinearDeficit n) :
+    ∃ R T : ℕ, ∀ t, t ≥ T → correction n t ≤ R * 2 ^ nu2 n t := by
+  sorry
 
-    Therefore a(t) → 0, but a(t) ≥ 1 as a positive integer,
-    so a(t) = 1 for large t — giving trajectory boundedness.
+/-- **Trajectory boundedness from sublinear deficit**.
 
-    Closing this sorry requires formalizing the geometric series argument
-    for the correction ratio bound. -/
+    Proof: decompose a(t) = (n·3^ν₃ + C(t))/2^ν₂ into two pieces.
+    1. Main term: n·3^ν₃ < 2^ν₂ for large t (from walk divergence, proved).
+    2. Correction: C(t) ≤ R·2^ν₂ for some constant R (geometric series, sorry).
+    Then a(t)·2^ν₂ = n·3^ν₃ + C(t) < (R+1)·2^ν₂, so a(t) ≤ R. -/
 theorem trajectory_bounded_of_sublinear_deficit (n : ℕ) (hn : n ≥ 1)
     (hsub : SublinearDeficit n) :
     ∃ B T₁ : ℕ, ∀ t, t ≥ T₁ → collatzSeq n t ≤ B := by
-  sorry
+  -- Correction ratio eventually bounded (the sorry)
+  obtain ⟨R, T_cr, hcr⟩ := correction_ratio_bounded_of_sublinear n hn hsub
+  -- Main term eventually dominated (proved from walk divergence)
+  obtain ⟨T_big, hbig⟩ := main_term_eventually_small n hn hsub
+  refine ⟨R, max T_cr T_big, fun t ht => ?_⟩
+  have ht_cr : t ≥ T_cr := le_trans (le_max_left ..) ht
+  have ht_big : t ≥ T_big := le_trans (le_max_right ..) ht
+  -- From identity: a(t) · 2^ν₂ = n·3^ν₃ + C(t)
+  have hid := collatz_identity n t
+  -- C(t) ≤ R · 2^ν₂
+  have hC := hcr t ht_cr
+  -- n·3^ν₃ < 2^ν₂
+  have hdom := hbig t ht_big
+  -- Combined: a(t) · 2^ν₂ < (R + 1) · 2^ν₂
+  have hlt : collatzSeq n t * 2 ^ nu2 n t < (R + 1) * 2 ^ nu2 n t :=
+    calc collatzSeq n t * 2 ^ nu2 n t
+        = n * 3 ^ nu3 n t + correction n t := hid
+      _ < 2 ^ nu2 n t + R * 2 ^ nu2 n t := by linarith
+      _ = (R + 1) * 2 ^ nu2 n t := by ring
+  -- Cancel 2^ν₂: a(t) < R + 1, hence a(t) ≤ R
+  by_contra hge
+  push_neg at hge
+  -- hge : R < collatzSeq n t, i.e., R + 1 ≤ collatzSeq n t
+  have h_le : (R + 1) * 2 ^ nu2 n t ≤ collatzSeq n t * 2 ^ nu2 n t :=
+    Nat.mul_le_mul_right (2 ^ nu2 n t) (by omega)
+  linarith
 
 /-! ## Cycle analysis under sublinear deficit
 
