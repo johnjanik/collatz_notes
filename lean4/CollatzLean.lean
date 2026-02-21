@@ -44,3 +44,5 @@ import CollatzLean.MetricConflict
 import CollatzLean.CarryBitScrambling
 import CollatzLean.FuelDynamics
 import CollatzLean.DistancePowers
+import CollatzLean.LinearFormGeneral
+import CollatzLean.SUnitEquation
