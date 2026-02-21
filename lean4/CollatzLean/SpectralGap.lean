@@ -269,6 +269,46 @@ def l2NormSq {N : ℕ} [NeZero N] (f : ZMod N → ℂ) : ℝ :=
 theorem three_coprime_pow2 (j : ℕ) : Nat.Coprime 3 (2 ^ j) :=
   Nat.Coprime.pow_right j (by norm_num : Nat.Coprime 3 2)
 
+/-- The ×3 transfer operator preserves mean-zero functions.
+    Proof: ∑_x (T₃f)(x) = (1/3) ∑_x ∑_r f((x-r)·3⁻¹).
+    For each r, the map x ↦ (x-r)·3⁻¹ is a bijection on ZMod(2^j),
+    so ∑_x f((x-r)·3⁻¹) = ∑_x f(x) = 0. -/
+theorem transferT3_mean_zero (j : ℕ) (f : ZMod (2 ^ j) → ℂ)
+    (hf : IsMeanZero f) : IsMeanZero (transferT3 j f) := by
+  unfold IsMeanZero transferT3 at *
+  simp only [Finset.mul_sum]
+  rw [Finset.sum_comm]
+  simp only [← Finset.mul_sum]
+  suffices h : ∀ r ∈ Finset.range 3,
+      ∑ x : ZMod (2 ^ j), f ((x - ↑r) * (3 : ZMod (2 ^ j))⁻¹) = 0 by
+    simp [Finset.sum_eq_zero h]
+  intro r _
+  -- x ↦ (x - r) * 3⁻¹ is injective, hence bijective on a finite type
+  have hinj : Function.Injective
+      (fun x : ZMod (2 ^ j) => (x - ↑r) * (3 : ZMod (2 ^ j))⁻¹) := by
+    intro a b hab
+    -- Multiply both sides by 3 to cancel 3⁻¹
+    have h1 : (a - ↑r) * (3 : ZMod (2 ^ j))⁻¹ * 3 =
+              (b - ↑r) * (3 : ZMod (2 ^ j))⁻¹ * 3 := congr_arg (· * 3) hab
+    simp only [mul_assoc] at h1
+    have h3inv : (3 : ZMod (2 ^ j))⁻¹ * (3 : ZMod (2 ^ j)) = 1 := by
+      rw [mul_comm]; exact ZMod.coe_mul_inv_eq_one 3 (three_coprime_pow2 j)
+    rw [h3inv, mul_one, mul_one] at h1
+    -- h1 : a - ↑r = b - ↑r, so a = b
+    have := congr_arg (· + (↑r : ZMod (2 ^ j))) h1
+    simpa [sub_add_cancel] using this
+  have hbij := Finite.injective_iff_bijective.mp hinj
+  set e := Equiv.ofBijective (fun x : ZMod (2 ^ j) =>
+    (x - ↑r) * (3 : ZMod (2 ^ j))⁻¹) hbij
+  have : ∑ x : ZMod (2 ^ j), f ((x - ↑r) * (3 : ZMod (2 ^ j))⁻¹) =
+         ∑ x : ZMod (2 ^ j), f x :=
+    Fintype.sum_equiv e (fun x => f (e x)) f (fun _ => rfl)
+  rw [this]; exact hf
+
+/-- L² norm squared is nonneg. -/
+theorem l2NormSq_nonneg {N : ℕ} [NeZero N] (f : ZMod N → ℂ) : 0 ≤ l2NormSq f :=
+  Finset.sum_nonneg (fun _ _ => pow_nonneg (norm_nonneg _) _)
+
 /-- **The Spectral Gap Theorem.**
 
     The ×3 transfer operator on ℤ/2^j contracts mean-zero
@@ -296,7 +336,22 @@ theorem spectral_gap_transfer (j : ℕ) (hj : j ≥ 3)
 theorem spectral_gap_iterated (j : ℕ) (hj : j ≥ 3) (t : ℕ)
     (f : ZMod (2 ^ j) → ℂ) (hf : IsMeanZero f) :
     l2NormSq ((transferT3 j)^[t] f) ≤ (1 / 9 : ℝ) ^ t * l2NormSq f := by
-  sorry
+  induction t with
+  | zero => simp
+  | succ t ih =>
+    have hmz : IsMeanZero ((transferT3 j)^[t] f) := by
+      clear ih; induction t with
+      | zero => simpa
+      | succ t iht =>
+        rw [Function.iterate_succ', Function.comp_apply]
+        exact transferT3_mean_zero j _ iht
+    rw [Function.iterate_succ', Function.comp_apply, pow_succ]
+    calc l2NormSq (transferT3 j ((transferT3 j)^[t] f))
+        ≤ 1 / 9 * l2NormSq ((transferT3 j)^[t] f) :=
+          spectral_gap_transfer j hj _ hmz
+      _ ≤ 1 / 9 * ((1 / 9) ^ t * l2NormSq f) :=
+          mul_le_mul_of_nonneg_left ih (by norm_num)
+      _ = (1 / 9) ^ t * (1 / 9) * l2NormSq f := by ring
 
 /-! ## Section 6: Arithmetic Decoupling (Axiom A9)
 
