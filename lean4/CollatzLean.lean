@@ -42,3 +42,5 @@ import CollatzLean.SpectralGap
 import CollatzLean.ArithmeticRigidity
 import CollatzLean.MetricConflict
 import CollatzLean.CarryBitScrambling
+import CollatzLean.FuelDynamics
+import CollatzLean.DistancePowers
