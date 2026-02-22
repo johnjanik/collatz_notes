@@ -46,3 +46,5 @@ import CollatzLean.FuelDynamics
 import CollatzLean.DistancePowers
 import CollatzLean.LinearFormGeneral
 import CollatzLean.SUnitEquation
+import CollatzLean.E8Lattice
+import CollatzLean.RiemannHypothesis
