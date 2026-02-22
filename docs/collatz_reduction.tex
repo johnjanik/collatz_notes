@@ -867,8 +867,7 @@ The remaining $0$-sorry infrastructure (fully proved theorems) includes:
   \item The spectral gap of $\times 3$: orbit cosine product identity (\texttt{SpectralGap.lean}),
   \item The non-coboundary theorem for the Collatz cocycle (\texttt{UniqueErgodicity.lean}),
   \item Sublinear drift from deficit boundedness (\texttt{SublinearDrift.lean}),
-  \item The $E_8$ root system: $240$ roots, norm, inner product (\texttt{E8Lattice.lean}),
-  \item The $E_{10}$ Coxeter matrix and Lehmer's polynomial (\texttt{Lehmer.lean}).
+  \item The $E_8$ root system: $240$ roots, norm, inner product (\texttt{E8Lattice.lean}).
 \end{itemize}
 
 
@@ -1082,78 +1081,6 @@ the gap between Tao's ``almost all'' and our ``every trajectory'' is precisely
 the gap between statistical and pointwise ergodic theorems for the Syracuse
 dynamics.
 
-\subsection{Connection to the Lehmer conjecture and Salem numbers}
-
-The E$_8$ lattice, whose root system is fully formalized in
-\texttt{E8Lattice.lean}, is the starting point of a chain that connects
-the Collatz problem to several other major open problems in number theory.
-The E-series of Coxeter groups,
-\[
-  E_6 \subset E_7 \subset E_8 \subset E_9 = \widetilde{E}_8 \subset
-  E_{10} = T(2,3,7),
-\]
-extends from finite ($E_6, E_7, E_8$) through affine ($E_9$) to hyperbolic
-($E_{10}$).  The Dynkin diagram of $E_{10}$ is the tree $T(2,3,7)$ with
-three arms of lengths $2$, $3$, and $7$ emanating from a branch node,
-giving $10$ nodes total.
-
-McMullen~\cite{McMullen2002} showed that the spectral radius of the $E_{10}$
-Coxeter element equals \emph{Lehmer's number} $\lambda_0 \approx 1.17628$,
-the largest real root of Lehmer's polynomial:
-\begin{equation}\label{eq:lehmer}
-  L(x) = x^{10} + x^9 - x^7 - x^6 - x^5 - x^4 - x^3 + x + 1.
-\end{equation}
-This polynomial is \emph{reciprocal} ($a_k = a_{10-k}$) and \emph{Salem}:
-it has exactly one root $\alpha > 1$, one root $1/\alpha < 1$, and eight
-roots on the unit circle.  Its Mahler measure $M(L) = \alpha \approx 1.17628$
-is the smallest known Mahler measure of any non-cyclotomic integer polynomial.
-
-\begin{conjecture}[Lehmer, 1933~\cite{Lehmer1933}]
-  There exists $c > 0$ such that $M(P) \geq 1 + c$ for every monic,
-  irreducible, non-cyclotomic polynomial $P \in \ZZ[x]$.  The conjectured
-  minimum is $M(L) \approx 1.17628$.
-\end{conjecture}
-
-Smyth~\cite{Smyth1971} resolved the non-reciprocal case: if $P$ is
-irreducible, non-cyclotomic, and not reciprocal, then $M(P) \geq \theta_0
-\approx 1.3247$, where $\theta_0$ is the real root of $x^3 - x - 1$ (the
-plastic number).  This reduces the Lehmer conjecture to reciprocal polynomials,
-and extensive computational searches~\cite{Mossinghoff1998,MossinghoffRhinWu2008}
-have confirmed that $L$ remains the smallest known example through degree $180$.
-
-We have implemented a parallel sieve (\texttt{lehmer\_sieve.c}) that
-enumerates monic reciprocal polynomials, applies a Graeffe root-squaring
-filter to rapidly reject candidates with large Mahler measure, and computes
-exact values for survivors.  At degree~$10$ with coefficient bound~$10$, the
-sieve searches $4.08 \times 10^6$ polynomials in $0.05$ seconds on $24$ threads
-and correctly identifies~$L$ as the unique Salem polynomial with smallest Mahler
-measure, recovering $M(L) = 1.17628081826$ to~$12$ significant figures.
-
-The connection to our framework is through the $E_{10}$ Cartan matrix, which
-we formalize in \texttt{Lehmer.lean}.  The Cartan matrix $C$ has diagonal
-entries $C_{ii} = 2$ and off-diagonal entries $C_{ij} = -1$ for adjacent nodes
-in the $T(2,3,7)$ diagram ($9$ edges, $18$ directed adjacencies).  We verify
-by \texttt{native\_decide}:
-\begin{itemize}
-  \item $\mathrm{tr}(C) = 20$, $\mathrm{tr}(C^2) = 58$;
-  \item $L$ is reciprocal, monic, with $L(1) = -1$ and $L(-1) = 1$
-    (so $L$ has no linear factors);
-  \item The plastic number satisfies $1.324 < \theta_0 < 1.325$
-    (certifying Smyth's bound to $3$ decimal places).
-\end{itemize}
-The formalization contains $14$ proved theorems (all by \texttt{native\_decide})
-and $3$ axioms: Smyth's bound (deep analytic result), irreducibility of~$L$
-(computational), and the Mahler measure bound $1.17 < M(L) < 1.18$ (numerical).
-
-The deeper significance of the $E$-series connection is that the spectral
-radius of the $E_{10}$ Coxeter element, Lehmer's number, may represent a
-universal obstruction in dynamical systems related to the interaction of
-multiplication by~$2$ and~$3$.  The spectral gap $\gamma = 2/3$ for $\times 3$
-on $2$-adic partitions (Section~\ref{sec:spectral}) and the Lehmer number
-$\lambda_0 \approx 1.176$ are both controlled by the arithmetic of $\log_2 3$,
-and both arise from root systems in the same $E$-series.  Whether this
-connection can be made precise remains an open problem.
-
 
 \begin{Backmatter}
 
@@ -1217,10 +1144,6 @@ M.~Herman, Sur la conjugaison diff\'erentiable des diff\'eomorphismes du cercle
 J.~C.~Lagarias, The $3x+1$ problem: An annotated bibliography (1963--1999),
 \texttt{arXiv:math/0309224}, 2003.
 
-\bibitem{Lehmer1933}
-D.~H.~Lehmer, Factorization of certain cyclotomic functions,
-\emph{Ann.\ of Math.\ (2)} \textbf{34} (1933), 461--479.
-
 \bibitem{Lagarias2010}
 J.~C.~Lagarias (ed.), \emph{The Ultimate Challenge: The $3x+1$ Problem},
 AMS, 2010.
@@ -1229,18 +1152,6 @@ AMS, 2010.
 E.~M.~Matveev, An explicit lower bound for a homogeneous rational linear form
 in the logarithms of algebraic numbers. II, \emph{Izv.\ Ross.\ Akad.\ Nauk
 Ser.\ Mat.} \textbf{64} (2000), 125--180.
-
-\bibitem{McMullen2002}
-C.~T.~McMullen, Coxeter groups, Salem numbers and the Hilbert metric,
-\emph{Publ.\ Math.\ IH\'ES} \textbf{95} (2002), 151--183.
-
-\bibitem{Mossinghoff1998}
-M.~J.~Mossinghoff, Polynomials with small Mahler measure,
-\emph{Math.\ Comp.} \textbf{67} (1998), 1697--1705.
-
-\bibitem{MossinghoffRhinWu2008}
-M.~J.~Mossinghoff, G.~Rhin, and Q.~Wu, Minimal Mahler measures,
-\emph{Experiment.\ Math.} \textbf{17} (2008), 451--458.
 
 \bibitem{Rhin1987}
 G.~Rhin, Approximants de Pad\'e et mesures effectives d'irrationalit\'e,
@@ -1255,11 +1166,6 @@ circle rotation, \texttt{arXiv:2601.04289}, 2026.
 J.~Simons and B.~M.~M.~de Weger, Theoretical and computational bounds for
 $m$-cycles of the $3n+1$ problem, \emph{Acta Arith.} \textbf{117} (2005),
 51--70.
-
-\bibitem{Smyth1971}
-C.~J.~Smyth, On the product of the conjugates outside the unit circle of an
-algebraic integer, \emph{Bull.\ London Math.\ Soc.} \textbf{3} (1971),
-169--175.
 
 \bibitem{Steiner1977}
 R.~P.~Steiner, A theorem on the Syracuse problem, in \emph{Proceedings of the
