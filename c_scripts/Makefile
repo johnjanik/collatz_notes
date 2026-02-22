@@ -3,7 +3,7 @@ CFLAGS  = -O3 -march=native -Wall
 CAIRO   = $(shell pkg-config --cflags --libs cairo)
 LIBS    = -lm
 
-all: collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger deficit_analysis v2_danger_5x1 v2_danger_7x1 littlewood_torus littlewood_cfrac furstenberg furstenberg_entropy furstenberg_spectrum
+all: collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger deficit_analysis v2_danger_5x1 v2_danger_7x1 littlewood_torus littlewood_cfrac furstenberg furstenberg_entropy furstenberg_spectrum lehmer_sieve
 
 collatz_tree: collatz_tree.c
 	$(CC) $(CFLAGS) -o $@ $< $(CAIRO) $(LIBS)
@@ -204,7 +204,20 @@ plot-compare: plot_danger_compare.py
 plot-7x1: plot_7x1_danger.py
 	python3 plot_7x1_danger.py . ../visualizations
 
-clean:
-	rm -f collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger deficit_analysis v2_danger_5x1 v2_danger_7x1 littlewood_torus littlewood_cfrac furstenberg furstenberg_entropy furstenberg_spectrum furstenberg_lift *.png *.csv
+# ── Lehmer sieve targets ───────────────────────────────────────────────
+lehmer_sieve: lehmer_sieve.c
+	$(CC) $(CFLAGS) -fopenmp -o $@ $< $(LIBS)
 
-.PHONY: all clean run-tree run-scatter run-sft run-profinite run-branch run-branch-10B run-branch-100B resume-branch-100B run-v2danger run-v2danger-1M run-v2danger-10M run-gpu-compare run-gpu-branch run-gpu-fast run-gpu-verify run-deficit-1B run-deficit-10B run-5x1 run-5x1-1M run-5x1-10M run-5x1-1B run-5x1-10B run-7x1 run-7x1-1M run-7x1-10M run-7x1-10B run-littlewood-torus run-littlewood-torus-10B run-littlewood-cfrac run-furstenberg run-furstenberg-1B run-furstenberg-all run-furstenberg-convergents run-furstenberg-resume run-furstenberg-10B run-entropy run-entropy-atoms run-entropy-orders run-entropy-rate run-spectrum run-spectrum-40 run-lift run-lift-3scale plot-5x1 plot-compare plot-7x1
+run-lehmer-10: lehmer_sieve
+	./lehmer_sieve --degree 10 --max-coeff 10
+
+run-lehmer-18: lehmer_sieve
+	./lehmer_sieve --degree 18 --max-coeff 5
+
+run-lehmer-24: lehmer_sieve
+	./lehmer_sieve --degree 24 --max-coeff 3
+
+clean:
+	rm -f collatz_tree collatz_scatter parity_sft profinite_compat branch_locus v2_danger deficit_analysis v2_danger_5x1 v2_danger_7x1 littlewood_torus littlewood_cfrac furstenberg furstenberg_entropy furstenberg_spectrum furstenberg_lift lehmer_sieve *.png *.csv
+
+.PHONY: all clean run-tree run-scatter run-sft run-profinite run-branch run-branch-10B run-branch-100B resume-branch-100B run-v2danger run-v2danger-1M run-v2danger-10M run-gpu-compare run-gpu-branch run-gpu-fast run-gpu-verify run-deficit-1B run-deficit-10B run-5x1 run-5x1-1M run-5x1-10M run-5x1-1B run-5x1-10B run-7x1 run-7x1-1M run-7x1-10M run-7x1-10B run-littlewood-torus run-littlewood-torus-10B run-littlewood-cfrac run-furstenberg run-furstenberg-1B run-furstenberg-all run-furstenberg-convergents run-furstenberg-resume run-furstenberg-10B run-entropy run-entropy-atoms run-entropy-orders run-entropy-rate run-spectrum run-spectrum-40 run-lift run-lift-3scale plot-5x1 plot-compare plot-7x1 run-lehmer-10 run-lehmer-18 run-lehmer-24
